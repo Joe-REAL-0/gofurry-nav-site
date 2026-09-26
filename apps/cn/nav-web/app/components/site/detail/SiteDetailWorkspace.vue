@@ -13,40 +13,32 @@
     <div :key="data.domain" :aria-busy="pending" class="min-w-0">
       <SiteObservationWorkspace v-if="active === 'observation'" :view="observationView" :presentation="observation" :history="history"
         @select="emit('observationView', $event)" @sample="emit('historySample', $event)" @retry="emit('historyRetry')" />
-      <div v-else-if="active === 'security'">
-        <h3 class="site-detail-label mb-3">{{ t('siteDetail.securityEvidence') }}</h3>
-        <SiteObservationMetricGrid :items="security" />
-      </div>
+      <SiteSecurityWorkspace v-else-if="active === 'security'" :view="securityView" :presentation="security" :raw-headers-to="rawHeadersTo"
+        @select="emit('securityView', $event)" />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import SiteInsightsPanel from '../SiteInsightsPanel.vue'
 import SiteOverviewWorkspace from './SiteOverviewWorkspace.vue'
-import SiteObservationMetricGrid from '../SiteObservationMetricGrid.vue'
+import SiteSecurityWorkspace from './security/SiteSecurityWorkspace.vue'
 import SiteObservationWorkspace from './observation/SiteObservationWorkspace.vue'
 import type { SiteDetailPageData } from '~/composables/useSiteDetailPage'
-import type { SiteDetailTab, SiteObservationView } from '~/utils/siteDetailRouteState'
-import type { SiteTargetPresentation } from '~/utils/siteTargetPresentation'
+import type { SiteDetailTab, SiteObservationView, SiteSecurityView } from '~/utils/siteDetailRouteState'
 import type { SiteInsights } from '~/types/insights'
 import type { SiteOverviewPresentation } from '~/utils/siteOverviewPresentation'
 import type { RouteLocationRaw } from 'vue-router'
-import type { ObservationMetricItem } from '../detailTypes'
+import type { SiteSecurityPresentation } from '~/utils/siteSecurityPresentation'
 import type { SiteObservationPresentation } from '~/utils/siteObservationPresentation'
 import type { SiteHistoryPresentation, SiteHistorySample } from '~/composables/useSiteObservationHistory'
-const props = defineProps<{
-  data: SiteDetailPageData; siteId: string; active: SiteDetailTab; presentation: SiteTargetPresentation
+defineProps<{
+  data: SiteDetailPageData; active: SiteDetailTab
   insights: SiteInsights | null; insightsUnavailable: boolean; pending: boolean
   overview: SiteOverviewPresentation; insightsTo: RouteLocationRaw
   observationView: SiteObservationView; observation: SiteObservationPresentation; history: SiteHistoryPresentation
+  securityView: SiteSecurityView; security: SiteSecurityPresentation; rawHeadersTo: RouteLocationRaw
 }>()
-const emit = defineEmits<{ observationView: [view: SiteObservationView]; historySample: [sample: SiteHistorySample]; historyRetry: [] }>()
+const emit = defineEmits<{ observationView: [view: SiteObservationView]; securityView: [view: SiteSecurityView]; historySample: [sample: SiteHistorySample]; historyRetry: [] }>()
 const { t } = useI18n()
-const security = computed<ObservationMetricItem[]>(() => [
-  { label: 'TLS', value: props.presentation.tlsVersion || '—', tone: 'normal' },
-  { label: t('siteDetail.certificate'), value: props.presentation.certificateLabel, tone: props.presentation.certificateVerified === false ? 'warn' : 'normal' },
-  { label: t('siteDetail.days'), value: props.presentation.certificateDays === null ? '—' : String(props.presentation.certificateDays), tone: 'normal' },
-])
 </script>

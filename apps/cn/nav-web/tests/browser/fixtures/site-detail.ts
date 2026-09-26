@@ -1,5 +1,6 @@
 import { runtimeTest } from './insights-runtime'
 import { seoState, seoResponse } from './seo-recovery'
+import { securityState, securityEvidence } from './site-security-data'
 
 export const longTarget = 'a-long-collected-target-name-for-layout-review.community.infrastructure.example'
 
@@ -8,7 +9,7 @@ export const longTarget = 'a-long-collected-target-name-for-layout-review.commun
 export const test = runtimeTest(
   () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
-    observationRich: false, historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false }),
+    observationRich: false, historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState() }),
   url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
     || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname),
   (url, media, _body, state) => {
@@ -43,6 +44,7 @@ export const test = runtimeTest(
     }
     if (url.pathname.endsWith('/detail') && !reply.status) {
       const target = url.searchParams.get('target') || 'target.example'
+      const security = state.security.enabled ? securityEvidence(target, state.security) : null
       const observed = '2026-08-30T12:00:00Z'
       const alternative = state.longTarget ? longTarget : 'alt.example'
       const changed = state.summaryChangesOnTarget && target !== 'target.example'
@@ -80,14 +82,15 @@ export const test = runtimeTest(
               meta: { description: 'Observed page description' + (state.longEvidence ? 'x'.repeat(350) : ''), keywords: 'furry, community' },
               redirect_chain: state.noRedirects ? [] : [`http://${target}/`, `https://${target}/`] } : {}),
           },
+          ...(security?.http ?? {}),
         } },
-      }, light_probe_state: state.observationRich ? { target, protocols: {
+      }, light_probe_state: security?.light ?? (state.observationRich ? { target, protocols: {
         robots: envelope('robots', { exists: true, status_code: 200, sitemap_count: 1, sitemaps: ['https://target.example/sitemap.xml'], user_agent_star_present: true, global_disallow_all: false }),
         llms_txt: envelope('llms_txt', { exists: true, path: '/llms.txt', status_code: 200, title: 'Community guide', heading_count: 2, link_count: 1, optional_section_present: false, body_read_bytes: 256, headings: ['About', 'Resources'], links: ['https://target.example/about'] }),
         page_assets: envelope('page_assets', { icon: { exists: true, source_url: 'https://target.example/favicon.ico', content_type: 'image/x-icon', status_code: 200 }, manifest: { exists: true, source_url: 'https://target.example/manifest.json', name: 'Fixture app', display: 'standalone', theme_color: '#123456', start_url: '/', scope: '/', icons_count: 2 } }),
         rdap: envelope('rdap', { registrable_domain: 'target.example', registrar: 'Fixture registrar', expires_at: '2027-09-26', statuses: ['active'], nameservers: ['ns1.example'], dnssec_delegation_signed: false }),
         security_txt: envelope('security_txt', { contact: ['SECURITY_ONLY_CONTACT'] }), port_check: envelope('port_check', { service: 'SECURITY_ONLY_PORT' }), waf_canary: envelope('waf_canary', { name: 'SECURITY_ONLY_WAF' }),
-      } } : null } }
+      } } : null) } }
     }
     return reply
   },

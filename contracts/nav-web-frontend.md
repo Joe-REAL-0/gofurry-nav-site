@@ -127,8 +127,8 @@ Pending Target requests preserve Hero, tabs and shell, retaining the explicitly
 labelled last resolved Target evidence until the next result is ready. A late
 response MUST NOT overwrite a newer Target. Site Insights fetching stays Site-owned
 across tab/Target changes. P2 initially showed the preview in Overview and Insights;
-P3 replaces Overview and confines that legacy panel to Insights. P4 replaces the
-Observation transition; Security retains its thin adapter until P5.
+P3 replaces Overview and confines that legacy panel to Insights. P4 and P5 replace
+the Observation and Security transitions respectively.
 
 `app/assets/styles/pages/site-detail.less` owns new appearance under the exact
 `.site-detail-page` / `html.dark .site-detail-page` / `--site-detail-*` token roots.
@@ -238,6 +238,59 @@ goldens are allowed. `site-observation.spec.ts`, the pure presentation unit test
 and real Nuxt history tests own verification. Maintainer visual acceptance of
 navigation, timing/chart density, HTTP/DNS/Web and mobile/themes is required before
 P5; local tests and screenshots do not grant that approval or remote acceptance.
+
+## Site Security workspace (#109 P5)
+
+Security presents Current Target technical evidence in Overview, TLS & Certificate,
+Web Security and Exposure. It cannot assess content safety, overall trustworthiness
+or vulnerability. No score, grade, safe/unsafe verdict, risk percentage or inferred
+WAF deployment is permitted. The presentation has no `score`, `grade`, `rating`,
+`riskPercent`, `overallLevel` or `wafEnabled` fields.
+
+`siteSecurityPresentation.ts` owns Target/envelope matching, raw parsing, nullable
+booleans, evidence states and all Security interpretation. Components render that
+projection only. HTTP provides TLS, certificate and Header evidence; existing light
+probes provide security.txt, Port Check and WAF Canary. P5 adds no endpoint or fetch:
+view changes add zero requests; Target changes add only Detail, never Insights/View.
+The P1 authoritative Detail and optional-source failure boundaries remain unchanged.
+
+`selectSiteSecurityView` extends the sole route-state owner. Secondary tabs support
+router history/reload, roving focus and ArrowLeft/ArrowRight/Home/End, scroll within
+their row on mobile and never stick. The raw Header link uses
+`selectSiteObservationView(..., 'http')`, preserving explicit Target query or the
+implicit primary Target. Materializing the implicit Target into a new query merely
+to change view would incorrectly cause a Detail fetch.
+
+Verification is separate from validity. `cert_collected=false` and `not_tls`
+prevent Go false/zero defaults from becoming failed certificate evidence. Explicit
+verification facts remain meaningful when the older payload lacks the collection
+flag. `readSiteCertificateEvidence` is shared with the Target presentation owner,
+so the Health Strip cannot contradict Security with uncollected default values.
+Remaining days come from the collector, never the client clock; >30 is normal,
+8–30 attention, 1–7 warning and <=0 expired. These tones belong to expiry alone.
+SAN, chain and crypto facts use native disclosure; fingerprints wrap in monospace.
+False OCSP and zero/missing SCT do not produce a security conclusion.
+
+Header state prefers `security_header_summary.present`, then the collected boolean
+map, then raw Header presence. The frontend does not reimplement a Header analyzer.
+Observed absence is Missing; failed HTTP is Unavailable; missing evidence is Not
+observed. security.txt distinguishes found, found-with-validation-issues, not-found,
+unavailable and not-observed. Only collector `validation_errors` drive validation
+issues, without a second RFC validator or client-clock expiry check.
+
+Ports retain neutral open/closed/timeout/filtered/skipped evidence; an open port is
+not a vulnerability. Collection metadata is disclosed. WAF shows reported counts
+and cases; a matching statement requires a complete successful sample and known,
+matching counts, never proof of WAF deployment. Truncation is visible outside the
+case disclosure. Attention is limited to verification failure, reported expiry,
+security.txt validation issues and positive reported Canary mismatch/error counts.
+
+P5 retires the consumer-free SiteObservationMetricGrid and SiteLightProbePanel only.
+Appearance extends the existing Site Detail owner, keeps deep selectors at zero
+and lowers only actual removed debt. Other cleanup remains P7; Insights remains P6
+and #108. `site-security.spec.ts` and pure projection tests own the contract. No
+accepted Visual file changes or final P8 goldens; maintainer visual review is still
+required before P6, independently of local gates and remote CI status.
 
 ## Styling ownership
 

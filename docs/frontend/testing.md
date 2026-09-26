@@ -8,7 +8,8 @@ P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
 17 independent Site Detail cases for 423 Functional Browser; #109 P2 adds 12
 shell/context cases for 435 Functional Browser. #109 P3 adds 16 Overview cases
 for 451 Functional Browser. #109 P4 adds 30 Observation cases for
-**481 Functional Browser /119 Visual /118 PNG**. The
+481 Functional Browser. #109 P5 adds 50 Security cases for
+**531 Functional Browser /119 Visual /118 PNG**. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
@@ -139,6 +140,29 @@ timings, collector percentage units, DNS trees, Web exclusion and history precis
 the API boundary, and covers activation, cache, states, retry and captured identity.
 Style-budget updates may only remove audited Observation entries; the phase ledger
 records the actual delta and current local/remote/manual acceptance separately.
+
+## Site Detail #109 P5
+
+`site-security.spec.ts` owns four SSR views, router/keyboard/history/reload, exact
+zero-request view navigation and Detail-only pending Target changes, plus the raw
+Header cross-workspace link for explicit and implicit Target context. Tests retain
+authoritative Detail failures and optional Insights/View isolation.
+
+TLS cases distinguish verification true/false/missing from failed collection and
+non-TLS defaults, and independently assert four expiry bands. Header tests preserve
+observed absence versus missing evidence. security.txt has found/validation/not-found/
+unavailable/not-observed cases. Ports retain neutral results and metadata; WAF cases
+verify reported mismatch/error counts, bounded matching, truncation and unavailable/
+not-observed. Native disclosures and long fingerprints/CSP/URLs run at
+390/768/1440 × Light/Dark with strict diagnostics and no horizontal overflow.
+
+`site-security-presentation.test.ts` adds 48 pure cases, including boundary days,
+Target identity, collector priority, no frontend RFC validation, unknown/zero/false,
+stale evidence and recursive exclusion of score/verdict fields. Two Target presentation
+regressions also reject uncollected certificate defaults; Browser asserts the Health
+Strip agrees with Security. No new Nuxt fetch
+composable or runner is introduced. The shared Site fixture adds pure Security data
+only. All P1–P4 and Visual contracts remain required; manual review is separate.
 
 ## Migrated regression knowledge
 

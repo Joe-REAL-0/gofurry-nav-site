@@ -1,4 +1,5 @@
 import type { SiteHealthSummary, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
+import { readSiteCertificateEvidence } from './siteSecurityPresentation'
 
 type Tone = 'neutral' | 'good' | 'warning' | 'bad'
 type Translate = (key: string) => string
@@ -46,8 +47,9 @@ export function presentSiteTarget(source: TargetSource, t: Translate) {
   const httpStatus = number(payload.status_code)
   const httpProtocol = text(payload.http_protocol)
   const tlsVersion = text(payload.tls_version)
-  const certificateDays = number(payload.cert_days_left)
-  const certificateVerified = typeof payload.cert_verified === 'boolean' ? payload.cert_verified : null
+  const certificate = readSiteCertificateEvidence(payload) ?? {}
+  const certificateDays = number(certificate.cert_days_left)
+  const certificateVerified = typeof certificate.cert_verified === 'boolean' ? certificate.cert_verified : null
   const certificateLabel = certificateVerified === null ? t('siteDetail.notObserved')
     : t(certificateVerified ? 'siteDetail.verified' : 'siteDetail.notVerified')
   const observedAt = date(summary?.observed_at, http?.observed_at)

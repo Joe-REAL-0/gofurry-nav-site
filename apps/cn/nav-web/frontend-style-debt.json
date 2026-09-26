@@ -14,8 +14,6 @@
       "app/assets/styles/pages/insights.less": 6,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/site/SiteChangeEvents.vue": 22,
-      "app/components/site/SiteLightProbePanel.vue": 74,
-      "app/components/site/SiteObservationMetricGrid.vue": 58,
       "app/components/site/SiteSignalCards.vue": 11
     },
     "important": {

@@ -6,6 +6,7 @@ export const siteSecurityViews = ['overview', 'tls', 'web', 'exposure'] as const
 export const siteInsightRanges = ['30d', '90d', 'all'] as const
 export type SiteDetailTab = typeof siteDetailTabs[number]
 export type SiteObservationView = typeof siteObservationViews[number]
+export type SiteSecurityView = typeof siteSecurityViews[number]
 type SiteDetailQuery = Readonly<Record<string, unknown>>
 type DomainState = { domain: string }
 export type SiteDetailRouteState = DomainState & (
@@ -66,4 +67,8 @@ export function selectSiteDetailTab(state: SiteDetailRouteState, tab: SiteDetail
 
 export function selectSiteObservationView(state: SiteDetailRouteState, view: SiteObservationView): SiteDetailRouteState {
   return parseSiteDetailRouteState({ domain: state.domain, tab: 'observation', view })
+}
+
+export function selectSiteSecurityView(state: SiteDetailRouteState, view: SiteSecurityView): SiteDetailRouteState {
+  return parseSiteDetailRouteState({ domain: state.domain, tab: 'security', view })
 }

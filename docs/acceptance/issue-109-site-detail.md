@@ -346,3 +346,103 @@ default loading, timing interpretation, chart height, evidence/disclosure densit
 resolution-chain readability, mobile flow and theme consistency. Local screenshots
 support review but are not maintainer approval. P4 exit criterion 38 remains
 pending until that review; do not enter P5 automatically.
+
+## P5: Current Target Security workspace
+
+The maintainer declared P1–P4 complete and explicitly requested P5 on current
+`dev`. Historical phase records above remain intact. The scope is the
+[Security contract](../../contracts/nav-web-frontend.md#site-security-workspace-109-p5);
+P6, #108, backend/schema changes and final P8 goldens remain outside it.
+
+### Evidence and runtime ownership
+
+Six Security components replace the transitional panel. Overview, TLS & Certificate,
+Web Security and Exposure use `selectSiteSecurityView` and the P1 route owner,
+including reload/back/forward, roving keyboard navigation and mobile row scrolling.
+`siteSecurityPresentation.ts` is a pure Current Target projection; Vue does not
+parse raw payload or infer business states. Existing Observation facts are reused
+with an optional structural break-all mode for cryptographic values.
+
+P5 adds zero requests. All evidence is SSR Detail data. View switches add none;
+Target changes add Detail only, retaining workspace and last-resolved pending
+evidence without repeating Insights/View. The raw Header link retains explicit
+Target context or its implicit-primary form, avoiding a spurious Detail request.
+The existing authoritative Detail and optional Insights/View boundaries remain.
+
+Overview explicitly scopes technical observations and labels certificate
+verification. Attention comes only from verification failure, collector remaining
+days, reported security.txt validation issues and positive Canary mismatch/error
+counts. There is no score, grade, overall verdict or WAF deployment field/claim.
+
+TLS transport, verification and validity are independent. Collector Go defaults
+behind `cert_collected=false` cannot become failed certificate evidence; an explicit
+verification fact remains usable in older payloads without that flag. The shared
+`readSiteCertificateEvidence` also prevents the Health Strip from contradicting
+Security with uncollected zero/false defaults. Expiry bands
+use collector days, never `Date.now()`. SAN/chain/crypto are disclosures; hashes wrap
+in monospace. False OCSP and zero SCT remain neutral observed facts.
+
+HTTP `security_headers` is a boolean map, not raw header text. The projection
+prefers `security_header_summary.present`, keeps raw Header values and does not
+reimplement policy parsing. Missing, not-observed and unavailable remain distinct.
+security.txt retains found/validation-issues/not-found/unavailable/not-observed,
+consuming only collector validation errors and no frontend RFC validator.
+
+Port outcomes stay neutral, including open 22/443; metadata is disclosed. WAF
+matching is limited to a successful complete sample with known matching counts.
+Cases remain folded initially, truncation is explicit outside disclosure, and
+mismatch/error counts never become an overall security assessment.
+
+### Legacy and measured appearance debt
+
+Consumer audit found no remaining use of SiteObservationMetricGrid or
+SiteLightProbePanel after replacement; both were deleted without clones. Other
+legacy owners remain for their later phases. No ESLint suppression change occurred.
+
+Policy first reported only those two stale raw-visual budgets: 58 and 74. After
+actual deletion, `style:policy:update` removed exactly those entries and policy
+passed. Raw visual debt **246 → 114**; Tailwind appearance **147**, arbitrary **2**,
+important **5**, deep selectors **0** and legacy dark **0** are unchanged. No
+surviving file budget was raised, transferred or hidden.
+
+### Executable and manual verification
+
+- Added 50 Unit cases (48 Security and two Target regressions) for route transitions, Target identity, booleans/zero/missing,
+  collection defaults, expiry boundaries, raw/summary Header precedence, probe
+  states, reported errors, truncated/unknown Canary counts and recursive exclusion
+  of conclusion fields.
+- Added 50 Functional Browser cases on the existing deterministic Site/Nitro/upstream
+  fixture. Four SSR views, all navigation/request accounting, pending Target changes,
+  optional and authoritative failures, evidence state matrices and native disclosures
+  are covered. 390/768/1440 × Light/Dark assert long-value wrapping and neutral ports.
+  Browser errors, exact request counts and zero retries remain strict.
+- P1–P5 focused acceptance initially passed 125 formal cases plus ten temporary
+  screenshot captures. After the final Overview wording, the 50 P5 contracts plus
+  ten refreshed captures passed again. Screenshots are outside the repository and
+  are review materials, not accepted baselines. The temporary capture test was
+  removed before full acceptance; no additional runner was introduced.
+
+The initial full run passed 531 cases in 14.8 minutes. Subsequent integration review
+found that the Health Strip still interpreted uncollected certificate defaults as
+evidence. Two new Unit tests reproduced it before the shared certificate normalizer
+repair; Browser now asserts matching neutral/missing Strip state as well.
+
+Frozen install, lint, stylelint, style-policy tooling (75), exact policy, Unit (178),
+Nuxt (11), combined Vitest (189), typecheck, Insights semantics, SEO recovery and
+production build have passed locally. Chromium installation succeeded. After the
+integration repair and rebuild, P1/P2/P5 focused acceptance passed 79 cases. Final
+`pnpm run test:browser --workers=1` passed **531 cases in 14.3 minutes**, with no
+failures, skips or retries. P1–P5, Entity, SEO and failure boundaries passed against
+the final unchanged production build.
+
+Visual inventory remains 119 tests / 118 accepted PNGs with no accepted file
+changes. Remote CI and pinned Linux Visual comparison remain unverified; previous
+CI runs are not this change's acceptance.
+
+### Required maintainer review before P6
+
+Review Overview semantics, verification versus validity, certificate/disclosure
+density, Header missing tones, security.txt state copy, neutral Port results and
+bounded WAF interpretation. Check desktop/mobile Exposure, long values and theme
+consistency. P5 exit criterion 40 remains pending until the maintainer accepts
+these visuals. Local tests and screenshots are not that approval; do not enter P6.

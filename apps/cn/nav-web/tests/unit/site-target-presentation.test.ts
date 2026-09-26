@@ -50,6 +50,14 @@ describe('Current Target presentation', () => {
     expect(failed.health[4]?.tone).toBe('warning')
   })
 
+  it.each([{ cert_collected: false }, { tls_handshake: 'not_tls' }])('does not treat uncollected certificate defaults as evidence: %j', marker => {
+    const result = presentSiteTarget(source({ cert_days_left: 0, cert_verified: false, ...marker }), t)
+    expect(result.certificateDays).toBeNull()
+    expect(result.certificateVerified).toBeNull()
+    expect(result.certificateLabel).toBe('siteDetail.notObserved')
+    expect(result.health[4]).toMatchObject({ value: '—', tone: 'neutral' })
+  })
+
   it('preserves target staleness and protocol state instead of inferring success', () => {
     const data = source()
     data.targetHealthSummary.state = 'stale'

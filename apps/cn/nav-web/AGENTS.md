@@ -93,6 +93,14 @@ example or permission. Remaining style debt belongs to Site Detail #109, Insight
 #108 and intentionally preserved ambient effects. No opportunistic migration of
 these areas; their new code still follows the contract.
 
+P5 Security consumes only Current Target Detail evidence through
+`siteSecurityPresentation.ts`; four secondary views use `selectSiteSecurityView`.
+No view fetch, score/verdict, port risk inference or WAF deployment claim is allowed.
+Preserve collector booleans, missing/failure distinctions and verification versus
+validity. `site-security.spec.ts` owns requests/states/disclosures/responsive checks.
+Only its replaced Metric Grid/Light Probe debt is removed; deep remains zero.
+P6 requires maintainer review and no P8 golden is created here.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing

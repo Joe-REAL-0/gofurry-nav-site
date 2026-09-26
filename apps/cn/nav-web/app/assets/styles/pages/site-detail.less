@@ -197,16 +197,19 @@ html.dark .site-detail-page {
   line-height: 1.4;
 }
 
-.site-observation {
+.site-observation,
+.site-security {
   font-size: 0.85rem;
   line-height: 1.6;
 }
 
-.site-observation-nav {
+.site-observation-nav,
+.site-security-nav {
   border-bottom: 1px solid var(--site-detail-border);
 }
 
 .site-observation-tab,
+.site-security-tab,
 .site-observation-sample {
   border-bottom: 2px solid transparent;
   padding: 0.6rem 0.85rem;
@@ -216,6 +219,7 @@ html.dark .site-detail-page {
 }
 
 .site-observation-tab[aria-selected="true"],
+.site-security-tab[aria-selected="true"],
 .site-observation-sample[aria-pressed="true"] {
   border-bottom-color: var(--gf-text-main);
   color: var(--gf-text-main);
@@ -223,11 +227,16 @@ html.dark .site-detail-page {
 }
 
 .site-observation-tab:hover,
+.site-security-tab:hover,
 .site-observation-sample:hover {
   background: var(--site-detail-surface);
 }
 
 .site-observation-tab:focus-visible,
+.site-security-tab:focus-visible,
+.site-security-disclosure > summary:focus-visible,
+.site-security-panel:focus-visible,
+.site-security-link:focus-visible,
 .site-observation-sample:focus-visible,
 .site-observation-disclosure > summary:focus-visible,
 .site-observation-panel:focus-visible {
@@ -246,7 +255,8 @@ html.dark .site-detail-page {
   padding: 0.85rem 0;
 }
 
-.site-observation-disclosure > summary {
+.site-observation-disclosure > summary,
+.site-security-disclosure > summary {
   padding: 0.35rem 0;
   color: var(--gf-text-muted);
   font-size: 0.8rem;
@@ -301,6 +311,32 @@ html.dark .site-detail-page {
 .site-observation-history-table th {
   color: var(--gf-text-muted);
   font-weight: 550;
+}
+
+.site-security-row {
+  border-bottom: 1px solid var(--site-detail-border);
+  padding: 0.9rem 0;
+}
+
+.site-security-attention {
+  border-left: 2px solid var(--site-detail-warning);
+  padding-left: 1rem;
+}
+
+.site-security-expiry[data-expiry="attention"],
+.site-security-expiry[data-expiry="warning"],
+.site-security-expiry[data-expiry="expired"] {
+  color: var(--site-detail-warning);
+}
+
+.site-security-crypto dd {
+  font-family: ui-monospace, monospace;
+}
+
+.site-security-link {
+  color: var(--gf-text-main);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .site-overview {
