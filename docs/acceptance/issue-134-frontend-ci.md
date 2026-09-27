@@ -74,13 +74,30 @@ provides the before measurement, not acceptance of #134:
 | Visual | 4m23s |
 | Deployment image | 2m08s |
 
-Fast's 3–5 minute goal is a target. Record its actual job duration and workflow
-creation-to-`nav-web` completion separately; CI-change-only Go/database work must
-not be presented as ordinary frontend feedback time.
+The implementation was pushed to dev. Its new
+[Fast run](https://github.com/gofurry/gofurry-nav-site/actions/runs/36338569370)
+completed successfully, including repository policy and the conservatively selected
+Go/database checks. The frontend measurements are:
 
-Remote Fast, manual Full and manual Visual results remain pending until this
-implementation is pushed and the respective runs actually finish. Nightly wiring
-is locally verified; no real nightly execution is claimed.
+| New daily frontend path | Measured duration / result |
+| --- | --- |
+| nav-web-fast job | 3m10s / PASS |
+| Workflow creation to stable nav-web success | 3m30s / PASS |
+| Full regression / Visual / deployment image on this dev push | Not scheduled, as required |
+
+This run reaches the 3–5 minute Fast target, reducing frontend feedback from 12m49s
+to 3m30s (about 73%). This is one measured run, not a promise about queue/load times.
+CI-change-only Go/database work is not included in the frontend gate dependency.
+Nightly wiring is locally verified; no real nightly execution is claimed. This
+result is recorded by a documentation-only follow-up; the tested workflows,
+scripts, Smoke cases and application source are unchanged.
+
+Both authorized dispatch attempts (`gh workflow run nav-web-full.yml --ref dev`
+and `gh workflow run nav-web-visual.yml --ref dev`) returned HTTP 404: workflow
+not found on the default branch. Neither suite ran, so both remain **unverified**.
+The existing main branch also lacks the #109 regression owners; copying only the
+new CI files there would violate the explicit inventory. Default-branch enablement
+needs a separately authorized integration, not a hidden production-branch change.
 
 GitHub requires new manual/scheduled workflows to exist on the default branch
 before they can receive those events. The current default is main; implementation
@@ -88,5 +105,6 @@ on dev alone is not proof of enabled dispatch/nightly. See [GitHub's workflow tr
 contract](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 No default-branch change or main merge is authorized by this acceptance record.
 If dispatch is blocked, retain Full/Visual as unverified rather than run a hidden
-fallback or restore expensive daily gates. #134 is closure-ready only after Fast,
-manual Full (including image) and manual Visual actually pass.
+fallback or restore expensive daily gates. Fast feedback governance is implemented
+and verified on dev. #134 is **not yet closure-ready**: manual Full (including image)
+and manual Visual still require default-branch enablement and passing remote runs.
