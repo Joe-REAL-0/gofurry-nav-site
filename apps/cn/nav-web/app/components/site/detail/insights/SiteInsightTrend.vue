@@ -10,7 +10,7 @@
       <div ref="element" data-site-insight-chart :data-site-chart-ready="ready && presentation.state === 'ready'" role="img" :aria-label="t('siteIntelligence.trendTitle')" :class="{ invisible: surfaceState !== 'ready' }" class="site-intelligence-chart w-full min-w-0" />
       <div v-if="surfaceState !== 'ready'" data-site-trend-message role="status" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
         <p class="site-detail-note">{{ t('siteIntelligence.trendStates.' + surfaceState) }}</p>
-        <button v-if="surfaceState === 'unavailable'" data-site-insight-trend-retry type="button" class="gf-button gf-button--ghost" @click="retry">{{ t('siteIntelligence.retry') }}</button>
+        <button v-if="surfaceState === 'unavailable'" data-site-insight-trend-retry type="button" class="site-detail-text-link" @click="retry">{{ t('siteIntelligence.retry') }}</button>
       </div>
     </div>
     <p v-if="surfaceState === 'ready' && !values.some(value => value !== null)" data-site-trend-no-values class="site-detail-note mt-2">{{ t('siteIntelligence.noObservedValues') }}</p>
@@ -43,13 +43,13 @@ async function renderChart() {
     if (!chart.value) chart.value = echarts.init(element.value, undefined, { renderer: 'canvas' })
     chart.value.setOption({ animation: false,
       grid: { top: 20, right: 16, bottom: 40, left: 48 },
-      tooltip: { trigger: 'axis', confine: true, renderMode: 'richText', backgroundColor: color('--site-detail-surface'),
-        borderColor: color('--site-detail-border'), textStyle: { color: color('--gf-text-main') }, valueFormatter: (value: unknown) => value === null ? '—' : `${value}%` },
+      tooltip: { trigger: 'axis', confine: true, renderMode: 'richText', backgroundColor: color('--gf-surface'),
+        borderWidth: 0, textStyle: { color: color('--gf-text-main') }, valueFormatter: (value: unknown) => value === null ? '—' : `${value}%` },
       xAxis: { type: 'category', boundaryGap: false, data: props.presentation.points.map(point => point.date), axisTick: { show: false },
-        axisLine: { lineStyle: { color: color('--site-detail-border') } }, axisLabel: { color: color('--gf-text-muted'), hideOverlap: true } },
-      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: color('--gf-text-muted'), formatter: '{value}%' }, splitLine: { lineStyle: { color: color('--site-detail-border') } } },
+        axisLine: { show: false }, axisLabel: { color: color('--gf-text-muted'), hideOverlap: true } },
+      yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: color('--gf-text-muted'), formatter: '{value}%' }, splitLine: { lineStyle: { color: color('--site-detail-border'), opacity: 0.3 } } },
       series: [{ name: t('siteIntelligence.adoption'), type: 'line', data: values.value, connectNulls: false, symbolSize: 6,
-        showSymbol: props.presentation.points.length <= 31, lineStyle: { width: 2, color: color('--site-detail-positive') }, itemStyle: { color: color('--site-detail-positive') } }],
+        showSymbol: props.presentation.points.length <= 31, lineStyle: { width: 2, color: style.color }, itemStyle: { color: style.color }, areaStyle: { color: style.color, opacity: 0.05 } }],
     }, true)
     ready.value = true
   } catch { if (active && version === revision) failed.value = true }

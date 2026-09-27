@@ -202,7 +202,9 @@ ArrowLeft/ArrowRight/Home/End; mobile navigation scrolls within its own row.
 `siteObservationPresentation.ts` is the only raw-payload projection for these
 views. Match Target identity before reading summary, core or light-probe evidence.
 Overview protocol rows retain status, duration, observed time and freshness as
-separate fields; human reason messages precede code fallback. Only observed
+separate fields. Task B and the Observation refinement supersede P4's original
+message-first copy: Attention uses Current Target health reason codes with
+frontend localization; raw diagnostic flags stay in DNS evidence. Only observed
 endpoint facts appear. HTTP shows summary, conditional redirect chain and common
 headers plus native disclosure for all headers, without Security interpretation.
 DNS groups actual A/AAAA/CNAME/MX/NS/TXT/CAA/SOA records, follows collected children
@@ -408,6 +410,44 @@ request, failure, cache, race and accessibility assertions. Optional temporary
 review screenshots are emitted by that same Functional owner, never a new runner
 or accepted Visual baseline. Site debt, deep and legacy-dark remain zero. Full
 maintainer visual acceptance is required before separately authorized P8 work.
+
+## Site Detail first-round composition completion (pre-P8)
+
+This appearance contract supersedes earlier P2–P6/Task B card, divider and Context
+surface descriptions; their Site/Target, route, request, failure and cache
+contracts remain unchanged. `site-detail.less` owns shared acrylic Plane A/B/C,
+hover, selected and 500ms motion tokens. Content surfaces have no perimeter
+border. Facts/list rows use 4–6px gaps, small corners and soft color-only hover;
+selected states respond immediately. Keep only meaningful relationship/chart
+lines, the primary active indicator, focus rings and the Identity Note separator.
+The Target selector may retain necessary control affordances.
+
+Hero and the six Health values share one Identity Note with an inset CSS dashed
+separator and three decorative, aria-hidden perforations. Health has no grid
+rules. Overview and Observation retain their accepted composition; only materials,
+unnecessary borders/dividers and row spacing change. Observation and Security
+own their H2 and finite, scrollbar-hidden secondary navigation in one header row,
+including on mobile. Preserve roving tabindex, keyboard navigation and route state.
+
+Security keeps four evidence-only views. TLS transport, verification and validity
+share one composite while remaining distinct facts; certificate identity is a
+secondary plane and crypto a native disclosure. Headers show name/state above
+value. security.txt metadata/errors and request cases stay in disclosures. Port
+Observation and Request Behavior Check never imply vulnerability or WAF deployment.
+Existing certificate normalization, expiry thresholds and explicit Attention
+evidence remain authoritative.
+
+Insights has an unboxed header and seven-row Capability Explorer, one primary
+Analysis plane and an unboxed Recent Change Stream. Adoption/coverage remain
+neutral; the adoption-only trend uses the info accent, not success green. No
+secondary tabs, score, filter, pagination or request is introduced. Unavailable
+Site Insights retains seven structural rows and the shared inline retry.
+
+The existing Functional Browser owners verify this composition and may export
+temporary review screenshots. Full local verification does not grant maintainer
+visual acceptance or remote CI acceptance. Stop after first-round completion;
+P8 and any second round require separate user authorization. Accepted Visual PNGs
+and the zero Site/deep/legacy-dark debt budgets stay unchanged.
 
 ## Styling ownership
 

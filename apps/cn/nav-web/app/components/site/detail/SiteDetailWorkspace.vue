@@ -5,7 +5,7 @@
     role="tabpanel" :aria-labelledby="'site-tab-' + active" tabindex="0"
     class="site-detail-workspace min-w-0 xl:order-1"
   >
-    <h2 class="site-detail-workspace-title mb-4">{{ t('siteDetail.tabs.' + active) }}</h2>
+    <h2 v-if="active === 'overview'" class="site-detail-workspace-title mb-4">{{ t('siteDetail.tabs.' + active) }}</h2>
     <SiteOverviewWorkspace v-if="active === 'overview'" :presentation="overview" :insights-to="insightsTo" :retrying="insightsRetrying" @retry="emit('insightsRetry')" />
     <!-- Fetch ownership stays on the Site page, independent of visible panels. -->
     <SiteInsightsWorkspace v-if="active === 'insights'" :site-id="siteId" :presentation="insights" :retrying="insightsRetrying" :metric="insightMetric" :range="insightRange" :trend="trend"

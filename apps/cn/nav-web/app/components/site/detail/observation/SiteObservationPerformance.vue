@@ -35,7 +35,7 @@
         <details class="site-observation-disclosure mt-4" data-site-history-table>
           <summary>{{ t('siteObservation.historyRecords') }}</summary>
           <div class="mt-3 max-h-96 overflow-y-auto">
-            <table class="site-observation-history-table w-full border-collapse break-words text-left">
+            <table class="site-observation-history-table w-full break-words text-left">
               <caption class="sr-only">{{ t('siteObservation.historyRecords') }}</caption>
               <thead><tr><th class="text-left">{{ t('siteObservation.fields.observed') }}</th><th class="text-left">{{ t('siteObservation.fields.status') }}</th><th class="text-left">RTT</th><th class="text-left">{{ t('siteObservation.fields.loss') }}</th></tr></thead>
               <tbody><tr v-for="row in history.rows" :key="row.key">

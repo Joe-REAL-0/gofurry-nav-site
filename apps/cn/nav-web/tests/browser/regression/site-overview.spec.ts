@@ -52,7 +52,7 @@ async function assertOverviewComposition(page: Page, width: number) {
   if (width >= 768) expect(new Set(layout.groups.map(group => group.y)).size).toBe(1)
   else expect(layout.groups[1]!.y).toBeGreaterThan(layout.groups[0]!.bottom)
   expect(layout.cards).toHaveLength(4)
-  expect(layout.cards.every(card => card.border === '1px' && card.radius === '8px' && card.shadow === 'none')).toBe(true)
+  expect(layout.cards.every(card => card.border === '0px' && card.radius === '8px' && card.shadow === 'none')).toBe(true)
   const firstRow = layout.cards.filter(card => card.y === layout.cards[0]!.y)
   expect(firstRow).toHaveLength(width === 1440 ? 4 : width === 768 ? 2 : 1)
 }
@@ -109,7 +109,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
       const style = getComputedStyle(node)
       return [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth, style.boxShadow]
     })
-    expect(borders).toEqual(['1px', '0px', '0px', '0px', 'none'])
+    expect(borders).toEqual(['0px', '0px', '0px', '0px', 'none'])
     await expect(status.locator('[data-site-overview-target-count]')).toHaveText('3 targets')
     await expect(page.locator('[data-site-change][data-site-change-category="certificate"]')).toHaveCount(1)
     await assertOverviewComposition(page, width)

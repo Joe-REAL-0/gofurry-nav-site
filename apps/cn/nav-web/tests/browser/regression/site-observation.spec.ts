@@ -302,11 +302,11 @@ test('Observation hover is 500ms with immediate selected feedback and no movemen
   expect(await inactive.evaluate(node => {
     const css = getComputedStyle(node)
     return { durations: css.transitionDuration.split(', ').every(value => value === '0.5s'), properties: css.transitionProperty, transform: css.transform, shadow: css.boxShadow }
-  })).toEqual({ durations: true, properties: 'background-color, border-color, color', transform: 'none', shadow: 'none' })
+  })).toEqual({ durations: true, properties: 'background-color, color', transform: 'none', shadow: 'none' })
   await inactive.click()
   await expect(inactive).toHaveCSS('transition-duration', '0s')
   const sample = page.locator('[data-site-performance-sample="60"]')
-  await expect(sample).toHaveCSS('transition-duration', '0.5s, 0.5s, 0.5s')
+  await expect(sample).toHaveCSS('transition-duration', '0.5s, 0.5s')
   await sample.click(); await expect(sample).toHaveCSS('transition-duration', '0s')
   await expect(history(page)).toHaveAttribute('data-site-performance-history-state', 'ready')
   expect(runtime.calls).toHaveLength(4)

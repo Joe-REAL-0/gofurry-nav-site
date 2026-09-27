@@ -13,8 +13,8 @@
     </section>
     <section data-site-dns-ledger class="site-observation-evidence">
       <h3 class="site-observation-heading">{{ t('siteObservation.recordLedger') }}</h3>
-      <section v-for="group in presentation.groups" :key="group.type" :data-site-dns-group="group.type" class="mt-4">
-        <h4 class="site-observation-ledger-heading mb-2 flex items-center gap-3"><span>{{ group.type }}</span><span class="site-observation-hairline min-w-0 flex-1" aria-hidden="true" /><span class="site-observation-caption">{{ group.records.length }}</span></h4>
+      <section v-for="group in presentation.groups" :key="group.type" :data-site-dns-group="group.type" class="mt-4 space-y-1.5">
+        <h4 class="site-observation-ledger-heading mb-2 flex items-center gap-3"><span>{{ group.type }}</span><span class="min-w-0 flex-1" aria-hidden="true" /><span class="site-observation-caption">{{ group.records.length }}</span></h4>
         <div v-for="(record, index) in group.records" :key="index" class="site-observation-ledger-row">
           <div class="flex flex-wrap justify-between gap-2"><span class="site-observation-technical min-w-0 break-all">{{ record.value }}</span><span class="site-observation-caption shrink-0">TTL {{ record.ttl }}</span></div>
           <details v-if="record.details.length" class="site-observation-disclosure mt-2">

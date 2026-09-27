@@ -1,11 +1,14 @@
 <template>
   <div data-site-detail :data-site-target="sitePageData.domain" :data-site-tab="routeState.tab" class="site-detail-page relative isolate min-h-full min-w-0">
     <main class="relative mx-auto w-full min-w-0 max-w-[1560px] px-4 pb-10 pt-5 sm:px-8 sm:pt-8 lg:px-10">
-      <SiteDetailHero
-        :site="sitePageData.siteInfo" :name="siteName" :domain="sitePageData.domain"
-        :view-count="siteViewCount" :visit-url="targetPresentation.visitUrl"
-      />
-      <SiteHealthStrip :presentation="targetPresentation" :pending="pending" class="mt-5 sm:mt-6" />
+      <div data-site-identity-note class="site-detail-identity-note min-w-0">
+        <SiteDetailHero
+          :site="sitePageData.siteInfo" :name="siteName" :domain="sitePageData.domain"
+          :view-count="siteViewCount" :visit-url="targetPresentation.visitUrl"
+        />
+        <div class="site-detail-perforation relative mx-5 flex items-center justify-between sm:mx-7" aria-hidden="true"><span /><span /><span /></div>
+        <SiteHealthStrip :presentation="targetPresentation" :pending="pending" />
+      </div>
       <SitePrimaryTabs :active="routeState.tab" class="mt-6" @select="changeTab" />
       <div class="mt-5 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] xl:gap-6">
         <SiteTargetContext

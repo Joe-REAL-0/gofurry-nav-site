@@ -74,7 +74,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
 test('router tabs survive history/reload, clear foreign state and support roving keyboard focus', async ({ page, runtime }) => {
   await openSite(page, '/en/site/41?domain=alt.example&tab=insights&metric=tls13&range=90d')
   await activeTab(page, 'insights')
-  await expect(page.locator('[data-site-insights-workspace] > header')).toContainText('Site-wide observations')
+  await expect(page.locator('[data-site-insights-workspace] > header')).toContainText('Site-wide data')
   await tab(page, 'observation').click()
   await activeTab(page, 'observation')
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'observation' })

@@ -18,7 +18,7 @@
       id="site-target-listbox"
       role="listbox"
       :aria-label="t('siteDetail.selectTarget')"
-      class="site-detail-target-list absolute right-0 z-40 mt-2 w-full overflow-y-auto"
+      class="site-detail-target-list absolute right-0 z-40 mt-2 w-full space-y-1.5 overflow-y-auto"
     >
       <li v-for="(item, index) in targets" :key="item.target" role="presentation">
         <button

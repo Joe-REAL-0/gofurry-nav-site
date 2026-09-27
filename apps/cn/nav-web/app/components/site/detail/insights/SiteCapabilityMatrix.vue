@@ -1,5 +1,5 @@
 <template>
-  <section data-site-capability-matrix class="site-detail-surface" aria-labelledby="site-matrix-title">
+  <section data-site-capability-matrix class="min-w-0" aria-labelledby="site-matrix-title">
     <h3 id="site-matrix-title" class="site-overview-title">{{ t('siteIntelligence.matrix') }}</h3>
     <div class="site-intelligence-matrix-heading mt-3 flex flex-wrap gap-3 lg:grid lg:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))_minmax(0,1.1fr)]">
       <span class="hidden lg:block">{{ t('siteIntelligence.capability') }}</span><span class="hidden lg:block">{{ t('siteIntelligence.siteState') }}</span>
@@ -7,7 +7,7 @@
       <SiteInsightHelp :label="t('siteIntelligence.coverage')" :help="t('siteIntelligence.coverageHelp')" />
       <span class="hidden lg:block">{{ t('siteIntelligence.factDate') }}</span>
     </div>
-    <section v-for="group in groups" :key="group.key" :data-site-insight-group="group.key" class="mt-3">
+    <section v-for="group in groups" :key="group.key" :data-site-insight-group="group.key" class="mt-4 space-y-1.5">
       <h4 class="site-detail-label mb-1">{{ group.label }}</h4>
     <button v-for="row in group.rows" :key="row.key" type="button" :data-site-capability="row.key" :data-site-capability-state="row.state"
       :data-site-capability-selected="selected === row.key" :aria-pressed="selected === row.key" :aria-label="row.label + ': ' + row.stateLabel"

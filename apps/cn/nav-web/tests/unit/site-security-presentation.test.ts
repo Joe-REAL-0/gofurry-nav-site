@@ -150,3 +150,27 @@ describe('Current Target security projection', () => {
     expect(vm.transport.observed).toBe('2026-08-30 12:00:00 UTC'); expect(vm.certificate.verification.label).toBe('已验证')
   })
 })
+
+
+describe('First-round Security composition facts', () => {
+  it('shows actual TLS independently from certificate verification and expiry', () => {
+    const data = source({ tls: 'failed', days: 45 })
+    payload(data).tls_version = 'TLS 1.2'
+    const vm = presentSiteSecurity(data, translate())
+    expect(vm.transport).toMatchObject({ value: 'TLS 1.2', tone: 'good' })
+    expect(vm.certificate.verification.state).toBe('failed')
+    expect(vm.certificate.expiry.state).toBe('normal')
+    expect(present({ tls: 'missing' }).transport).toMatchObject({ state: 'not_observed', tone: 'muted' })
+  })
+  it('keeps configured ports as metadata while exposing the six requested summary facts', () => {
+    const vm = present()
+    expect(vm.portCheck.summary.map(item => item.key)).toEqual(['ports_checked', 'open_count', 'closed_count', 'timeout_count', 'filtered_suspected_count', 'skipped_count'])
+    expect(vm.portCheck.metadata.some(item => item.key === 'ports_configured')).toBe(true)
+    expect(vm.portCheck.results.find(item => item.status === 'open')?.tone).toBe('neutral')
+    expect(vm.wafCanary.tone).toBe('info')
+    expect(vm.wafCanary.summaryText).toBe('1 / 1 expected behaviors matched')
+  })
+  it.each([['found', 'info'], ['not_found', 'neutral'], ['unavailable', 'warning'], ['not_observed', 'muted']] as const)('keeps security.txt %s tone factual', (txt, tone) => {
+    expect(present({ txt }).securityTxt.tone).toBe(tone)
+  })
+})

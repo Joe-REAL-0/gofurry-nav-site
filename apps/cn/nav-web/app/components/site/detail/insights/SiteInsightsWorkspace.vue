@@ -1,14 +1,17 @@
 <template>
   <div data-site-insights data-site-insights-workspace :data-site-insights-state="presentation.state" class="site-intelligence min-w-0 space-y-7">
-    <header class="site-detail-surface">
-      <p class="site-detail-note">{{ t('siteIntelligence.scope') }}</p>
-      <div class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-        <NuxtLink data-site-insights-ecosystem :to="localePath('/insights/sites')" class="gf-button gf-button--ghost">{{ t('siteIntelligence.ecosystem') }}<PhArrowSquareOut class="site-detail-icon" aria-hidden="true" /></NuxtLink>
-        <NuxtLink data-site-insights-compare :to="localePath({ path: '/insights/sites/compare', query: { ids: siteId } })" class="gf-button gf-button--ghost">{{ t('siteIntelligence.compare') }}<PhArrowsLeftRight class="site-detail-icon" aria-hidden="true" /></NuxtLink>
+    <header data-site-insights-header>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h2 class="site-detail-workspace-title">{{ t('siteDetail.tabs.insights') }}</h2>
+        <div class="flex flex-wrap gap-x-5 gap-y-2">
+          <NuxtLink data-site-insights-ecosystem :to="localePath('/insights/sites')" class="site-detail-text-link inline-flex items-center gap-1">{{ t('siteIntelligence.ecosystem') }}<PhArrowSquareOut class="site-detail-icon" aria-hidden="true" /></NuxtLink>
+          <NuxtLink data-site-insights-compare :to="localePath({ path: '/insights/sites/compare', query: { ids: siteId } })" class="site-detail-text-link inline-flex items-center gap-1">{{ t('siteIntelligence.compare') }}<PhArrowsLeftRight class="site-detail-icon" aria-hidden="true" /></NuxtLink>
+        </div>
       </div>
-      <div v-if="presentation.state === 'unavailable'" data-site-insights-unavailable class="mt-4" :aria-busy="retrying">
+      <p class="site-detail-note mt-2">{{ t('siteIntelligence.scope') }}</p>
+      <div v-if="presentation.state === 'unavailable'" data-site-insights-unavailable class="mt-3 flex flex-wrap items-baseline gap-3" :aria-busy="retrying">
         <p role="status" class="site-detail-note">{{ t('siteIntelligence.unavailable') }}</p>
-        <button data-site-insights-retry type="button" :disabled="retrying" class="gf-button gf-button--ghost mt-2" @click="emit('retry')">{{ t(retrying ? 'siteIntelligence.loading' : 'siteIntelligence.retry') }}</button>
+        <button data-site-insights-retry type="button" :disabled="retrying" class="site-detail-text-link" @click="emit('retry')">{{ t(retrying ? 'siteIntelligence.loading' : 'siteIntelligence.retry') }}</button>
       </div>
     </header>
     <SiteCapabilityMatrix :groups="presentation.groups" :selected="metric" @select="emit('metric', $event)" />

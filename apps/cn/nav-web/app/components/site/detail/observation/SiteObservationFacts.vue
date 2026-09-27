@@ -1,5 +1,5 @@
 <template>
-  <dl class="site-observation-facts min-w-0">
+  <dl class="site-observation-facts min-w-0 space-y-1.5">
     <div v-for="item in items" :key="item.key" :data-site-evidence="item.key" class="grid min-w-0 gap-1 sm:grid-cols-[minmax(8rem,1fr)_minmax(0,3fr)] sm:gap-4">
       <dt class="site-detail-note">{{ item.label }}</dt>
       <dd class="min-w-0 whitespace-pre-wrap" :data-tone="item.tone" :class="breakAll ? 'break-all' : 'break-words'">{{ item.value }}</dd>

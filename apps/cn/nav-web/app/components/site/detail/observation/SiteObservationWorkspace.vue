@@ -1,6 +1,9 @@
 <template>
   <div data-site-observation :data-site-observation-target="presentation.target" class="site-observation min-w-0">
-    <SiteObservationNav :active="view" @select="emit('select', $event)" />
+    <header data-site-workspace-subnav-header class="flex min-w-0 items-center justify-between gap-3">
+      <h2 class="site-detail-workspace-title shrink-0">{{ t('siteDetail.tabs.observation') }}</h2>
+      <SiteObservationNav :active="view" class="min-w-0 flex-1 sm:flex-initial" @select="emit('select', $event)" />
+    </header>
     <section id="site-observation-panel" :data-site-observation-view="view" role="tabpanel" :aria-labelledby="'observation-tab-' + view" tabindex="0" class="site-observation-panel mt-5 min-w-0">
       <SiteObservationOverview v-if="view === 'overview'" :presentation="presentation" />
       <SiteObservationPerformance v-else-if="view === 'performance'" :presentation="presentation" :history="history" @sample="emit('sample', $event)" @retry="emit('retry')" />
@@ -23,4 +26,5 @@ import SiteObservationDns from './SiteObservationDns.vue'
 import SiteObservationWeb from './SiteObservationWeb.vue'
 defineProps<{ view: SiteObservationView; presentation: SiteObservationPresentation; history: SiteHistoryPresentation }>()
 const emit = defineEmits<{ select: [view: SiteObservationView]; sample: [sample: SiteHistorySample]; retry: [] }>()
+const { t } = useI18n()
 </script>

@@ -71,7 +71,8 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   const handshake = text(payload.tls_handshake)
   const transportState = handshake === 'failed' ? 'failed' : handshake === 'not_tls' ? 'not_applicable'
     : text(payload.tls_version) || handshake === 'collected' ? 'present' : httpMeta.state === 'present' ? 'not_observed' : httpMeta.state
-  const transport = { ...httpMeta, ...state(transportState), facts: [fact('tls_version', payload.tls_version), fact('cipher_suite', payload.cipher_suite),
+  const transport = { ...httpMeta, ...state(transportState), value: text(payload.tls_version) || state(transportState).label,
+    tone: transportState === 'not_observed' ? 'muted' as const : siteProtocolTone(transportState), facts: [fact('tls_version', payload.tls_version), fact('cipher_suite', payload.cipher_suite),
     fact('tls_handshake', handshake), fact('observed_at', httpMeta.observed)] }
 
   const collected = bool(payload.cert_collected)
@@ -110,6 +111,7 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   const txtState = txtMeta.state !== 'present' ? txtMeta.state : bool(txt.exists) === true ? validation.length ? 'found_with_issues' : 'found'
     : bool(txt.exists) === false ? 'not_found' : 'unknown'
   const securityTxt = { ...txtMeta, ...state(txtState), metaFacts: txtMeta.facts, validation: txtMeta.state === 'present' ? validation : [],
+    tone: txtState === 'found' ? 'info' as const : ['unavailable', 'found_with_issues'].includes(txtState) ? 'warning' as const : txtState === 'not_observed' ? 'muted' as const : 'neutral' as const,
     validationLabels: txtMeta.state === 'present' ? validationLabels : [],
     facts: facts(txt, ['exists', 'recognition', 'path_used', 'status_code', 'content_type', 'contact', 'expires', 'policy', 'canonical', 'preferred_languages']),
     truncated: txtMeta.truncated || txt.body_truncated === true }
@@ -122,8 +124,8 @@ export function presentSiteSecurity(source: Source, t: Translate) {
     facts: [fact('port', item.port), fact('service_hint', item.service_hint), fact('status', t('siteSecurity.states.' + (['open', 'closed', 'timeout', 'filtered_suspected', 'skipped'].includes(text(item.status)) ? text(item.status) : 'unknown'))), fact('duration_ms', ms(item.duration_ms))],
     errors: compact(facts(item, ['error_code', 'error_message'])) }))
   const portCheck = { ...portMeta, ...state(portMeta.state === 'present' && Array.isArray(ports.results) && !portRows.length ? 'empty' : portMeta.state),
-    summary: facts(ports, ['ports_configured', 'ports_checked', 'open_count', 'closed_count', 'timeout_count', 'filtered_suspected_count']),
-    results: portRows, metadata: facts(ports, ['skipped_count', 'invalid_port_count', 'duplicate_port_count', 'truncated_port_count', 'truncated', 'skipped_reason']),
+    summary: facts(ports, ['ports_checked', 'open_count', 'closed_count', 'timeout_count', 'filtered_suspected_count', 'skipped_count']),
+    results: portRows, metadata: facts(ports, ['ports_configured', 'invalid_port_count', 'duplicate_port_count', 'truncated_port_count', 'truncated', 'skipped_reason']),
     truncated: portMeta.truncated || ports.truncated === true }
 
   const wafEnvelope = envelope(light, 'waf_canary'), waf = record(wafEnvelope?.payload)
@@ -153,12 +155,12 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   if (txtState === 'found_with_issues') addAttention('securityTxt', validationLabels.join('; '))
   for (const key of mismatches) addAttention(key, display(waf[key]))
   const overview = { attention, sections: [
-    { key: 'transport', title: t('siteSecurity.transport'), value: text(payload.tls_version) || transport.label, detail: '', tone: siteProtocolTone(transport.state) },
+    { key: 'transport', title: t('siteSecurity.transport'), value: transport.value, detail: '', tone: transport.tone },
     { key: 'certificate', title: t('siteSecurity.certificate'), value: certificate.verification.label, detail: expiryPresentation.value, tone: certificate.verification.tone },
     { key: 'headers', title: t('siteSecurity.headers'), value: headerRows.some(row => row.state === 'present' || row.state === 'missing')
       ? `${headerRows.filter(row => row.state === 'present').length} / ${headerRows.length} ${t('siteSecurity.observedCount')}`
       : state(httpMeta.state === 'present' ? 'not_observed' : httpMeta.state).label, detail: '' },
-    { key: 'securityTxt', title: 'security.txt', value: securityTxt.label, detail: '' },
+    { key: 'securityTxt', title: 'security.txt', value: securityTxt.label, detail: '', tone: securityTxt.tone },
     { key: 'portCheck', title: t('siteSecurity.portCheck'), value: portMeta.state === 'present' && count(ports.ports_checked) !== null
       ? `${ports.ports_checked} ${t('siteSecurity.checkedCount')}` : portCheck.label, detail: '' },
     { key: 'wafCanary', title: t('siteSecurity.wafCanary'), value: wafCanary.summaryText, detail: wafState === 'matched' ? '' : wafCanary.label, tone: wafCanary.tone },

@@ -1,8 +1,8 @@
 <template>
-  <div data-site-security-nav role="tablist" :aria-label="t('siteSecurity.navigation')" class="site-security-nav flex min-w-0 overflow-x-auto">
+  <div data-site-security-nav role="tablist" :aria-label="t('siteSecurity.navigation')" class="site-detail-subnav flex min-w-0 overflow-x-auto">
     <button v-for="(view, index) in siteSecurityViews" :id="'security-tab-' + view" :key="view" :data-site-security-tab="view"
       type="button" role="tab" :aria-selected="active === view" aria-controls="site-security-panel" :tabindex="active === view ? 0 : -1"
-      class="site-security-tab shrink-0" @click="emit('select', view)" @keydown="onKey($event, index)">
+      class="site-detail-segment shrink-0" @click="emit('select', view)" @keydown="onKey($event, index)">
       {{ t('siteSecurity.views.' + view) }}
     </button>
   </div>

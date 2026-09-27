@@ -6,8 +6,8 @@
     </div>
     <p class="site-detail-note mt-1">{{ t('siteIntelligence.factDate') }} · <time :datetime="capability.dateTime">{{ capability.date }}</time></p>
     <dl class="site-intelligence-facts mt-4 grid min-w-0 grid-cols-2 gap-4">
-      <div class="min-w-0"><dt class="site-detail-label"><SiteInsightHelp :label="t('siteIntelligence.sameDayAdoption')" :help="t('siteIntelligence.adoptionHelp')" /></dt><dd data-site-selected-adoption class="site-detail-health__value mt-1">{{ capability.adoption }}</dd></div>
-      <div class="min-w-0"><dt class="site-detail-label"><SiteInsightHelp :label="t('siteIntelligence.coverage')" :help="t('siteIntelligence.coverageHelp')" /></dt><dd data-site-selected-coverage class="site-detail-health__value mt-1">{{ capability.coverage }}</dd></div>
+      <div class="min-w-0"><dt class="site-detail-label"><SiteInsightHelp :label="t('siteIntelligence.sameDayAdoption')" :help="t('siteIntelligence.adoptionHelp')" /></dt><dd data-site-selected-adoption class="site-intelligence-analysis-value mt-1">{{ capability.adoption }}</dd></div>
+      <div class="min-w-0"><dt class="site-detail-label"><SiteInsightHelp :label="t('siteIntelligence.coverage')" :help="t('siteIntelligence.coverageHelp')" /></dt><dd data-site-selected-coverage class="site-intelligence-analysis-value mt-1">{{ capability.coverage }}</dd></div>
     </dl>
     <slot />
   </section>

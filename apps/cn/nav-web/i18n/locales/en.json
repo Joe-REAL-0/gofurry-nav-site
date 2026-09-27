@@ -1,9 +1,9 @@
 {
   "siteIntelligence": {
-    "scope": "Site-wide observations, independent of the current target.",
-    "ecosystem": "Site ecosystem",
+    "scope": "Site-wide data · independent of the current target.",
+    "ecosystem": "Ecosystem-wide",
     "compare": "Compare sites",
-    "matrix": "Capability matrix",
+    "matrix": "Capability Explorer",
     "capability": "Capability",
     "siteState": "Site state",
     "siteFact": "Current Site fact",
@@ -37,6 +37,8 @@
     "coverageHelp": "Share of the eligible population with known facts."
   },
   "siteSecurity": {
+    "lastObserved": "Last observed",
+    "secureTransport": "Secure Transport",
     "navigation": "Security views",
     "currentTarget": "Current Target",
     "scope": "Technical security observations for this target do not assess site content safety or overall trustworthiness.",
@@ -60,12 +62,12 @@
     "headerHint": "Missing means the header was not observed in this response.",
     "collectorSummary": "Observation details",
     "rawHeaders": "Raw HTTP headers",
-    "portCheck": "Port check",
+    "portCheck": "Port Observation",
     "portHint": "An open port is a reachable service, not evidence of a vulnerability.",
-    "wafCanary": "WAF canary",
-    "wafHint": "Blocking may come from a proxy, application or middleware. Canary behavior does not prove a WAF is installed.",
+    "wafCanary": "Request Behavior Check",
+    "wafHint": "Compares expected and observed responses; it does not determine whether a WAF is enabled.",
     "probeMetadata": "Collection details",
-    "cases": "Canary cases and collection details",
+    "cases": "Request cases and observation details",
     "attentionTitle": "Attention",
     "views": {
       "overview": "Overview",
@@ -189,7 +191,7 @@
     "identity": "Certificate identity",
     "observedCount": "observed",
     "checkedCount": "ports checked",
-    "expectedMatched": "expected blocking behaviors matched",
+    "expectedMatched": "expected behaviors matched",
     "validation": {
       "content_type_not_text_plain": "The response is not plain text",
       "body_empty": "The file is empty",

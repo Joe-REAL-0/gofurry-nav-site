@@ -127,6 +127,13 @@ longer renders relation/infrastructure dumps. `site-detail-refinement.spec.ts`
 adds focused UI assertions and optional temporary review screenshots through the
 same Functional fixture. Debt stays zero; full manual review precedes P8 goldens.
 
+First-round Site Detail completion uses shared acrylic Plane A/B/C and borderless
+content surfaces, spaced 500ms hover rows, an Identity Note and title-row
+Observation/Security subnav. Overview/Observation composition remains intact;
+Security and Insights preserve all runtime and evidence contracts. This supersedes
+earlier card/divider appearance only. See the frontend contract. Stop before P8
+or a second round; final Visual work still needs separate authorization.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing

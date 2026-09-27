@@ -1,9 +1,9 @@
 {
   "siteIntelligence": {
-    "scope": "站点级观测，不受当前目标切换影响。",
-    "ecosystem": "网站生态",
+    "scope": "站点级生态数据 · 不受当前目标切换影响。",
+    "ecosystem": "全站生态",
     "compare": "站点对比",
-    "matrix": "能力矩阵",
+    "matrix": "能力浏览",
     "capability": "能力",
     "siteState": "站点状态",
     "siteFact": "当前站点事实",
@@ -37,6 +37,8 @@
     "coverageHelp": "符合统计条件的总体中，已有已知事实的比例。"
   },
   "siteSecurity": {
+    "lastObserved": "最近观测",
+    "secureTransport": "传输与证书",
     "navigation": "安全二级导航",
     "currentTarget": "当前目标",
     "scope": "当前目标的技术安全观测，不代表网站内容安全或整体可信度评价。",
@@ -60,12 +62,12 @@
     "headerHint": "缺失仅表示本次响应未观测到该 Header。",
     "collectorSummary": "观测详情",
     "rawHeaders": "查看原始 HTTP Headers",
-    "portCheck": "端口探测",
+    "portCheck": "端口观测",
     "portHint": "开放端口表示服务可达，不等同于存在漏洞。",
-    "wafCanary": "WAF Canary",
-    "wafHint": "阻断可能来自代理、应用或中间件，Canary 行为不能证明已部署 WAF。",
+    "wafCanary": "请求行为校验",
+    "wafHint": "仅比较预期与实际响应行为，不用于判断是否启用了 WAF。",
     "probeMetadata": "采集详情",
-    "cases": "Canary 用例与采集详情",
+    "cases": "请求用例与观测详情",
     "attentionTitle": "需要关注",
     "views": {
       "overview": "总览",
@@ -189,7 +191,7 @@
     "identity": "证书身份",
     "observedCount": "已观测",
     "checkedCount": "个端口已检查",
-    "expectedMatched": "项预期阻断行为匹配",
+    "expectedMatched": "项预期行为匹配",
     "validation": {
       "content_type_not_text_plain": "响应不是纯文本格式",
       "body_empty": "文件内容为空",

@@ -1,5 +1,5 @@
 <template>
-  <section data-site-health-strip :aria-label="t('siteDetail.health')" :aria-busy="pending" class="site-detail-health grid grid-cols-2 lg:grid-cols-6">
+  <section data-site-health-strip :aria-label="t('siteDetail.health')" :aria-busy="pending" class="site-detail-health grid grid-cols-2 gap-2 lg:grid-cols-6">
     <div v-for="item in presentation.health" :key="item.key" :data-site-health="item.key" class="site-detail-health__item min-w-0">
       <div class="site-detail-label">{{ item.label }}</div>
       <div class="site-detail-health__value break-words" :data-tone="item.tone">{{ item.value }}</div>

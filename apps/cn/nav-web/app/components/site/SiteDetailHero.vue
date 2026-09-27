@@ -1,5 +1,5 @@
 <template>
-  <header data-site-hero class="site-detail-hero site-detail-surface grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 sm:gap-x-5">
+  <header data-site-hero class="site-detail-hero grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2 sm:gap-x-5">
     <ManagedAssetImage :object-key="site?.icon || undefined" :alt="name" class="site-detail-hero__icon row-span-4 object-contain" />
     <div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
       <h1 class="site-detail-hero__name min-w-0 break-words">{{ name }}</h1>

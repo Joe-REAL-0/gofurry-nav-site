@@ -4,7 +4,7 @@
     <SiteTargetSelector :targets="presentation.targetList" :selected="selected" :display-target="presentation.target" @select="emit('select', $event)" />
     <p v-if="pending" data-site-target-pending role="status" class="site-detail-note mt-3 break-words">{{ t('siteDetail.loadingTarget', { target: selected }) }}</p>
     <div :aria-busy="pending" class="mt-3 min-w-0">
-      <dl class="grid min-w-0 gap-x-5 sm:grid-cols-3 xl:grid-cols-1">
+      <dl class="grid min-w-0 gap-x-5 gap-y-1.5 sm:grid-cols-3 xl:grid-cols-1">
         <div v-for="protocol in presentation.protocolStates" :key="protocol.protocol" :data-site-protocol="protocol.protocol" class="site-detail-protocol-row flex min-w-0 items-baseline justify-between gap-2">
           <dt class="site-detail-label">{{ protocol.label }}</dt>
           <dd class="site-detail-protocol-value flex flex-wrap justify-end gap-x-2 text-right">

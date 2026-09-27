@@ -770,3 +770,97 @@ analysis; long values/disclosures, mobile wrapping and Light/Dark readability.
 Automatic checks and agent screenshot inspection do not replace this acceptance.
 Task B engineering exit criteria are satisfied. Full acceptance and entry to P8
 still require that maintainer visual confirmation; P8 has not been started.
+
+## First-round visual composition completion (2026-09-27)
+
+This round starts from the completed Overview and Observation composition work
+on `dev`. It intentionally replaces the earlier card-border/divider appearance
+descriptions, including Task B's four Insights surfaces, while preserving the
+P1–P6 runtime and evidence contracts. It is neither P8 nor a second design round.
+
+### Material and composition
+
+The existing Site Detail Less owner supplies shared acrylic Plane A/B/C,
+hover/selected and 500ms motion tokens. Content surfaces and facts/matrix/list
+rows lose their perimeter borders and decorative dividers. Rows use compact
+padding, small corners and 4–6px gaps; selection remains immediate. Focus rings,
+the primary active indicator, actual relationship/chart lines and necessary
+Target control affordances remain.
+
+- Hero and six Health values share one borderless Identity Note. Its inset CSS
+  dashed separator has three aria-hidden perforations. Tags are lighter and the
+  Health grid has no rules. Certificate thresholds and Not observed are intact.
+- Target Context, Overview composites/change cards and all five Observation
+  views consume the same material family. Their existing content composition,
+  evidence order and ownership remain intact.
+- Observation and Security own their H2 and finite secondary nav in one row,
+  including mobile. Overflow stays inside the scrollbar-hidden nav; existing
+  tab roles, focus/keyboard behavior and route helpers are unchanged.
+- Security retains four evidence-only views: one six-summary plane; one
+  TLS/verification/validity composite plus identity and crypto disclosures;
+  name/state-over-value header evidence plus security.txt; compact Port
+  Observation and Request Behavior Check. Metadata and cases remain native
+  disclosures. Open ports, missing headers, OCSP/SCT and matching requests imply
+  no score, safety conclusion or WAF deployment verdict.
+- Insights has an unboxed workspace header, seven-row Capability Explorer,
+  one primary Analysis plane and an unboxed full Recent Change Stream. Retry is
+  inline. Adoption/coverage/date stay neutral and the adoption-only chart uses
+  the info accent with faint grid/area, borderless tooltip and no legend.
+
+Only Security/Insights locale namespaces change, in both zh/en; new icons use
+the existing Phosphor package. The pure Security presentation owner exposes
+actual TLS version and evidence tones and puts configured ports in metadata
+while showing skipped count in the compact summary. Certificate normalization
+and all health/Attention interpretation remain unchanged.
+
+### Runtime, tests and protected inventory
+
+All existing runtime hooks are retained. Page, Hero, Target selector and
+secondary-nav business scripts are unchanged. No Collector/Backend, API,
+route-state, service/composable, SSR/SEO, request accounting, Site/Target identity,
+history/trend lazy/cache/race/retry owner is modified.
+
+The existing refinement Browser owner now has 23 cases. It checks computed
+translucency and borderless content, Identity Note, title/nav geometry,
+responsive keyboard scrolling, immediate selection, spaced rows, neutral
+Security evidence, the single Insights analysis plane and inline retry request
+isolation. Short Chinese nav labels fit at 390px; an additional 320px viewport
+exercises actual keyboard-driven overflow in both locales. Three existing
+Browser owners update only superseded appearance/copy expectations. Existing
+request, failure, keyboard, race, chart-state and SEO assertions are retained.
+Six Unit cases cover actual TLS presentation, compact port evidence and
+security.txt state tones. Nuxt runtime tests are unchanged.
+
+No policy updater is run. Site appearance/arbitrary/raw debt stays **0/0/0**;
+deep selector and legacy dark stay **0**. Ambient raw **75** and #108 important
+**5**, debt/suppression manifests and the lockfile are unchanged. All **118
+accepted Visual PNGs** and their source/configuration inventory are unchanged.
+No final Site Detail golden is created or updated.
+
+Frozen install, lint, stylelint, policy tooling **75**, exact style policy, Unit
+**243**, Nuxt **20**, combined Vitest **263**, typecheck, Insights semantics, SEO
+recovery, production build and Chromium installation have passed locally.
+The final `pnpm run test:browser --workers=1` run passed **593/593 in 14.6 minutes**,
+with zero failures, skips or retries, including all P1–P6 Site owners and the 23
+refinement cases. Remote CI and pinned Linux Visual comparison remain unverified
+for this change; local results are not remote acceptance.
+
+### Visual review and exit boundary
+
+The existing optional Functional screenshot export produces **68 temporary
+fixture screenshots** outside the repository: Overview, all five Observation
+views, all four Security views and Insights across 390/768/1440 × Light/Dark,
+plus zh/en populated Attention. A local gallery links those images; it does not
+generate screenshots or introduce a runner. Agent inspection does not replace
+maintainer approval.
+
+Maintainer review remains pending for 1440 Light/Dark, 768 Light and 390
+Light/Dark across all workspaces. Check material consistency, Identity Note and
+perforation restraint, absence of decorative outlines, row spacing/hover,
+same-row mobile nav, Security neutrality, long values/disclosures and
+Explorer + Analysis hierarchy. Do not enter P8, begin a second round or update
+final goldens as part of this task.
+
+First-round engineering exit criteria are satisfied. The full exit criteria
+remain open only for maintainer visual acceptance; no approval is inferred from
+automated checks or agent screenshot inspection.
