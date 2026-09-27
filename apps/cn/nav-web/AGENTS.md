@@ -193,9 +193,12 @@ Browser tests use the real production Nitro build, deterministic local upstream
 and exact network/error accounting. Each worker owns stable servers; each test
 owns fresh mutable scenario/gates. Playwright owns contexts/pages. Release gates
 unconditionally; do not use `unrouteAll(wait)` or fixed sleeps for readiness.
-Chromium only, retries zero, CI workers one per shard. All three Browser shards
-are required; the stable `nav-web` check also requires Visual and Docker. Use `--workers=1` locally for the
-complete acceptance run; focused smoke/regression commands remain available.
+Chromium only, retries zero, CI workers one. Daily dev/PR `nav-web` requires Fast
+static/unit/Nuxt/build plus the seven Smoke owners in one job. Full runs on main,
+manual dispatch and nightly dev through three explicit inventory-checked groups;
+deployment image verification runs on main/manual Full only. Visual is manual-only.
+Use `--workers=1` locally; do not run Full locally merely to validate CI wiring.
+See the testing guide's #134 tier contract and measured acceptance record.
 
 `assertHeroHydration` is the sole narrow mobile Home Footer-debt check. It defaults
 to `/`; only the English Home fixture explicitly opts into `/en`. Require one
@@ -212,9 +215,10 @@ Insights/SEO Contract Guards. External/cloud acceptance requires explicit scope
 and credentials and is not a normal gate.
 
 Visual is separate from Functional Browser. Only the current digest-pinned Linux
-Playwright image with Node 24 is authoritative. CI builds once in that image;
-Browser and Visual consume the same commit's archived output in matching containers
-and only compare. Docker separately builds the deployment image with its original context.
+Playwright image with Node 24 is authoritative. Fast builds and runs Smoke in one
+job. Full archives one build for all three groups, pinning their checkout to its
+resolved source SHA (nightly resolves dev once). Manual Visual builds and compares
+in its own pinned job. Docker separately verifies main/manual Full deployment images.
 Never update snapshots to make a test pass. Approved visual changes require
 explicit authorization, pinned generation and maintainer review. Treat package,
 image digest, browser revision and baselines as one upgrade unit.

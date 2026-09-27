@@ -1154,8 +1154,9 @@ Browser tests and external acceptance retain independent scope.
 
 P3.2.1 establishes a Chromium-only Playwright Test gate against the production
 Nitro build, never `nuxt dev`. CI MUST build successfully before running
-`test:browser`; retries are zero and each of the three CI shards has one worker.
-All shards MUST run, without reducing the selected suite or enabling retries.
+Browser tests; retries are zero and each CI job has one worker. #134 separates
+daily Smoke from Full Regression; Full MUST run all three explicitly inventoried
+groups without reducing coverage or enabling retries/fullyParallel.
 Domain fixtures own worker-scoped production servers, close them at teardown,
 and reset mutable state for every case. Playwright owns per-test browser contexts
 and pages; do not introduce a global `webServer` or order-dependent serial suites.
@@ -1201,15 +1202,30 @@ Authoritative Visual CI MUST use the official Playwright image matching the
 package version, pinned by a verified immutable digest, with `--ipc=host` and
 Node 24. The exact identity and local commands live in
 [testing guidance](../docs/frontend/testing.md#visual-runner-and-pinned-environment-p331).
-For Nav Web changes, `nav-web-build` MUST pass policy/static/unit/type checks and
-build inside this pinned container. It archives `.output` with its symlinks and
-permissions under the current commit SHA. Separate Browser shards and
-`nav-web-visual` MUST install their frozen dependencies and restore that same-run
-artifact inside the identical pinned image, then run their full suites in parallel.
-They MUST NOT reuse output from a different commit/environment, install browsers,
-or update snapshots. Docker retains an independent real image build. The stable
-`nav-web` check MUST fail unless the build, every Browser shard, Visual and Docker
-all succeed. Failure artifacts retain separate reports/results for seven days.
+The #134 CI tiers supersede the earlier every-push Browser/Visual/Image topology:
+
+- Fast (`checks.yml`) runs for selected dev pushes and PRs: frozen install, lint,
+  stylelint, policy tests/scan, Unit/Nuxt, typecheck, semantic/SEO guards, production
+  build and all seven Smoke owners in one pinned job. The stable `nav-web` gate
+  depends only on change detection and `nav-web-fast`; it MUST report their failure.
+- Full (`nav-web-full.yml`) runs on main push, manual selected ref and nightly dev.
+  Build once, archive `.output` preserving symlinks/permissions, then restore it
+  inside the identical pinned image in three fixed groups. The explicit lists in
+  `.github/scripts/nav-web-regression-groups.mjs` MUST cover every regression spec
+  exactly once and fail on stale/missing/duplicate membership. Resolve scheduled
+  dev HEAD once and pin all consumer checkouts/artifacts to that SHA. No numerical
+  sharding or dynamic bin-packing. Its final gate requires every group and build;
+  deployment image verification is required on main/manual and skipped on nightly.
+- Visual (`nav-web-visual.yml`) is manual-only, building and comparing all existing
+  specs in one pinned job with `GOFURRY_VISUAL_ENV=pinned`. It MUST NOT run on daily
+  pushes/PRs/main/nightly, install browsers or update snapshots.
+
+All hosted runners use `ubuntu-24.04`; Playwright image/package identity is unchanged.
+Docs-only selection remains cheap; workflow/script edits remain conservative.
+Failure reports/results retain seven days; only Full's one-day production build
+artifact is shared between jobs. Fast's 3–5 minute feedback is a measured target,
+not permission to skip checks. Full/Visual remote acceptance remains separate
+from Fast and from maintainer visual approval. See [CI tiers](../docs/frontend/testing.md#ci-tiers-134).
 
 Baseline update is an explicit visual-change review action, not a test-fix
 command. Agents MUST NOT update baselines just to make CI green. Updates require

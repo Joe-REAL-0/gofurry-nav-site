@@ -83,7 +83,7 @@ and introduces no newer frontend dependency versions.
 `.github/scripts/detect-changes.mjs` owns the tested dependency matrix. Standalone
 doctor/policy/formatting-tool changes run tooling checks without all Go/database
 suites; frontend README/AGENTS/docs changes do not run Browser/Visual. Runtime,
-dependency, test, Docker and Task changes retain the applicable complete gates.
+dependency, test, Docker and Task changes select the applicable daily gates.
 Admin React changes still rebuild/test the Go embed owner, but do not by themselves
 start PostgreSQL integration tests. SQL contracts/migrations retain their explicit
 consumer matrix, including Admin; unknown tooling changes remain conservative.
@@ -91,9 +91,11 @@ consumer matrix, including Admin; unknown tooling changes remain conservative.
 Push checks run on `dev` and `main`; other branches use pull requests. If a branch
 already has an open PR, its PR run owns validation and the duplicate push skips
 heavy jobs. Failure to query PRs falls back to running push checks. Superseded runs
-are still cancelled. Nav Web's pinned build feeds three one-worker Browser shards
-and Visual, alongside the independently cached Docker build. The stable `nav-web`
-check requires every frontend gate; see [frontend testing](frontend/testing.md).
+are still cancelled. Nav Web dev/PR feedback uses `nav-web-fast` (all static/unit/
+Nuxt checks, production build and Smoke in one pinned job), behind the stable
+`nav-web` gate. Full Regression runs on main/manual/nightly dev using three fixed
+groups; deployment-image verification is main/manual only. Visual comparison is
+an explicit manual workflow. See [frontend testing](frontend/testing.md#ci-tiers-134).
 
 ## Configuration
 

@@ -23,7 +23,7 @@ test('frontend documentation does not start builds or browser suites', () => {
   }
 })
 
-test('Nav Web code, locks, tests and Docker keep the complete frontend gate', () => {
+test('Nav Web code, locks, tests and Docker select the daily Fast frontend gate', () => {
   for (const path of ['app/pages/index.vue', 'pnpm-lock.yaml', 'tests/browser/smoke/example.spec.ts', 'Dockerfile', 'app/content/example.md']) {
     const gates = detectChanges([`apps/cn/nav-web/${path}`])
     assert.equal(gates.nav_web, true, path)
@@ -54,7 +54,7 @@ test('database ownership includes Admin and the correct consumers', () => {
 })
 
 test('Task and CI changes retain broad build coverage; SQL tooling remains conservative', () => {
-  for (const path of ['Taskfile.yml', '.github/workflows/checks.yml', '.github/scripts/detect-changes.mjs']) {
+  for (const path of ['Taskfile.yml', '.github/workflows/checks.yml', '.github/workflows/nav-web-full.yml', '.github/workflows/nav-web-visual.yml', '.github/workflows/future.yaml', '.github/scripts/detect-changes.mjs', '.github/scripts/nav-web-regression-groups.mjs']) {
     const gates = detectChanges([path])
     assert.equal(gates.modules.length, 6)
     assert.equal(gates.policy && gates.nav_web, true)

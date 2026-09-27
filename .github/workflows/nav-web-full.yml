@@ -1,0 +1,159 @@
+name: nav-web-full
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '17 20 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-web-full-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nav-web-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      source_sha: ${{ steps.source.outputs.sha }}
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Resolve nightly dev once; every consumer checks out this exact commit.
+          ref: ${{ github.event_name == 'schedule' && 'dev' || github.ref }}
+      - name: Record build source
+        id: source
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/cn/nav-web/package.json
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
+      - name: Validate regression inventory
+        run: node --test .github/scripts/nav-web-regression-groups.test.mjs
+      - working-directory: apps/cn/nav-web
+        run: pnpm install --frozen-lockfile
+      - name: Build once
+        working-directory: apps/cn/nav-web
+        run: pnpm run build
+      - name: Archive the pinned Linux build
+        working-directory: apps/cn/nav-web
+        run: tar -czf "$RUNNER_TEMP/nav-web-output.tar.gz" .output
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-full-output-${{ steps.source.outputs.sha }}
+          path: ${{ runner.temp }}/nav-web-output.tar.gz
+          overwrite: true
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
+
+  nav-web-full:
+    name: nav-web-full / ${{ matrix.group }}
+    needs: nav-web-build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [games, sites-other, insights-nav]
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.nav-web-build.outputs.source_sha }}
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/cn/nav-web/package.json
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
+      - working-directory: apps/cn/nav-web
+        run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: nav-web-full-output-${{ needs.nav-web-build.outputs.source_sha }}
+          path: ${{ runner.temp }}
+      - name: Restore this run's production build
+        working-directory: apps/cn/nav-web
+        run: tar -xzf "$RUNNER_TEMP/nav-web-output.tar.gz"
+      - name: Full regression group
+        id: regression
+        working-directory: apps/cn/nav-web
+        env:
+          REGRESSION_GROUP: ${{ matrix.group }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node "$GITHUB_WORKSPACE/.github/scripts/nav-web-regression-groups.mjs" "$REGRESSION_GROUP" > "$RUNNER_TEMP/regression-files"
+          mapfile -t specs < "$RUNNER_TEMP/regression-files"
+          pnpm exec playwright test "${specs[@]}" --workers=1
+      - name: Group failure artifacts
+        if: ${{ failure() && steps.regression.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-full-failure-${{ matrix.group }}
+          overwrite: true
+          path: |
+            apps/cn/nav-web/playwright-report/
+            apps/cn/nav-web/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
+  nav-web-image:
+    needs: nav-web-build
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.nav-web-build.outputs.source_sha }}
+      - uses: docker/setup-buildx-action@v4
+      - name: Build deployment image
+        uses: docker/build-push-action@v7
+        with:
+          context: apps/cn/nav-web
+          push: false
+          load: true
+          tags: gofurry-nav-web:ci
+          cache-from: type=gha,scope=nav-web
+          cache-to: type=gha,scope=nav-web,mode=max
+
+  nav-web-full-gate:
+    needs: [nav-web-build, nav-web-full, nav-web-image]
+    if: ${{ always() && !cancelled() }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require build, all groups and the applicable image gate
+        env:
+          EVENT: ${{ github.event_name }}
+          BUILD: ${{ needs.nav-web-build.result }}
+          REGRESSION: ${{ needs.nav-web-full.result }}
+          IMAGE: ${{ needs.nav-web-image.result }}
+        run: |
+          test "$BUILD" = success
+          test "$REGRESSION" = success
+          if [ "$EVENT" = schedule ]; then
+            test "$IMAGE" = skipped
+          else
+            test "$IMAGE" = success
+          fi

@@ -1,0 +1,52 @@
+name: nav-web-visual
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nav-web-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  nav-web-visual:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
+      options: --ipc=host
+    env:
+      GOFURRY_VISUAL_ENV: pinned
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: apps/cn/nav-web/package.json
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
+      - working-directory: apps/cn/nav-web
+        run: pnpm install --frozen-lockfile
+      - name: Build
+        working-directory: apps/cn/nav-web
+        run: pnpm run build
+      - name: Compare all Visual baselines
+        id: visual
+        working-directory: apps/cn/nav-web
+        run: pnpm run test:visual
+      - name: Visual failure artifacts
+        if: ${{ failure() && steps.visual.outcome == 'failure' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: nav-web-visual-failure
+          overwrite: true
+          path: |
+            apps/cn/nav-web/playwright-visual-report/
+            apps/cn/nav-web/visual-test-results/
+          retention-days: 7
+          if-no-files-found: warn

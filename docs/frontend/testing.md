@@ -19,6 +19,57 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## CI tiers (#134)
+
+| Tier | Trigger | Required work |
+| --- | --- | --- |
+| Fast | Selected `dev` pushes / PRs | Frozen install, lint/stylelint, policy tests/scan, Unit/Nuxt, typecheck, Insights/SEO guards, production build, Browser Smoke |
+| Full | `main` push / manual selected ref / nightly `dev` | One build, three fixed regression groups; deployment image on main/manual only |
+| Visual | Manual selected ref only | One pinned build and the complete Visual comparison suite; no baseline updates |
+
+Fast uses one `nav-web-fast` job, so Smoke repeats no setup/install/artifact restore.
+The stable `nav-web` aggregate requires only change selection and Fast. Repository
+policy remains its own gate and can run concurrently. Normal dev/PR changes do not
+run Full, Visual or deployment image verification. The target is 3–5 minutes of
+developer feedback; record actual timing rather than weakening checks to hit it.
+Docs-only changes retain their existing inexpensive selection.
+
+Smoke keeps game-detail, hero, nav-home-locales, resource-routing and static-locales,
+plus site-detail and games-search: seven owners. The two new cases only prove SSR/
+hydration/core content and one basic search path, reusing strict deterministic
+fixtures. Detailed interactions, accounting, failures and Visual checks stay in
+their existing owners. `pnpm run test:browser:smoke --workers=1` runs this tier locally
+after a production build; do not use the dev fixture for CI acceptance.
+
+Full uses `.github/scripts/nav-web-regression-groups.mjs` as the authoritative
+explicit inventory: Games 12 specs (~298s supplied test-time estimate), Sites + Other
+15 (~277s), Insights + Nav 18 (~252s). These are planning estimates, not measured
+new job durations. The inventory guard rejects unassigned/new, missing and duplicate
+specs. Workflows run the CLI-produced file list with one worker; no `--shard`,
+automatic filename grouping, `fullyParallel` or retries. Reclassify new specs in
+that owner and run `node --test .github/scripts/nav-web-regression-groups.test.mjs`.
+
+Nightly is scheduled at 20:17 UTC, resolves `dev` once and exports the checkout SHA.
+All groups restore that run's one-day `.output` archive and check out that exact
+SHA; a newer dev push cannot mix fixtures and output. Manual uses the selected
+workflow ref, with no separate custom ref input. Main/manual Full also builds the
+real deployment image with the existing Buildx/GHA cache; nightly skips it. The
+final Full gate verifies the expected image success/skip and all three groups.
+
+Per [GitHub's trigger rules](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), new manual/scheduled workflows must first exist on the repository's default branch
+(`main`) to receive those GitHub events. This is an enablement prerequisite, not
+authorization to merge a release or change the default branch. Once enabled:
+
+```text
+gh workflow run nav-web-full.yml --ref dev
+gh workflow run nav-web-visual.yml --ref dev
+```
+
+All relevant hosted runners are pinned to Ubuntu 24.04; the Playwright container
+digest stays unchanged. Fast Smoke, each Full group and Visual retain separate
+failure-only artifacts for seven days. No accepted PNG changes accompany #134.
+Results and before/after duration live in the [#134 acceptance record](../acceptance/issue-134-frontend-ci.md).
+
 ## Choose the test owner
 
 | Category | Owner / command | Boundary |
@@ -443,13 +494,12 @@ The image contains Node 24 and browser/system dependencies; CI still explicitly
 selects Node 24 with `actions/setup-node@v6`. The [Playwright Docker guidance](https://playwright.dev/docs/docker)
 describes the matching-package/image requirement and `--ipc=host`.
 
-`nav-web-build` runs the cheap checks and builds once using that tag **and**
-immutable digest with Node 24 and `--ipc=host`. Its same-run, commit-named tar
-artifact preserves `.output` symlinks/permissions. Three Browser shards and
-`nav-web-visual` restore that artifact in the identical image after frozen installs;
-Visual also sets `GOFURRY_VISUAL_ENV=pinned`. They run in parallel without another
-build or browser installation. On failure, shard-specific Browser artifacts and
-`nav-web-visual-failure` retain the distinct reports/results for seven days.
+All three CI tiers use that tag **and** immutable digest with Node 24 and
+`--ipc=host`. Fast builds and runs Smoke in one job. Full's same-run, source-named
+tar preserves `.output` symlinks/permissions for its three regression groups.
+Manual Visual builds and compares in its own job with `GOFURRY_VISUAL_ENV=pinned`.
+No tier installs browsers or restores another run's output. See [CI tiers](#ci-tiers-134)
+for triggers, group inventory and failure artifacts.
 
 The environment sentinel uses a real Chromium page to check browser type,
 viewport, DPR, language, timezone, reduced motion and light theme; CI/pinned runs
@@ -1213,19 +1263,15 @@ uses two complete runs to expose state/teardown leaks. Do not compete with a
 simultaneous resource-heavy Visual build. For an uncontainerized Linux workstation,
 install Chromium with `pnpm exec playwright install --with-deps chromium`.
 
-`nav-web-build` waits for repository policy, then runs separate **Unit tests** and
-**Nuxt tests** steps before typecheck/contract guards/build. Its pinned Linux build
-is shared by all three **Browser tests** shards (`--shard=1/3`, `2/3`, `3/3`, each
-with `--workers=1`) and Visual. File-level sharding preserves all cases and zero
-retries. `nav-web-image` runs alongside those tests and independently builds the
-actual Docker deployment image with cached layers, covering dependency-only frozen
-install followed by source copy and fresh Nuxt preparation. A full-checkout build
-alone does not cover that ordering; image context remains `apps/cn/nav-web`.
-The original `nav-web` check now aggregates build, all Browser shards, Visual and
-Docker: failed or unexpectedly skipped dependencies cannot make it pass.
-After an authorized push verify every selected job actually passed; local results
-or skipped jobs are not remote acceptance. When instructed not to push, report
-remote gate acceptance as unverified.
+The commands above are an explicit full local acceptance run, not the daily CI
+default. #134's [three tiers](#ci-tiers-134) keep daily Fast, Full regression and
+manual Visual independently visible. The main/manual Full image check still covers
+dependency-only frozen install followed by source copy and fresh Nuxt preparation;
+a full-checkout build alone does not cover that ordering. Image context remains
+`apps/cn/nav-web`. Gates fail on required dependencies that fail or unexpectedly skip.
+After an authorized push/dispatch verify the selected tier actually passed; Fast
+success, local results or skipped jobs are not Full/Visual acceptance. When remote
+execution is unavailable or not authorized, report that tier as unverified.
 
 Ordinary test-only migrations with unchanged production/runtime and smoke
 behavior need no manual UI review once guards pass. Creating or changing golden

@@ -41,7 +41,10 @@ var productionTooling = []string{
 	"sqlc.yaml",
 	".github/workflows/checks.yml",
 	".github/workflows/security.yml",
+	".github/workflows/nav-web-full.yml",
+	".github/workflows/nav-web-visual.yml",
 	".github/scripts/detect-changes.mjs",
+	".github/scripts/nav-web-regression-groups.mjs",
 }
 
 var archiveToolingPath = regexp.MustCompile(`(?i)(^|[\s"'/\\])(legacy|experimental|third-party|apps[/\\]intl)([\s"'/\\]|$)`)

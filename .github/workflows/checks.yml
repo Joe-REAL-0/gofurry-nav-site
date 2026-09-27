@@ -14,8 +14,7 @@ on:
       - 'Taskfile.yml'
       - 'docs/**'
       - 'ops/**'
-      - '.github/workflows/checks.yml'
-      - '.github/workflows/security.yml'
+      - '.github/workflows/**'
       - '.github/scripts/**'
   pull_request:
     paths:
@@ -29,8 +28,7 @@ on:
       - 'Taskfile.yml'
       - 'docs/**'
       - 'ops/**'
-      - '.github/workflows/checks.yml'
-      - '.github/workflows/security.yml'
+      - '.github/workflows/**'
       - '.github/scripts/**'
 
 permissions:
@@ -46,7 +44,7 @@ concurrency:
 
 jobs:
   detect-changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       modules: ${{ steps.detect.outputs.modules }}
       has_modules: ${{ steps.detect.outputs.has_modules }}
@@ -113,7 +111,7 @@ jobs:
   production-go:
     needs: detect-changes
     if: needs.detect-changes.outputs.has_modules == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -163,11 +161,11 @@ jobs:
         working-directory: ${{ matrix.module }}
         run: go build ./...
 
-  nav-web-build:
-    needs: [detect-changes, repository-policy]
-    if: needs.detect-changes.outputs.nav_web == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+  nav-web-fast:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.nav_web == 'true' && (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
       options: --ipc=host
@@ -216,58 +214,15 @@ jobs:
       - name: Build
         working-directory: apps/cn/nav-web
         run: pnpm run build
-      - name: Archive the pinned Linux build
+      - name: Browser Smoke
+        id: smoke
         working-directory: apps/cn/nav-web
-        run: tar -czf "$RUNNER_TEMP/nav-web-output.tar.gz" .output
-      - uses: actions/upload-artifact@v7
-        with:
-          name: nav-web-output-${{ github.sha }}
-          path: ${{ runner.temp }}/nav-web-output.tar.gz
-          overwrite: true
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
-
-  nav-web-browser:
-    needs: nav-web-build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    container:
-      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
-      options: --ipc=host
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: apps/cn/nav-web/package.json
-          run_install: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
-      - working-directory: apps/cn/nav-web
-        run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v8
-        with:
-          name: nav-web-output-${{ github.sha }}
-          path: ${{ runner.temp }}
-      - name: Restore the pinned Linux build
-        working-directory: apps/cn/nav-web
-        run: tar -xzf "$RUNNER_TEMP/nav-web-output.tar.gz"
-      - name: Browser tests
-        id: browser-tests
-        working-directory: apps/cn/nav-web
-        run: pnpm run test:browser --shard=${{ matrix.shard }}/3 --workers=1
-      - name: Browser failure artifacts
-        if: ${{ failure() && steps.browser-tests.outcome == 'failure' }}
+        run: pnpm run test:browser:smoke --workers=1
+      - name: Smoke failure artifacts
+        if: ${{ failure() && steps.smoke.outcome == 'failure' }}
         uses: actions/upload-artifact@v7
         with:
-          name: nav-web-browser-failure-${{ matrix.shard }}
+          name: nav-web-smoke-failure
           overwrite: true
           path: |
             apps/cn/nav-web/playwright-report/
@@ -275,92 +230,24 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  nav-web-visual:
-    needs: nav-web-build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    container:
-      # Verified against the MCR manifest list; upgrade with Playwright and baselines.
-      image: mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948
-      options: --ipc=host
-    env:
-      GOFURRY_VISUAL_ENV: pinned
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-        with:
-          package_json_file: apps/cn/nav-web/package.json
-          run_install: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: apps/cn/nav-web/pnpm-lock.yaml
-      - working-directory: apps/cn/nav-web
-        run: pnpm install --frozen-lockfile
-      - uses: actions/download-artifact@v8
-        with:
-          name: nav-web-output-${{ github.sha }}
-          path: ${{ runner.temp }}
-      - name: Restore the pinned Linux build
-        working-directory: apps/cn/nav-web
-        run: tar -xzf "$RUNNER_TEMP/nav-web-output.tar.gz"
-      - name: Visual tests
-        working-directory: apps/cn/nav-web
-        run: pnpm run test:visual
-      - name: Visual failure artifacts
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: nav-web-visual-failure
-          overwrite: true
-          path: |
-            apps/cn/nav-web/playwright-visual-report/
-            apps/cn/nav-web/visual-test-results/
-          retention-days: 7
-          if-no-files-found: warn
-
-  nav-web-image:
-    needs: nav-web-build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v6
-      - uses: docker/setup-buildx-action@v4
-      - name: Build deployment image
-        uses: docker/build-push-action@v7
-        with:
-          context: apps/cn/nav-web
-          push: false
-          load: true
-          tags: gofurry-nav-web:ci
-          cache-from: type=gha,scope=nav-web
-          cache-to: type=gha,scope=nav-web,mode=max
-
-  # Keep the original check name as a gate for every frontend result.
+  # Preserve the externally expected daily frontend check name.
   nav-web:
-    needs: [detect-changes, nav-web-build, nav-web-browser, nav-web-visual, nav-web-image]
-    if: ${{ always() && !cancelled() && (needs.detect-changes.result != 'success' || needs.detect-changes.outputs.nav_web == 'true') }}
-    runs-on: ubuntu-latest
+    needs: [detect-changes, nav-web-fast]
+    if: ${{ always() && !cancelled() && (github.event_name == 'pull_request' || github.ref == 'refs/heads/dev') && (needs.detect-changes.result != 'success' || needs.detect-changes.outputs.nav_web == 'true') }}
+    runs-on: ubuntu-24.04
     steps:
-      - name: Require every frontend gate
+      - name: Require the Fast frontend gate
         env:
           DETECT: ${{ needs.detect-changes.result }}
-          BUILD: ${{ needs.nav-web-build.result }}
-          BROWSER: ${{ needs.nav-web-browser.result }}
-          VISUAL: ${{ needs.nav-web-visual.result }}
-          IMAGE: ${{ needs.nav-web-image.result }}
+          FAST: ${{ needs.nav-web-fast.result }}
         run: |
           test "$DETECT" = success
-          test "$BUILD" = success
-          test "$BROWSER" = success
-          test "$VISUAL" = success
-          test "$IMAGE" = success
+          test "$FAST" = success
 
   repository-policy:
     needs: detect-changes
     if: needs.detect-changes.outputs.policy == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -378,6 +265,8 @@ jobs:
           task --summary build build:admin
       - name: Test change selection
         run: node --test .github/scripts/detect-changes.test.mjs
+      - name: Test regression group inventory
+        run: node --test .github/scripts/nav-web-regression-groups.test.mjs
       - name: Tooling contract tests
         working-directory: tools
         run: go test ./check-production-policy ./check-sqlc ./check-gofmt
@@ -387,7 +276,7 @@ jobs:
   active-vulnerability:
     needs: detect-changes
     if: needs.detect-changes.outputs.vulnerability == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -407,7 +296,7 @@ jobs:
   foundation:
     needs: detect-changes
     if: needs.detect-changes.outputs.foundation == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:18
@@ -449,7 +338,7 @@ jobs:
   postgres-integration:
     needs: detect-changes
     if: needs.detect-changes.outputs.game_integration == 'true' || needs.detect-changes.outputs.nav_integration == 'true' || needs.detect-changes.outputs.admin_integration == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:18

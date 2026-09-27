@@ -10,7 +10,7 @@ const documentation = path => /(^|\/)(README(?:_[\w-]+)?\.md|AGENTS\.md)$/i.test
 export function detectChanges(paths) {
   const changed = paths.filter(path => !documentation(path))
   const has = pattern => changed.some(path => pattern.test(path))
-  const ci = has(/^\.github\/(scripts\/|workflows\/(checks|security)\.yml$)/)
+  const ci = has(/^\.github\/(scripts\/|workflows\/[^/]+\.ya?ml$)/)
   const runtimeTools = changed.some(path => path.startsWith('tools/')
     && !/^tools\/(doctor\.mjs$|check-gofmt\/|check-production-policy\/)/.test(path))
   const sql = ci || runtimeTools || has(/^sqlc\.yaml$/)
@@ -25,7 +25,7 @@ export function detectChanges(paths) {
   return {
     modules: selected,
     has_modules: selected.length > 0,
-    policy: paths.some(path => /^(Taskfile\.yml$|apps\/cn\/|db\/|tools\/|sqlc\.yaml$|AGENTS\.md$|\.agents\/|contracts\/|\.github\/(scripts\/|workflows\/(checks|security)\.yml$))/.test(path)),
+    policy: paths.some(path => /^(Taskfile\.yml$|apps\/cn\/|db\/|tools\/|sqlc\.yaml$|AGENTS\.md$|\.agents\/|contracts\/|\.github\/(scripts\/|workflows\/[^/]+\.ya?ml$))/.test(path)),
     foundation: sql || has(/^(db\/|apps\/cn\/[^/]+\/internal\/db\/.*\/queries\/)/),
     nav_web: ci || has(/^(Taskfile\.yml$|apps\/cn\/nav-web\/)/),
     game_integration: sql || adminBackend || has(/^(apps\/cn\/game-(backend|collector)\/|db\/game\/)/),
