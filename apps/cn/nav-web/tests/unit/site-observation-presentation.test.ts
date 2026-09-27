@@ -99,4 +99,55 @@ describe('Current Target evidence projection', () => {
     expect(rows[1]).toMatchObject({ rtt: null, loss: null, status: 'failure' })
     expect(presentPingHistory([], target)).toEqual([])
   })
+
+  it('sources Attention only from Target health reasons, without filtering collector conclusions', () => {
+    const data = source({ dns: envelope('dns', { risk_flags: ['ptr_empty', 'low_ttl', 'private_ip'] }) },
+      { target, state: 'ready', status: 'warning', reason_codes: [] } as TargetHealthSummary)
+    data.targetLatestCore.reason_codes = ['dns_risk_private_ip']
+    expect(presentSiteObservation(data, translate()).risks).toEqual([])
+    data.targetHealthSummary!.reason_codes = ['dns_risk_ptr_empty', 'dns_risk_ptr_empty']
+    expect(presentSiteObservation(data, translate()).risks).toEqual([en.siteDetail.reasons.dns_risk_ptr_empty])
+    // No frontend blacklist: an explicit health reason remains Collector-owned.
+  })
+
+  it('keeps successful status independent of latency and uses existing response tones', () => {
+    const vm = present({ http: envelope('http', { status_code: 200, response_time_ms: 2500 }, { duration_ms: 2500 }), dns: envelope('dns', { A: [] }) })
+    expect(vm.protocols[1]).toMatchObject({ status: 'success', tone: 'good', durationTone: 'bad' })
+    expect(vm.http.headline.find(item => item.key === 'status')?.tone).toBe('good')
+    expect(vm.http.headline.find(item => item.key === 'response')?.tone).toBe('bad')
+    expect(vm.dns.facts[0]).toMatchObject({ value: '0' })
+    expect(vm.dns.facts[0]).not.toHaveProperty('tone')
+    expect(vm.kpis[2]).not.toHaveProperty('tone')
+    expect(vm.kpis[3]).not.toHaveProperty('tone')
+  })
+
+  it.each(['en', 'zh'])('selects probe-specific summaries and friendly DNS labels in %s', locale => {
+    const vm = presentSiteObservation(source({ dns: envelope('dns', { risk_flags: ['ptr_empty', 'low_ttl', 'other', 'private_ip', 'nxdomain_with_answer'] }) }, null, latest({
+      robots: envelope('robots', { exists: true, sitemap_count: 0, user_agent_star_present: true, global_disallow_all: false }),
+      llms_txt: envelope('llms_txt', { exists: true, title: 'Guide', heading_count: 0, link_count: 0, optional_section_present: false }),
+      page_assets: envelope('page_assets', { icon: { exists: false }, manifest: { exists: true, name: 'App', display: 'standalone', theme_color: '#123456', icons_count: 0 } }),
+      rdap: envelope('rdap', { registrable_domain: target, registrar: 'Registrar', expires_at: '2027-09-27', dnssec_delegation_signed: false }),
+    })), translate(locale))
+    expect(vm.web.probes.map(probe => probe.summaryFacts.map(item => item.key))).toEqual([
+      ['sitemaps', 'userAgentStar', 'disallowAll'], ['title', 'headings', 'links', 'optional'],
+      ['name', 'display', 'themeColor', 'icons'], ['registrableDomain', 'registrar', 'expires', 'dnssecDelegation'],
+    ])
+    expect(vm.web.probes.every(probe => probe.state === 'found' && probe.tone === 'info')).toBe(true)
+    expect(vm.web.probes[3]!.summaryFacts.find(item => item.key === 'expires')).not.toHaveProperty('tone')
+    expect(vm.dns.signals.map(signal => signal.tone)).toEqual(['neutral', 'neutral', 'neutral', 'warning', 'warning'])
+    expect(vm.dns.signals.every(signal => !signal.label.includes(signal.code))).toBe(true)
+  })
+
+  it('distinguishes missing, absent, failed and stale Web evidence before existence hints', () => {
+    const probes = latest({ robots: envelope('robots', { exists: false }), llms_txt: envelope('llms_txt', { exists: false }, { status: 'failure' }),
+      page_assets: envelope('page_assets', { icon: { exists: false }, manifest: { exists: false } }),
+      rdap: envelope('rdap', { registrable_domain: target }, { status: 'failure' }) })
+    expect(presentSiteObservation(source({}, null, probes), translate()).web.probes.map(probe => [probe.state, probe.tone])).toEqual([
+      ['not_found', 'neutral'], ['unavailable', 'warning'], ['not_found', 'neutral'], ['unavailable', 'warning'],
+    ])
+    probes.state = 'stale'
+    expect(presentSiteObservation(source({}, null, probes), translate()).web.probes.map(probe => probe.state)).toEqual(['stale', 'unavailable', 'stale', 'unavailable'])
+    expect(present().web.probes.every(probe => probe.state === 'not_observed')).toBe(true)
+    expect(presentSiteObservation(source({}, null, latest({ robots: envelope('robots', {}) })), translate()).web.probes[0]?.state).toBe('unknown')
+  })
 })

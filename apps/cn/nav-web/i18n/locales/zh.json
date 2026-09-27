@@ -251,7 +251,7 @@
       "rdap": "RDAP"
     },
     "sections": {
-      "metadata": "页面元信息",
+      "metadata": "页面概况",
       "robots": "robots.txt",
       "sitemaps": "站点地图",
       "llms": "llms.txt",
@@ -310,6 +310,17 @@
       "statuses": "域名状态",
       "nameservers": "域名服务器",
       "dnssecDelegation": "DNSSEC 委派签名"
+    },
+    "requestPerformance": "请求性能",
+    "recordLedger": "解析记录",
+    "lastObserved": "最近观测",
+    "probeStates": {
+      "found": "已找到",
+      "not_found": "未找到",
+      "unavailable": "暂不可用",
+      "stale": "已过期",
+      "not_observed": "尚未观测",
+      "unknown": "未知"
     },
     "currentObservation": "当前观测",
     "responseSummary": "HTTP 响应",

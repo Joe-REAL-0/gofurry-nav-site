@@ -10,7 +10,7 @@ export const longTarget = 'a-long-collected-target-name-for-layout-review.commun
 export const test = runtimeTest(
   () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
-    observationRich: false, historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
+    observationRich: false, observationHealthReasons: true, webProbeScenario: 'ready' as 'ready' | 'not-found' | 'failure' | 'stale' | 'missing', historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
   url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
     || url.pathname === '/api/v2/nav/home'
     || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
@@ -73,6 +73,12 @@ export const test = runtimeTest(
         TXT: [{ type: 'TXT', value: state.longEvidence ? 'v=DKIM1; p=' + 'M'.repeat(350) : 'v=spf1 -all', ttl: 120 }], CAA: [{ type: 'CAA', value: '0 issue "ca.example"', ttl: 120 }],
         SOA: [{ type: 'SOA', value: 'ns1.example admin.example 1 2 3 4 5', ttl: 3600 }],
         cname_chain_depth: state.noCname ? 0 : 1, cname_terminal: state.noCname ? '' : 'edge.example', risk_flags: ['ptr_empty', 'low_ttl', 'private_ip', 'nxdomain_with_answer', 'collector_reported_signal'] }
+      const lightEnvelope = (protocol: string, payload: Record<string, unknown>) => {
+        const absent = { exists: false, status_code: 404 }
+        const evidence = state.webProbeScenario === 'not-found' && protocol !== 'rdap'
+          ? protocol === 'page_assets' ? { icon: absent, manifest: absent } : absent : payload
+        return { ...envelope(protocol, state.webProbeScenario === 'failure' ? {} : evidence), status: state.webProbeScenario === 'failure' ? 'failure' : 'success' }
+      }
       return { data: { ...reply.data as Record<string, unknown>, selected_target: target,
         site_summary: state.missingSummary ? { state: 'missing', status: 'unknown', targets: null } : {
           state: state.summaryScenario === 'stale' ? 'stale' : 'ready', status: mixed ? 'degraded' : unknown ? 'unknown' : 'healthy',
@@ -81,7 +87,7 @@ export const test = runtimeTest(
           reason_messages: mixed ? ['后端旧中文 HTTP 失败'] : [], reason_codes: mixed ? ['http_failed'] : [],
           target_relation_hints: [{ relation: 'shared_canonical', host: 'target.example', targets: ['target.example', alternative] }] },
         target_summary: state.noTargetEvidence ? { state: 'missing', target, status: 'unknown', observed_at: '0001-01-01T00:00:00Z', protocols: {} } : { state: 'ready', target, status: target === 'target.example' ? 'healthy' : 'warning', observed_at: observed,
-          reason_messages: state.observationRich ? ['后端旧中文 DNS 观测过期'] : [], reason_codes: state.observationRich ? ['dns_missing_or_stale'] : [],
+          reason_messages: state.observationRich ? ['后端旧中文 DNS 观测过期'] : [], reason_codes: state.observationRich && state.observationHealthReasons ? ['dns_missing_or_stale'] : [],
           protocols: Object.fromEntries(['ping', 'http', 'dns'].map(protocol => [protocol, { protocol, status: 'success', observed_at: observed, duration_ms: 24, stale: state.observationRich && protocol === 'dns' }])),
           edge_provider_hints: [{ provider: 'cloudflare', hint_type: 'response_header', confidence: 'medium', evidence: [{ source: 'http', field: 'server', value: 'cloudflare' }] }] },
         latest_core: state.noTargetEvidence ? null : {
@@ -97,11 +103,11 @@ export const test = runtimeTest(
           },
           ...(security?.http ?? {}),
         } },
-      }, light_probe_state: security?.light ?? (state.observationRich ? { target, protocols: {
-        robots: envelope('robots', { exists: true, status_code: 200, sitemap_count: 1, sitemaps: ['https://target.example/sitemap.xml'], user_agent_star_present: true, global_disallow_all: false }),
-        llms_txt: envelope('llms_txt', { exists: true, path: '/llms.txt', status_code: 200, title: 'Community guide', heading_count: 2, link_count: 1, optional_section_present: false, body_read_bytes: 256, headings: ['About', 'Resources'], links: ['https://target.example/about'] }),
-        page_assets: envelope('page_assets', { icon: { exists: true, source_url: 'https://target.example/favicon.ico', content_type: 'image/x-icon', status_code: 200 }, manifest: { exists: true, source_url: 'https://target.example/manifest.json', name: 'Fixture app', display: 'standalone', theme_color: '#123456', start_url: '/', scope: '/', icons_count: 2 } }),
-        rdap: envelope('rdap', { registrable_domain: 'target.example', registrar: 'Fixture registrar', expires_at: '2027-09-26', statuses: ['active'], nameservers: ['ns1.example'], dnssec_delegation_signed: false }),
+      }, light_probe_state: security?.light ?? (state.observationRich && state.webProbeScenario !== 'missing' ? { target, state: state.webProbeScenario === 'stale' ? 'stale' : 'ready', protocols: {
+        robots: lightEnvelope('robots', { exists: true, status_code: 200, sitemap_count: 1, sitemaps: ['https://target.example/sitemap.xml'], user_agent_star_present: true, global_disallow_all: false }),
+        llms_txt: lightEnvelope('llms_txt', { exists: true, path: '/llms.txt', status_code: 200, title: 'Community guide', heading_count: 2, link_count: 1, optional_section_present: false, body_read_bytes: 256, headings: ['About', 'Resources'], links: ['https://target.example/about'] }),
+        page_assets: lightEnvelope('page_assets', { icon: { exists: true, source_url: 'https://target.example/favicon.ico', content_type: 'image/x-icon', status_code: 200 }, manifest: { exists: true, source_url: 'https://target.example/manifest.json', name: 'Fixture app', display: 'standalone', theme_color: '#123456', start_url: '/', scope: '/', icons_count: 2 } }),
+        rdap: lightEnvelope('rdap', { registrable_domain: 'target.example', registrar: 'Fixture registrar', expires_at: '2027-09-26', statuses: ['active'], nameservers: ['ns1.example'], dnssec_delegation_signed: false }),
         security_txt: envelope('security_txt', { contact: ['SECURITY_ONLY_CONTACT'] }), port_check: envelope('port_check', { service: 'SECURITY_ONLY_PORT' }), waf_canary: envelope('waf_canary', { name: 'SECURITY_ONLY_WAF' }),
       } } : null) } }
     }

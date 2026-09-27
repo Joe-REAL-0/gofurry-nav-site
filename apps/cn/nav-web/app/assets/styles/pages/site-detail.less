@@ -711,3 +711,190 @@ html.dark .site-detail-page {
     border-left: 1px solid var(--site-detail-border);
   }
 }
+
+// Observation owns these materials; shared evidence and other workspaces stay unchanged.
+.site-observation {
+  --site-observation-plane: color-mix(in srgb, var(--gf-surface) 72%, transparent);
+  --site-observation-plane-soft: color-mix(in srgb, var(--gf-surface) 43%, transparent);
+  --site-observation-line: color-mix(in srgb, var(--gf-border) 65%, transparent);
+  --site-observation-tint: color-mix(in srgb, var(--site-detail-info) 4%, transparent);
+  --site-observation-hover: color-mix(in srgb, var(--gf-accent-soft) 16%, transparent);
+  --site-observation-selection: color-mix(in srgb, var(--gf-surface) 85%, transparent);
+}
+
+.site-observation-composite,
+.site-observation-evidence {
+  border: 1px solid var(--site-observation-line);
+  border-radius: 10px;
+  padding: 1rem;
+  background: var(--site-observation-plane-soft);
+}
+
+.site-observation-composite {
+  background: linear-gradient(120deg, var(--site-observation-tint), transparent 65%), var(--site-observation-plane);
+}
+
+.site-observation-heading {
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-observation-caption,
+.site-observation-profile-meta,
+.site-observation-probe-footer {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.site-observation-measure {
+  font-size: 1.35rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.site-observation-technical,
+.site-observation-evidence-value {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.site-observation-protocol-strip > div + div {
+  border-top: 1px solid var(--site-observation-line);
+  padding-top: 1rem;
+}
+
+.site-observation-rail {
+  border: 1px solid var(--site-observation-line);
+  border-radius: 8px;
+  padding: 0.2rem;
+  background: color-mix(in srgb, var(--site-observation-plane-soft) 40%, transparent);
+}
+
+.site-observation-segment {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  transition: background-color 500ms, border-color 500ms, color 500ms;
+}
+
+.site-observation-segment:hover {
+  background-color: var(--site-observation-hover);
+  color: var(--gf-text-main);
+}
+
+.site-observation-segment[aria-selected="true"],
+.site-observation-segment[aria-pressed="true"] {
+  border-color: var(--site-observation-line);
+  background-color: var(--site-observation-selection);
+  color: var(--gf-text-main);
+  font-weight: 650;
+  transition: none;
+}
+
+.site-observation-segment:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-observation-evidence-list > div,
+.site-observation-ledger-row {
+  border-radius: 4px;
+  padding: 0.45rem 0;
+  transition: background-color 500ms;
+}
+
+.site-observation-evidence-list > div + div {
+  border-top: 1px solid var(--site-observation-line);
+}
+
+.site-observation-evidence-list > div:hover,
+.site-observation-ledger-row:hover {
+  background-color: var(--site-observation-hover);
+}
+
+.site-observation-attention-rail,
+.site-observation-signal-rail,
+.site-observation-flow {
+  border-left: 2px solid var(--site-observation-line);
+  padding: 0.35rem 1rem;
+}
+
+.site-observation-attention-rail {
+  border-left-color: color-mix(in srgb, var(--site-detail-warning) 40%, transparent);
+}
+
+.site-observation-waterfall,
+.site-observation-response-evidence,
+.site-observation-raw-headers,
+.site-observation-profile-meta,
+.site-observation-probe-footer {
+  border-top: 1px solid var(--site-observation-line);
+  padding-top: 1rem;
+}
+
+.site-observation-measure-track {
+  height: 0.4rem;
+  border-radius: 4px;
+  background: var(--site-observation-line);
+}
+
+.site-observation-measure-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--site-detail-info) 65%, transparent);
+}
+
+.site-observation-measure-bar[data-total="true"] {
+  background: color-mix(in srgb, var(--gf-text-muted) 55%, transparent);
+}
+
+.site-observation-response-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-observation-response-strip > [data-site-evidence="status"] > dd {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.site-observation-header-disclosure > summary {
+  font-size: 0.75rem;
+}
+
+.site-observation-ledger-heading {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.site-observation-hairline {
+  height: 1px;
+  background: var(--site-observation-line);
+}
+
+.site-observation-profile-content {
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.site-observation-probe-state {
+  font-size: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .site-observation-protocol-strip > div + div {
+    border-top: 0;
+    border-left: 1px solid var(--site-observation-line);
+    padding-top: 0;
+    padding-left: 1rem;
+  }
+}

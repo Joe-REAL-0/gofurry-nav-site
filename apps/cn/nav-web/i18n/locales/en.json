@@ -251,7 +251,7 @@
       "rdap": "RDAP"
     },
     "sections": {
-      "metadata": "Page metadata",
+      "metadata": "Page profile",
       "robots": "robots.txt",
       "sitemaps": "Sitemaps",
       "llms": "llms.txt",
@@ -311,10 +311,21 @@
       "nameservers": "Nameservers",
       "dnssecDelegation": "DNSSEC delegation"
     },
+    "requestPerformance": "Request performance",
+    "recordLedger": "Record ledger",
+    "lastObserved": "Last observed",
+    "probeStates": {
+      "found": "Found",
+      "not_found": "Not found",
+      "unavailable": "Unavailable",
+      "stale": "Stale",
+      "not_observed": "Not observed",
+      "unknown": "Unknown"
+    },
     "currentObservation": "Current observation",
     "responseSummary": "HTTP response",
     "dnsSummary": "DNS summary",
-    "dnsObservationSignals": "DNS observation signals",
+    "dnsObservationSignals": "DNS Observation Signals",
     "informationalSignal": "Informational",
     "warningSignal": "Needs attention",
     "probeDetails": "Observation details",

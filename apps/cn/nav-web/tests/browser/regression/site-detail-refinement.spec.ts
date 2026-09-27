@@ -51,7 +51,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
       await page.locator(`[data-site-observation-tab="${view}"]`).click()
       if (view === 'performance') {
         await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
-        await expect(page.locator('.site-detail-segmented [data-site-performance-sample="20"]')).toHaveAttribute('aria-pressed', 'true')
+        await expect(page.locator('[data-site-performance] [data-site-performance-sample="20"]')).toHaveAttribute('aria-pressed', 'true')
       }
       if (view === 'http') {
         await expect(page.locator('[data-site-http-redirects] li')).toHaveCount(2)
@@ -59,7 +59,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
         await expect(page.locator('[data-site-http-redirects] svg[aria-hidden="true"]')).toHaveCount(1)
       }
       if (view === 'dns') {
-        await expect(page.locator('[data-site-dns-risks] h3')).toHaveText('DNS observation signals')
+        await expect(page.locator('[data-site-dns-risks] h3')).toHaveText('DNS Observation Signals')
         for (const code of ['ptr_empty', 'low_ttl', 'collector_reported_signal']) await expect(page.locator(`[data-site-dns-signal="${code}"] [data-tone]`)).toHaveAttribute('data-tone', 'neutral')
         for (const code of ['private_ip', 'nxdomain_with_answer']) await expect(page.locator(`[data-site-dns-signal="${code}"] p[data-tone]`)).toHaveAttribute('data-tone', 'warning')
       }

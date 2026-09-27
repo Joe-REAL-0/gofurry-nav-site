@@ -35,7 +35,7 @@ async function renderChart() {
       axisLine: { lineStyle: { color: color('--gf-border') } },
       axisLabel: { color: color('--gf-text-muted'), hideOverlap: true, formatter: (value: string) => value.slice(5, 16) } },
     yAxis: { type: 'value', min: 0, name: 'ms', nameTextStyle: { color: color('--gf-text-muted') },
-      axisLabel: { color: color('--gf-text-muted') }, splitLine: { lineStyle: { color: color('--gf-border') } } },
+      axisLabel: { color: color('--gf-text-muted') }, splitLine: { lineStyle: { color: color('--gf-border'), opacity: 0.45 } } },
     series: [{ name: t('siteObservation.fields.rtt'), type: 'line', data: rows.map(row => row.rtt), connectNulls: false,
       symbolSize: 6, showSymbol: rows.length <= 20, lineStyle: { color: color('--site-detail-positive'), width: 2 },
       itemStyle: { color: color('--site-detail-positive') } }],

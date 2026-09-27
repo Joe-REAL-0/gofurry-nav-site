@@ -46,14 +46,15 @@ export function presentSiteObservation(source: Source, t: Translate) {
     const state = summary?.protocols?.[protocol], envelope = core(protocol)
     const status = observationStatus(state?.status || envelope?.status)
     const stale = state?.stale ?? (latest?.state === 'stale' ? true : null)
-    return { protocol, status, statusLabel: t('siteDetail.states.' + status), tone: siteProtocolTone(status), duration: ms(state?.duration_ms ?? envelope?.duration_ms),
+    const duration = state?.duration_ms ?? envelope?.duration_ms
+    return { protocol, status, statusLabel: t('siteDetail.states.' + status), tone: siteProtocolTone(status), duration: ms(duration), durationTone: siteLatencyTone(observationNumber(duration)),
       observed: observationTime(state?.observed_at || envelope?.observed_at),
       freshness: t('siteObservation.' + (stale === true ? 'stale' : stale === false ? 'fresh' : 'freshnessUnknown')) }
   })
   const status = observationStatus(summary?.state === 'missing' ? null : summary?.status)
-  const codes = [...new Set([...strings(summary?.reason_codes), ...strings(latest?.reason_codes)])]
+  // Attention explains the Target health conclusion, never raw protocol diagnostics.
+  const codes = [...new Set(strings(summary?.reason_codes))]
   const risks = codes.map(code => siteHealthReasonLabel(code, t))
-  if (!risks.length && ['warning', 'degraded', 'down', 'stale'].includes(status)) risks.push(t('siteDetail.states.' + status))
   const headers = normalizeObservationHeaders(http.headers)
   const header = (key: string) => headers.find(item => item.key === key)?.value
   const response = observationNumber(http.response_time_ms) ?? observationNumber(httpEnvelope?.duration_ms)
@@ -68,7 +69,7 @@ export function presentSiteObservation(source: Source, t: Translate) {
   const kpis = [{ ...fact('response', ms(response)), tone: siteLatencyTone(response) },
     { ...fact('rtt', ms(ping.avg_rtt_ms)), tone: siteLatencyTone(observationNumber(ping.avg_rtt_ms)) },
     fact('jitter', ms(ping.jitter_ms)), fact('loss', percent(ping.loss_rate))]
-  const httpFacts = [{ ...fact('status', http.status_code), tone: siteHttpTone(observationNumber(http.status_code)) }, fact('protocol', http.http_protocol), fact('response', ms(response)),
+  const httpFacts = [{ ...fact('status', http.status_code), tone: siteHttpTone(observationNumber(http.status_code)) }, fact('protocol', http.http_protocol), { ...fact('response', ms(response)), tone: siteLatencyTone(response) },
     fact('finalUrl', http.final_url), fact('remoteIp', http.remote_ip), fact('contentType', http.content_type || header('content-type')),
     fact('bytes', observationNumber(http.body_read_bytes) === null ? undefined : `${http.body_read_bytes} B`),
     fact('server', http.server || header('server')), fact('observed', observationTime(httpEnvelope?.observed_at))]
@@ -99,7 +100,7 @@ export function presentSiteObservation(source: Source, t: Translate) {
   const dnsGroups = groupTypes.flatMap(type => groups.has(type) ? [{ type, records: groups.get(type)! }] : [])
   const dnsFacts = [
     ...['A', 'AAAA', 'CNAME', 'MX', 'NS'].map(type => ({ key: type, label: type, value: Array.isArray(dns[type]) ? String(groups.get(type)?.length ?? 0) : '—' })),
-    fact('duration', ms(dnsEnvelope?.duration_ms)), fact('cnameDepth', dns.cname_chain_depth), fact('cnameTerminal', dns.cname_terminal),
+    { ...fact('duration', ms(dnsEnvelope?.duration_ms)), tone: siteLatencyTone(observationNumber(dnsEnvelope?.duration_ms)) }, fact('cnameDepth', dns.cname_chain_depth), fact('cnameTerminal', dns.cname_terminal),
   ]
   const meta = observationRecord(http.meta)
   const metadata = [fact('title', http.title), fact('description', meta.description), fact('charset', http.html_charset || meta.charset), fact('keywords', meta.keywords)]
@@ -123,20 +124,31 @@ export function presentSiteObservation(source: Source, t: Translate) {
       section('rdap', [fact('registrableDomain', data.registrable_domain), fact('registrar', data.registrar), fact('expires', data.expires_at),
         fact('statuses', data.statuses), fact('nameservers', data.nameservers), fact('dnssecDelegation', data.dnssec_delegation_signed)])
     }
-    let visible = protocol === 'page_assets' ? 4 : 5
-    const summaryFacts: ObservationFact[] = []
+    const summarySection = protocol === 'page_assets' ? 'manifest' : protocol === 'llms_txt' ? 'llms' : protocol
+    const summaryKeys = protocol === 'robots' ? ['sitemaps', 'userAgentStar', 'disallowAll']
+      : protocol === 'llms_txt' ? ['title', 'headings', 'links', 'optional']
+        : protocol === 'page_assets' ? ['name', 'display', 'themeColor', 'icons']
+          : ['registrableDomain', 'registrar', 'expires', 'dnssecDelegation']
+    const summaryFacts = sections.find(section => section.key === summarySection)!.items.filter(item => summaryKeys.includes(item.key))
     const details = sections.flatMap(section => {
-      if (section.disclosure) return [section]
-      const take = Math.min(visible, section.items.length)
-      summaryFacts.push(...section.items.slice(0, take))
-      visible -= take
-      return section.items.length > take ? [{ ...section, items: section.items.slice(take) }] : []
+      const items = section.key === summarySection ? section.items.filter(item => !summaryKeys.includes(item.key)) : section.items
+      return items.length ? [{ ...section, items }] : []
     })
+    const icon = observationRecord(data.icon), manifest = observationRecord(data.manifest)
+    const exists = protocol === 'page_assets' ? icon.exists === true || manifest.exists === true ? true
+      : icon.exists === false && manifest.exists === false ? false : null
+      : protocol === 'rdap' ? text(data.registrable_domain) ? true : null : data.exists
+    // An envelope failure is not evidence that the resource was absent.
+    const state = !envelope ? 'not_observed' : envelope.status === 'failure' ? 'unavailable'
+      : light?.state === 'stale' ? 'stale' : envelope.status !== 'success' ? 'not_observed'
+        : exists === true ? 'found' : exists === false ? 'not_found' : 'unknown'
+    const tone: SiteDetailTone = state === 'found' ? 'info' : ['unavailable', 'stale'].includes(state) ? 'warning' : state === 'not_found' ? 'neutral' : 'muted'
     return { protocol, status: observationStatus(envelope?.status), statusLabel: t('siteDetail.states.' + observationStatus(envelope?.status)),
+      state, stateLabel: t('siteObservation.probeStates.' + state), tone,
       observed: observationTime(envelope?.observed_at), duration: ms(envelope?.duration_ms), sections, summaryFacts, details }
   })
   return { target, status, statusLabel: t('siteDetail.states.' + status), protocols, risks, endpoint, timings, kpis,
-    http: { facts: httpFacts, headers, commonHeaders, redirects: strings(http.redirect_chain) },
+    http: { facts: httpFacts, headline: httpFacts.slice(0, 3), evidence: httpFacts.slice(3), headers, commonHeaders, redirects: strings(http.redirect_chain) },
     dns: { facts: dnsFacts, groups: dnsGroups, chains: [...new Map(chains.map(chain => [JSON.stringify(chain), chain])).values()], risks: strings(dns.risk_flags), signals: strings(dns.risk_flags).map(flag => siteDnsSignal(flag, t)) },
     web: { metadata, probes: webProbes } }
 }

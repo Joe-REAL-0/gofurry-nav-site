@@ -1,7 +1,17 @@
 import type { Page } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '../fixtures/site-detail'
 const tab = (page: Page, view: string) => page.locator(`[data-site-observation-tab="${view}"]`)
 const history = (page: Page) => page.locator('[data-site-performance-history-state]')
+async function reviewObservation(page: Page, view: string, width: number, theme: string) {
+  const directory = process.env.GOFURRY_OBSERVATION_REVIEW_DIR
+  if (!directory) return
+  await mkdir(directory, { recursive: true })
+  await settleRuntime(page)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({ path: join(directory, `${view}-${width}-${theme}.png`), fullPage: true })
+}
 async function openObservation(page: Page, view = 'overview') {
   const counted = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   const html = await openRuntime(page, '/en/site/41?tab=observation' + (view === 'overview' ? '' : '&view=' + view))
@@ -104,7 +114,11 @@ for (const state of ['empty', 'unavailable', 'no-rtt']) test('Performance classi
   expect(runtime.count('/observations')).toBe(state === 'unavailable' ? 2 : 1) // Nitro GET retry on injected 503 only.
   if (state === 'unavailable') {
     runtime.state.historyFailure = false
-    await page.locator('[data-site-history-retry]').click()
+    const retry = page.locator('[data-site-history-retry]')
+    await retry.hover()
+    await expect(retry).toHaveCSS('transform', 'none')
+    await expect(retry).toHaveCSS('transition-duration', '0.5s, 0.5s, 0.5s')
+    await retry.click()
     await expect(history(page)).toHaveAttribute('data-site-performance-history-state', 'ready')
     expect(runtime.count('/observations')).toBe(3)
   }
@@ -174,11 +188,20 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-observation-protocol="dns"] [data-site-protocol-freshness]')).toContainText('Stale')
     await expect(page.locator('[data-site-observation-risks]')).toContainText('DNS observations are missing or stale')
     await expect(page.locator('[data-site-observation-risks]')).not.toContainText('后端旧中文')
+    await expect(page.locator('[data-site-observation-current] [data-site-observation-protocol]')).toHaveCount(3)
+    await expect(page.locator('[data-site-observation-status]')).toHaveCount(0)
+    await expect(page.locator('[data-site-observation-endpoint]')).toContainText('https://target.example/')
+    await expect(page.locator('[data-site-observation-risks]')).not.toContainText(/PTR|TTL|private_ip/)
+    await assertRuntimeSurface(page, '[data-site-observation-overview]', theme)
+    await reviewObservation(page, 'overview', width, theme)
     await tab(page, 'http').click()
+    await expect(page.locator('[data-site-http-response] [data-site-evidence="status"]')).toContainText('200')
+    await expect(page.locator('[data-site-http-response] [data-site-evidence="response"] dd')).toHaveAttribute('data-tone', 'good')
     await expect(page.locator('[data-site-http] [data-site-evidence="bytes"]')).toContainText('0 B')
     await expect(page.locator('[data-site-http-redirects] li')).toHaveCount(2)
     const full = page.locator('[data-site-http-all-headers]')
     await expect(full).not.toHaveAttribute('open')
+    await reviewObservation(page, 'http', width, theme)
     await full.locator('summary').focus(); await page.keyboard.press('Enter')
     await expect(full).toHaveAttribute('open', '')
     await expect(full).toContainText('full-header-value')
@@ -188,6 +211,14 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-dns-chain]')).toContainText('edge.example')
     await expect(page.locator('[data-site-dns-group="AAAA"]')).toHaveCount(0)
     for (const group of ['A', 'CNAME', 'MX', 'NS', 'TXT', 'CAA', 'SOA']) await expect(page.locator(`[data-site-dns-group="${group}"]`)).toBeVisible()
+    await expect(page.locator('[data-site-dns-ledger] [data-site-dns-group]')).toHaveCount(7)
+    await expect(page.locator('[data-site-dns-risks] h3')).toHaveText('DNS Observation Signals')
+    for (const code of ['ptr_empty', 'low_ttl', 'collector_reported_signal', 'private_ip', 'nxdomain_with_answer']) {
+      const signal = page.locator(`[data-site-dns-signal="${code}"]`)
+      await expect(signal).not.toContainText(code)
+      await expect(signal.locator('p')).toHaveAttribute('data-tone', ['private_ip', 'nxdomain_with_answer'].includes(code) ? 'warning' : 'neutral')
+    }
+    await reviewObservation(page, 'dns', width, theme)
     const details = page.locator('[data-site-dns-group="A"] details').first()
     await details.locator('summary').click(); await expect(details).toContainText('AS64496')
     await expect(details).toContainText('Fixture ISP')
@@ -195,10 +226,25 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await tab(page, 'web').click()
     await expect(page.locator('[data-site-web-metadata]')).toContainText('UTF-8')
     await expect(page.locator('[data-site-web-probe]')).toHaveCount(4)
+    for (const probe of await page.locator('[data-site-web-probe]').all()) {
+      await expect(probe).toHaveAttribute('data-site-web-state', 'found')
+      await expect(probe.locator('details')).not.toHaveAttribute('open')
+      const visible = await probe.innerText()
+      expect(visible).toContain('Last observed')
+      expect(visible).not.toMatch(/Success|24 ms/)
+    }
+    await expect(page.locator('[data-site-web-probe="page_assets"] > dl')).toContainText('Fixture app')
+    await expect(page.locator('[data-site-web-probe="page_assets"] img')).toHaveCount(0)
+    const probeBoxes = await page.locator('[data-site-web-probe]').evaluateAll(nodes => nodes.map(node => {
+      const rect = node.getBoundingClientRect(); return { x: rect.x, y: rect.y, bottom: rect.bottom }
+    }))
+    if (width >= 1024) expect(probeBoxes[1]!.x).toBeGreaterThan(probeBoxes[0]!.x)
+    else expect(probeBoxes[1]!.y).toBeGreaterThan(probeBoxes[0]!.bottom)
     for (const value of ['Community guide', 'Fixture app', 'Fixture registrar', 'Global Disallow', 'DNSSEC delegation']) await expect(page.locator('[data-site-web]')).toContainText(value)
     await expect(page.locator('[data-site-web]')).not.toContainText('SECURITY_ONLY')
     await expect(page.locator('[data-site-web]')).not.toContainText('security.txt')
     await assertRuntimeSurface(page, '[data-site-web]', theme)
+    await reviewObservation(page, 'web', width, theme)
     expect(runtime.calls).toHaveLength(3)
     runtime.assertQuiet()
   })
@@ -215,6 +261,10 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-timing]')).toHaveCount(6)
     await expect(page.locator('[data-site-timing="total"]')).toContainText('120 ms')
     await expect(page.locator('[data-site-performance-kpi="jitter"]')).toContainText('0 ms')
+    await expect(page.locator('[data-site-request-performance] [data-site-performance-kpi]')).toHaveCount(4)
+    await expect(page.locator('[data-site-request-performance] [data-site-performance-waterfall]')).toHaveCount(1)
+    await expect(page.locator('[data-site-performance-waterfall] [tabindex="0"]')).toHaveAttribute('title', 'Stages may overlap; total is the observed response time.')
+    await reviewObservation(page, 'performance', width, theme)
     await page.locator('[data-site-history-table] summary').click()
     await expect(page.locator('[data-site-history-table] tbody tr')).toHaveCount(20)
     await expect(page.locator('[data-site-history-table] tbody tr').nth(1)).toContainText('10%')
@@ -233,3 +283,46 @@ test('no redirect and no CNAME do not invent chains or history requests', async 
   expect(runtime.calls).toHaveLength(3)
   runtime.assertQuiet()
 })
+
+test('Attention follows Target health reasons while raw DNS diagnostics remain available', async ({ page, runtime }) => {
+  runtime.state.observationRich = true; runtime.state.observationHealthReasons = false
+  await openObservation(page)
+  await expect(page.locator('[data-site-observation-risks]')).toHaveCount(0)
+  await tab(page, 'dns').click()
+  await expect(page.locator('[data-site-dns-signal]')).toHaveCount(5)
+  expect(runtime.calls).toHaveLength(3)
+  runtime.assertQuiet()
+})
+
+test('Observation hover is 500ms with immediate selected feedback and no movement', async ({ page, runtime }) => {
+  runtime.state.observationRich = true
+  await openObservation(page)
+  const inactive = tab(page, 'performance')
+  await inactive.hover()
+  expect(await inactive.evaluate(node => {
+    const css = getComputedStyle(node)
+    return { durations: css.transitionDuration.split(', ').every(value => value === '0.5s'), properties: css.transitionProperty, transform: css.transform, shadow: css.boxShadow }
+  })).toEqual({ durations: true, properties: 'background-color, border-color, color', transform: 'none', shadow: 'none' })
+  await inactive.click()
+  await expect(inactive).toHaveCSS('transition-duration', '0s')
+  const sample = page.locator('[data-site-performance-sample="60"]')
+  await expect(sample).toHaveCSS('transition-duration', '0.5s, 0.5s, 0.5s')
+  await sample.click(); await expect(sample).toHaveCSS('transition-duration', '0s')
+  await expect(history(page)).toHaveAttribute('data-site-performance-history-state', 'ready')
+  expect(runtime.calls).toHaveLength(4)
+  runtime.assertQuiet()
+})
+
+for (const [scenario, state, label] of [['not-found', 'not_found', 'Not found'], ['failure', 'unavailable', 'Unavailable'], ['stale', 'stale', 'Stale'], ['missing', 'not_observed', 'Not observed']] as const) {
+  test(`Web evidence state ${scenario} keeps all four probe entries`, async ({ page, runtime }) => {
+    runtime.state.observationRich = true; runtime.state.webProbeScenario = scenario
+    await openObservation(page, 'web')
+    await expect(page.locator('[data-site-web-probe]')).toHaveCount(4)
+    const robots = page.locator('[data-site-web-probe="robots"]')
+    await expect(robots).toHaveAttribute('data-site-web-state', state)
+    await expect(robots.locator('.site-observation-probe-state')).toHaveText(label)
+    await expect(page.locator('[data-site-web]')).not.toContainText(/SECURITY_ONLY|security\.txt|port_check|waf_canary/)
+    expect(runtime.calls).toHaveLength(3)
+    runtime.assertQuiet()
+  })
+}

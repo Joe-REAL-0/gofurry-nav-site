@@ -1,8 +1,8 @@
 <template>
-  <div data-site-observation-nav role="tablist" :aria-label="t('siteObservation.navigation')" class="site-observation-nav flex min-w-0 overflow-x-auto">
+  <div data-site-observation-nav role="tablist" :aria-label="t('siteObservation.navigation')" class="site-observation-rail flex min-w-0 overflow-x-auto">
     <button v-for="(view, index) in siteObservationViews" :id="'observation-tab-' + view" :key="view" :data-site-observation-tab="view"
       type="button" role="tab" :aria-selected="active === view" aria-controls="site-observation-panel" :tabindex="active === view ? 0 : -1"
-      class="site-observation-tab shrink-0" @click="emit('select', view)" @keydown="onKey($event, index)">
+      class="site-observation-segment shrink-0" @click="emit('select', view)" @keydown="onKey($event, index)">
       {{ t('siteObservation.views.' + view) }}
     </button>
   </div>
