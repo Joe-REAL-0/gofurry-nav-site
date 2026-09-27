@@ -142,6 +142,15 @@ Observation/Performance; both Overviews are explicit. Default hydration adds one
 Ping history call, never SSR. Preserve P4/P6 cache/race internals and all other
 runtime/SEO/debt boundaries. Task C still does not authorize P8 or final goldens.
 
+Task D authorizes focused composite/help/changes refinement plus Game average and
+one-shot Gallery media-abort fixes. Preserve Task C entry and P4/P6 runtime.
+`SiteDetailHelpTooltip` replaces native Info titles; `SiteChangeStream` shares only
+serpentine geometry with Game. All appearance stays with its existing owner.
+For Task D only, run focused Playwright, typecheck and focused lint/style checks;
+do not run full tests or production build. `GOFURRY_FIXTURE_DEV=1` opts the existing
+fixture into isolated local Nuxt source checks, never CI/production acceptance.
+No P8 or final golden is authorized.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing

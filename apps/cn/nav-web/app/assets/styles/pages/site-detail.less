@@ -136,7 +136,7 @@ html.dark .site-detail-page {
 .site-detail-hero__domain {
   color: var(--gf-text-muted);
   font-family: ui-monospace, monospace;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   line-height: 1.45;
 }
 
@@ -414,13 +414,6 @@ html.dark .site-detail-page {
   color: var(--gf-text-main);
 }
 
-.site-overview-status-composite,
-.site-overview-capability-composite {
-  border-radius: var(--site-detail-radius);
-  padding: 1.2rem;
-  background: var(--site-detail-panel);
-}
-
 .site-overview-heading {
   font-size: 0.95rem;
   font-weight: 650;
@@ -487,28 +480,10 @@ html.dark .site-detail-page {
   background: var(--site-detail-hover);
 }
 
-.site-overview-change-card {
-  border-radius: var(--gf-radius-sm);
-  padding: 0.9rem;
-  background: var(--site-detail-panel);
-}
-
 .site-overview-change-event {
   font-size: 0.85rem;
   font-weight: 550;
   line-height: 1.5;
-}
-
-.site-overview-change-card[data-site-change-category="capability"] .site-overview-change-category {
-  color: var(--gf-accent);
-}
-
-.site-overview-change-card[data-site-change-category="target"] .site-overview-change-category {
-  color: var(--site-detail-info);
-}
-
-.site-overview-change-card[data-site-change-category="certificate"] .site-overview-change-category {
-  color: var(--site-detail-positive);
 }
 
 @media (min-width: 768px) {
@@ -806,6 +781,7 @@ html.dark .site-detail-page {
 }
 
 .site-detail-segment[aria-selected="true"],
+.site-detail-segment[aria-pressed="true"],
 .site-security-tab[aria-selected="true"],
 .site-intelligence-range[aria-pressed="true"] {
   background-color: var(--site-detail-selected);
@@ -865,12 +841,10 @@ html.dark .site-detail-page {
   transition: none;
 }
 
-.site-overview-change-card,
 .site-observation-history-table tbody tr {
   transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
 }
 
-.site-overview-change-card:hover,
 .site-observation-history-table tbody tr:hover {
   background-color: var(--site-detail-hover);
 }
@@ -991,4 +965,61 @@ html.dark .site-detail-page {
   height: 8px;
   border-radius: 50%;
   background: currentColor;
+}
+
+// Task D groups related evidence without introducing a second material.
+.site-detail-inset-separator {
+  border-top: 1px dashed color-mix(in srgb, var(--site-detail-border) 55%, transparent);
+}
+
+.site-detail-help-trigger {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.2rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  cursor: help;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-help-trigger:hover {
+  background: var(--site-detail-hover);
+  color: var(--gf-text-main);
+}
+
+.site-detail-help-trigger:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-help-tooltip {
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 1.5rem));
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  backdrop-filter: blur(18px);
+  background: var(--site-detail-panel);
+  color: var(--gf-text-main);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.site-detail-change-item,
+.site-detail-redirect-node {
+  border-radius: 7px;
+  padding: 0.65rem 0.75rem;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-change-item:hover,
+.site-detail-redirect-node:hover {
+  background: var(--site-detail-hover);
+}
+
+.site-detail-redirect-node {
+  background: var(--site-detail-panel);
+}
+
+.site-detail-flow-arrow {
+  color: var(--gf-text-muted);
 }

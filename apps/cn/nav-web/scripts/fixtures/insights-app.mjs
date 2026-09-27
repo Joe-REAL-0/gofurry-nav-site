@@ -9,7 +9,9 @@ import { rootDir } from '../perf/shared.mjs'
 
 // Isolated production server with loopback-only API origins; no runtime .env loading.
 export async function startInsightsFixtureApp(resolveResponse, runtimeOverrides = {}) {
-  assert(existsSync(join(rootDir, '.output/server/index.mjs')), 'Build Nav Web before running the production fixture smoke')
+  const development = process.env.GOFURRY_FIXTURE_DEV === '1'
+  assert(!development || !process.env.CI, 'Development fixtures are local focused checks only')
+  if (!development) assert(existsSync(join(rootDir, '.output/server/index.mjs')), 'Build Nav Web before running the production fixture smoke')
   let upstreamUrl = ''
   const requests = []
   const upstream = createServer(async (request, response) => {
@@ -51,8 +53,12 @@ export async function startInsightsFixtureApp(resolveResponse, runtimeOverrides 
     NUXT_PUBLIC_ASSET_MIRROR_BASE: upstreamUrl,
     ...runtimeOverrides,
   }
-  for (const name of ['NAV_API', 'NAV_V2_API', 'GAME_API', 'GAME_V2_API']) environment[`NUXT_${name}_INTERNAL_BASE`] = `${upstreamUrl}/api/${name.includes('V2') ? 'v2' : 'v1'}`
-  const preview = spawn(process.execPath, ['.output/server/index.mjs'], { cwd: rootDir, env: environment, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  for (const name of ['NAV_API', 'NAV_V2_API', 'GAME_API', 'GAME_V2_API']) {
+    environment[`NUXT_${name}_INTERNAL_BASE`] = `${upstreamUrl}/api/${name.includes('V2') ? 'v2' : 'v1'}`
+    environment[`${name}_INTERNAL_BASE`] = environment[`NUXT_${name}_INTERNAL_BASE`]
+  }
+  const args = development ? ['node_modules/nuxt/bin/nuxt.mjs', 'dev', '--no-fork', '--host', '127.0.0.1', '--port', String(port), '--dotenv', '.fixture-no-env'] : ['.output/server/index.mjs']
+  const preview = spawn(process.execPath, args, { cwd: rootDir, env: environment, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
   let logs = ''
   const record = data => { logs = (logs + data.toString()).slice(-8000) }
   preview.stdout.on('data', record)

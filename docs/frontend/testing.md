@@ -42,6 +42,19 @@ Nuxt cases have a 30-second budget for the first mount's cold app/router transfo
 unit cases retain Vitest's default timeout. Nuxt's generated `.nuxtrc` module setup
 marker is local and ignored, like `.nuxt/`.
 
+## Task D local focused source checks
+
+When the task explicitly forbids a production build, set
+`GOFURRY_FIXTURE_DEV=1` and use `pnpm exec playwright test <exact specs> -g <cases>
+--workers=1 --timeout=120000`. This is the same Playwright/Nitro/upstream owner,
+with Nuxt dev compiling current source into `.nuxt/fixture` and an isolated Vite
+cache. It does not read a local dotenv file. The larger local case timeout covers
+cold development transforms; it adds no retries or sleeps. Error capture and
+request accounting are unchanged. CI rejects the flag and retains the existing
+production `.output` fixture. These checks are explicitly development-runtime
+results, not a substitute for a later authorized production/remote acceptance.
+Do not run full suites or `pnpm run build` under Task D's focused-only budget.
+
 ## Site Detail #109 P1
 
 `tests/browser/regression/site-detail-contract.spec.ts` owns Site/Target SSR,

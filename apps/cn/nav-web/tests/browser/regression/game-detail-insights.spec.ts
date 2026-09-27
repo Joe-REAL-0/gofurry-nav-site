@@ -97,3 +97,31 @@ test('Timeline and real chart themes retain date precision, ordering and respons
   await tooltipAppearance('player', true); await tooltipAppearance('price', true)
   detail.assertQuiet()
 })
+
+
+for (const [value, expected] of [[35386.394, '35,386.4'], [42.5, '42.5'], [42, '42']] as const) test('Task D 30-day average precision ' + value, async ({ detail }) => {
+  detail.average(value)
+  await detail.open(); await detail.tab('insights')
+  await expect(detail.page.locator('[data-average-players]')).toHaveText(expected + ' 人')
+  await expect(detail.page.locator('[data-current-players]')).toHaveText('0 人')
+  await expect(detail.page.locator('.game-insights-overview__metrics dd').first()).toHaveText('120 人')
+  detail.assertQuiet()
+})
+
+test('Task D real player and price chart tooltips retain missing evidence as a dash', async ({ detail }) => {
+  detail.missingChartEvidence()
+  await detail.open(); await detail.tab('insights')
+  for (const [kind, left] of [['player', 58], ['price', 62]] as const) {
+    const root = detail.page.locator(`[data-${kind}-history]`), canvas = root.locator('canvas')
+    await expect(canvas).toBeVisible(); await detail.settle(root)
+    const width = (await canvas.boundingBox())!.width
+    await canvas.hover({ position: { x: left + (width - left - 18) * 2 / 7, y: 150 } })
+    const tooltip = root.locator('.game-insights-chart > div').last()
+    await expect(tooltip).toContainText('2026-09-03')
+    await expect(tooltip).toContainText('—')
+    await expect(tooltip).not.toContainText(/undefined|null|NaN|Infinity/)
+    expect((await tooltip.textContent())!.match(/—/g)).toHaveLength(kind === 'player' ? 2 : 1)
+    await detail.page.mouse.move(0, 0)
+  }
+  detail.assertQuiet()
+})

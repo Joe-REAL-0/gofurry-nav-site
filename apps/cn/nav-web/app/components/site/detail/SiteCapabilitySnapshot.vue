@@ -1,5 +1,5 @@
 <template>
-  <section data-site-capability-snapshot data-site-overview-capability-composite :data-site-capabilities-state="state" class="site-overview-capability-composite min-w-0" aria-labelledby="site-capability-title">
+  <section data-site-capability-snapshot data-site-overview-capability-composite :data-site-capabilities-state="state" class="min-w-0" aria-labelledby="site-capability-title">
     <div class="site-overview-section-head flex min-w-0 items-center gap-3">
       <h3 id="site-capability-title" class="site-overview-heading shrink-0">{{ t('siteOverview.capabilities') }}</h3>
       <span class="min-w-0 flex-1" aria-hidden="true" />

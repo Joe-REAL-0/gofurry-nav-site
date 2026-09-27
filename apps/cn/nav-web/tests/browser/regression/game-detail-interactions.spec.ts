@@ -72,12 +72,23 @@ test('a real video becomes ready and stops when Gallery is unmounted', async ({ 
   const held = detail.movieGate()
   await detail.page.locator('.game-detail-thumb').first().click(); await held.wait()
   await expect(detail.page.locator('.game-detail-video-loading')).toBeVisible()
+  const loaded = detail.page.waitForResponse(response => response.url().endsWith('/media/detail-trailer.webm'))
   held.release()
+  await (await loaded).finished()
   const video = detail.page.locator('video')
   await expect.poll(() => video.evaluate(el => (el as HTMLVideoElement).readyState)).toBeGreaterThanOrEqual(2)
   await expect(detail.page.locator('.game-detail-video-loading')).toHaveCount(0)
   const handle = await video.elementHandle()
+  // The real video must first decode. Reload the same resource behind a gate
+  // so unmount always cancels one in-flight request, independent of CI timing.
+  const reloading = detail.movieGate()
+  await video.evaluate(el => (el as HTMLVideoElement).load())
+  await reloading.wait()
+  const aborted = detail.expectMovieAbort()
   await detail.tab('intro')
+  await aborted
+  reloading.release()
+  await expect.poll(() => reloading.completed).toBe(true)
   expect(await handle!.evaluate(el => (el as HTMLVideoElement).paused)).toBe(true)
   await expect(video).toHaveCount(0)
   detail.failMovie(); await detail.tab('gallery'); await detail.page.locator('.game-detail-thumb').first().click()

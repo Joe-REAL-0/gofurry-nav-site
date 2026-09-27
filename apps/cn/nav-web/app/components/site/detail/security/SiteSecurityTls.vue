@@ -6,23 +6,22 @@
         <div class="min-w-0">
           <h4 class="site-detail-label">{{ t('siteSecurity.transport') }}</h4>
           <p data-site-tls-state :data-state="transport.state" :data-tone="transport.tone" class="site-security-primary-value mt-2">{{ transport.value }}</p>
-          <p v-if="transport.stale" class="site-detail-note mt-1">{{ t('siteSecurity.stale') }}</p>
-          <p v-if="transport.truncated" class="site-detail-note mt-1">{{ t('siteSecurity.truncated') }}</p>
-          <SiteObservationFacts :items="transport.facts" class="mt-3" />
-          <SiteObservationFacts v-if="transport.errors.length" :items="transport.errors" class="mt-2" />
         </div>
         <div class="min-w-0">
           <h4 class="site-detail-label">{{ t('siteSecurity.verification') }}</h4>
           <p data-site-certificate-verification :data-state="certificate.verification.state" :data-tone="certificate.verification.tone" class="site-security-primary-value mt-2">{{ certificate.verification.label }}</p>
-          <SiteObservationFacts v-if="certificate.errors.length" :items="certificate.errors" class="mt-3" />
         </div>
         <div class="min-w-0">
-          <h4 class="site-detail-label flex items-center gap-2">{{ t('siteSecurity.validity') }}<span tabindex="0" class="site-detail-help inline-flex" :title="t('siteSecurity.validityHint')" :aria-label="t('siteSecurity.validityHint')"><PhInfo class="site-detail-icon" aria-hidden="true" /></span></h4>
+          <h4 class="site-detail-label flex items-center gap-2">{{ t('siteSecurity.validity') }}<SiteDetailHelpTooltip :label="t('siteSecurity.validity')" :text="t('siteSecurity.validityHint')" /></h4>
           <p data-site-certificate-expiry :data-expiry="certificate.expiry.state" :data-tone="certificate.expiry.tone" class="site-security-primary-value mt-2">{{ certificate.expiry.value }}</p>
-          <p class="site-detail-note mt-1">{{ certificate.expiry.label }}</p>
-          <SiteObservationFacts :items="certificate.validity" class="mt-3" />
         </div>
       </div>
+      <details data-site-transport-details class="site-security-disclosure mt-4">
+        <summary>{{ t('siteSecurity.collectorSummary') }}</summary>
+        <p v-if="transport.stale" class="site-detail-note mt-2">{{ t('siteSecurity.stale') }}</p>
+        <p v-if="transport.truncated" class="site-detail-note mt-2">{{ t('siteSecurity.truncated') }}</p>
+        <SiteObservationFacts :items="[...transport.facts, ...transport.errors, ...certificate.errors, ...certificate.validity]" class="mt-3" />
+      </details>
     </section>
     <section data-site-certificate-identity class="site-detail-surface site-detail-surface--secondary">
       <h3 class="site-overview-title mb-3">{{ t('siteSecurity.identity') }}</h3>
@@ -46,17 +45,19 @@
           </details>
         </div>
       </div>
+      <div class="site-detail-inset-separator mx-3 my-5" aria-hidden="true" />
+      <details data-site-certificate-crypto class="site-security-disclosure site-security-crypto">
+        <summary>{{ t('siteSecurity.crypto') }}</summary>
+        <SiteObservationFacts :items="certificate.crypto" break-all class="mt-2" />
+        <p class="site-detail-note mt-2">{{ t('siteSecurity.cryptoHint') }}</p>
+      </details>
     </section>
-    <details data-site-certificate-crypto class="site-security-disclosure site-security-crypto">
-      <summary>{{ t('siteSecurity.crypto') }}</summary>
-      <SiteObservationFacts :items="certificate.crypto" break-all class="mt-2" />
-      <p class="site-detail-note mt-2">{{ t('siteSecurity.cryptoHint') }}</p>
-    </details>
   </div>
 </template>
 <script setup lang="ts">
 import type { SiteSecurityPresentation } from '~/utils/siteSecurityPresentation'
-import { PhArrowDown, PhInfo } from '@phosphor-icons/vue'
+import { PhArrowDown } from '@phosphor-icons/vue'
+import SiteDetailHelpTooltip from '../SiteDetailHelpTooltip.vue'
 import SiteObservationFacts from '../observation/SiteObservationFacts.vue'
 defineProps<{ transport: SiteSecurityPresentation['transport']; certificate: SiteSecurityPresentation['certificate'] }>()
 const { t } = useI18n()

@@ -943,3 +943,104 @@ Remote CI remains unverified. This task stops before P8.
 Task C engineering exit criteria are satisfied. Full exit remains pending only
 for maintainer visual acceptance; agent screenshot review and automated checks
 do not imply that approval.
+
+
+## Task D — composites, help and focused defects (2026-09-27)
+
+Task D runs directly on current `dev` after Task C. It preserves the accepted
+material and default Observation/Performance entry. It is not P8 and does not
+claim final visual or production acceptance.
+
+### Implemented ownership
+
+- Overview has one Summary/conditional Attention/Capabilities panel. Summary
+  fields contain only label/value; distribution and Site-wide helper rows are
+  removed. Observation Overview similarly combines Current/Endpoint/Attention.
+  Conditional evidence sections use quiet inset dashed separators, without
+  copying Hero perforations. DNS signals live inside the ledger; their existing
+  informational/warning projection and Target-health Attention source are intact.
+- HTTP Response/optional Redirects/Common Headers share one panel. Redirects
+  use three-column serpentine placement on desktop and vertical arrows on mobile;
+  missing redirects remove both the section and its separator. No hop status is
+  inferred. Performance loses its Waterfall heading/help, with space between the
+  KPI strip and timings. The API still requests 100 Ping rows once and slices
+  20/60/100 locally, defaulting to 20.
+- Hero name/domain share a row, metadata/views share the next, and description
+  keeps the content column. Current Target CDN selection is unchanged. Security
+  Summary/Attention share a panel. TLS/verification/validity are label/value only;
+  auxiliary evidence moves into closed native details. Certificate Identity and
+  closed Crypto disclosure share one panel. Visible Security/Insights scope
+  paragraphs are removed, without changing their Target/Site ownership.
+- `SiteChangeStream` owns local Compact/List display for Overview (at most four)
+  and Site Insights (complete recent set). Only placement/connector functions are
+  shared with Game Timeline. DOM chronology, date precision, categories and unknown
+  fallback remain; mobile uses a list with hidden mode controls. The mode selection
+  uses immediate shared selected fill; hover remains 500ms without motion.
+- `SiteDetailHelpTooltip` replaces active Info/native-title help. It supports
+  pointer, focus, click/touch, Escape and blur, has `role=tooltip`/`aria-describedby`,
+  inherits Site acrylic tokens through a page-local Teleport, constrains viewport
+  width and updates placement during scroll. Responsive arrows have one visible
+  icon each; Tailwind visibility lives on wrappers to avoid the icon display rule.
+- The four audited charts use finite numeric normalization. Site adoption tooltip
+  and Ping values render a dash for absent/invalid evidence. Game player tooltip
+  does likewise; malformed priced amounts remain gaps rather than zero-price
+  points. Existing explicit unknown/free price semantics remain. Game average has
+  at most one decimal, while current/peak remain integer. No chart library added.
+- The Gallery fixture registers one exact active trailer request before intentional
+  unmount and requires its actual `net::ERR_ABORTED`. A decoded real video is
+  reloaded behind the existing release gate to make that cancellation deterministic.
+  Request identity, exact URL, error and unmount timing are checked; every other
+  failed request remains fatal. No generic browser-error suppression was changed.
+
+Collector/Backend/API/schema, route keys, health/reason projection, SSR/SEO owners,
+P4/P6 activation/cache/race/retry and Site/Target identities are unchanged.
+
+### Focused verification actually performed
+
+The task explicitly prohibits a full build and full test suites. The existing
+fixture therefore gained opt-in `GOFURRY_FIXTURE_DEV=1`: local Nuxt source with
+isolated build/cache paths and the same deterministic upstream/error accounting.
+The flag is rejected in CI; the default production fixture is unchanged. These
+are **development-runtime results**, not validation of a new production bundle.
+
+Two final focused runs passed **13/13** and **3/3** (15 distinct cases; the no-redirect
+case was repeated after adding its absent-separator assertion), with zero retries:
+
+- Task D formatter boundaries, Overview/Observation composites, default history
+  sample/request budget, HTTP snake/headers, DNS semantics, Security TLS details,
+  help interactions, full/limited changes, Site Target-switch request accounting,
+  390 Light and 1440 Dark overflow/visibility checks.
+- Real Site ECharts canvas text at the missing middle adoption point includes
+  the correct date and `—`, with no undefined/null/NaN/Infinity text.
+- Existing Task C blank-entry SSR/hydration, no-redirect/no-CNAME, Target health
+  Attention versus raw diagnostics, and Overview 1440 Light composition cases.
+- Existing Game real chart theme/tooltip/responsive and Gallery-unmount cases;
+  three average fixtures (`35386.394`, `42.5`, `42`), plus actual player/price
+  tooltip missing-evidence cases.
+
+Commands used `pnpm exec playwright test` with explicit spec paths, exact `-g`
+selection, `--workers=1 --timeout=120000` and the local source flag. Final typecheck,
+focused ESLint over **37** changed/new Vue/TS/MJS files, Site Detail Less stylelint,
+style policy and `git diff --check` passed. No `pnpm test`, full Browser command,
+production build or full theme/route/viewport matrix was run for Task D.
+
+Site Tailwind/arbitrary/raw debt remains **0**, deep and legacy dark **0**.
+Ambient raw **75** and #108 important **5** remain unchanged. No budget updater,
+dependency upgrade or suppression change. All **118 accepted PNGs** match the
+baseline; the **142-file Visual inventory** is unchanged.
+
+### Manual review and exit boundary
+
+The existing Functional screenshot export supplies **14 temporary screenshots**
+outside the repository, plus a static index linking them. This is neither a new
+runner nor a final golden. Desktop Light covers the touched Site routes; 390 Light
+and 1440 Dark are representative checks, not a full matrix. Agent inspection
+confirmed combined panels, inset separators, snake arrows, mobile stacking and
+absence of overflow in those captures.
+
+Maintainer review remains pending: Hero density, summary two-line hierarchy,
+Compact/List and date order, HTTP flow, TLS closed/open disclosures, real tooltip
+hover/focus/click/Escape on Site, and average/tooltip display in Game Insights.
+Remote CI is **unverified**; earlier Task C CI is not evidence for Task D.
+Engineering exit criteria are satisfied within the explicitly focused budget;
+manual visual acceptance remains open. Stop here, before P8.

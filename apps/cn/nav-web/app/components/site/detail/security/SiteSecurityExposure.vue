@@ -16,7 +16,7 @@
       <details class="site-security-disclosure mt-3" data-site-port-metadata><summary>{{ t('siteSecurity.probeMetadata') }}</summary><SiteObservationFacts :items="ports.metadata" class="mt-2" /><SiteObservationFacts :items="ports.facts" /></details>
     </section>
     <section data-site-waf-canary :data-state="waf.state" class="site-detail-surface">
-      <h3 class="site-overview-title flex items-center gap-2">{{ t('siteSecurity.wafCanary') }}<span tabindex="0" class="site-detail-help inline-flex" :title="t('siteSecurity.wafHint')" :aria-label="t('siteSecurity.wafHint')"><PhInfo class="site-detail-icon" aria-hidden="true" /></span></h3>
+      <h3 class="site-overview-title flex items-center gap-2">{{ t('siteSecurity.wafCanary') }}<SiteDetailHelpTooltip :label="t('siteSecurity.wafCanary')" :text="t('siteSecurity.wafHint')" /></h3>
       <p class="site-security-primary-value mt-3" :data-tone="waf.tone">{{ waf.summaryText }}</p><p class="site-detail-note mt-1">{{ waf.label }}</p>
       <p v-if="waf.stale" class="site-detail-note mt-1">{{ t('siteSecurity.stale') }}</p>
       <p v-if="waf.truncated" data-site-waf-truncated class="site-security-attention mt-3">{{ t('siteSecurity.truncated') }}</p>
@@ -37,7 +37,7 @@
   </div>
 </template>
 <script setup lang="ts">
-import { PhInfo } from '@phosphor-icons/vue'
+import SiteDetailHelpTooltip from '../SiteDetailHelpTooltip.vue'
 import type { SiteSecurityPresentation } from '~/utils/siteSecurityPresentation'
 import SiteObservationFacts from '../observation/SiteObservationFacts.vue'
 defineProps<{ ports: SiteSecurityPresentation['portCheck']; waf: SiteSecurityPresentation['wafCanary'] }>()

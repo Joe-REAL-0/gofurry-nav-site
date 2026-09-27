@@ -10,7 +10,7 @@ export const longTarget = 'a-long-collected-target-name-for-layout-review.commun
 export const test = runtimeTest(
   () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, viewCount: 2, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
-    cdnScenario: 'none' as 'none' | 'reliable' | 'unreliable', protocolScenario: 'normal' as 'normal' | 'slow' | 'failure' | 'missing', observationRich: false, observationHealthReasons: true, webProbeScenario: 'ready' as 'ready' | 'not-found' | 'failure' | 'stale' | 'missing', historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
+    cdnScenario: 'none' as 'none' | 'reliable' | 'unreliable', protocolScenario: 'normal' as 'normal' | 'slow' | 'failure' | 'missing', observationRich: false, observationHealthReasons: true, webProbeScenario: 'ready' as 'ready' | 'not-found' | 'failure' | 'stale' | 'missing', historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, redirectCount: 2, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
   url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
     || url.pathname === '/api/v2/nav/home'
     || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
@@ -106,7 +106,7 @@ export const test = runtimeTest(
               remote_ip: ip, body_read_bytes: 0, content_type: 'text/html', title: `${target} page`, html_charset: 'UTF-8',
               headers: { Server: ['fixture-edge'], 'Content-Type': ['text/html'], 'Cache-Control': ['max-age=0'], 'X-Fixture': ['full-header-value' + (state.longEvidence ? 'x'.repeat(350) : '')], 'Strict-Transport-Security': ['max-age=31536000'] },
               meta: { description: 'Observed page description' + (state.longEvidence ? 'x'.repeat(350) : ''), keywords: 'furry, community' },
-              redirect_chain: state.noRedirects ? [] : [`http://${target}/`, `https://${target}/`] } : {}),
+              redirect_chain: state.noRedirects ? [] : Array.from({ length: state.redirectCount }, (_, index) => index === 0 ? `http://${target}/` : index === 1 ? `https://${target}/` : `https://${target}/hop-${index}`) } : {}),
           },
           ...(security?.http ?? {}),
         } },

@@ -7,9 +7,8 @@
           <dt class="site-observation-caption">{{ item.label }}</dt><dd class="site-observation-measure mt-1" :data-tone="item.tone">{{ item.value }}</dd>
         </div>
       </dl>
-      <div data-site-performance-waterfall class="site-observation-waterfall mt-5">
-        <h4 class="site-observation-heading flex items-center gap-2">{{ t('siteObservation.waterfall') }}<span tabindex="0" class="site-detail-help inline-flex" :title="t('siteObservation.timingHint')" :aria-label="t('siteObservation.timingHint')"><PhInfo class="site-detail-icon" aria-hidden="true" /></span></h4>
-        <ol class="mt-3 space-y-3">
+      <div data-site-performance-waterfall class="site-observation-waterfall mt-6">
+        <ol class="space-y-3">
           <li v-for="item in presentation.timings" :key="item.key" :data-site-timing="item.key" class="grid min-w-0 gap-x-4 gap-y-1 sm:grid-cols-[8rem_minmax(0,1fr)_6rem] sm:items-center">
             <span>{{ item.label }}</span>
             <div class="site-observation-measure-track min-w-0" aria-hidden="true"><span class="site-observation-measure-bar block" :data-total="item.key === 'total'" :style="{ width: `${item.fraction * 100}%` }" /></div>
@@ -53,7 +52,6 @@
 import type { SiteObservationPresentation } from '~/utils/siteObservationPresentation'
 import type { SiteHistoryPresentation, SiteHistorySample } from '~/composables/useSiteObservationHistory'
 import SitePingHistoryChart from './SitePingHistoryChart.vue'
-import { PhInfo } from '@phosphor-icons/vue'
 defineProps<{ presentation: SiteObservationPresentation; history: SiteHistoryPresentation }>()
 const emit = defineEmits<{ sample: [sample: SiteHistorySample]; retry: [] }>()
 const { t } = useI18n()

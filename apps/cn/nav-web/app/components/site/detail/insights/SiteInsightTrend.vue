@@ -20,6 +20,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useThemeStore } from '~/stores/theme'
 import { siteInsightRanges, type SiteInsightMetric, type SiteInsightRange } from '~/utils/siteDetailRouteState'
+import { formatChartPercent } from '~/utils/detailChartValues'
 import { siteInsightAdoptionValues } from '~/utils/siteInsightsPresentation'
 import type { SiteInsightTrendPresentation } from '~/composables/useSiteInsightTrend'
 const props = defineProps<{ presentation: SiteInsightTrendPresentation; metric: SiteInsightMetric; range: SiteInsightRange }>()
@@ -44,7 +45,7 @@ async function renderChart() {
     chart.value.setOption({ animation: false,
       grid: { top: 20, right: 16, bottom: 40, left: 48 },
       tooltip: { trigger: 'axis', confine: true, renderMode: 'richText', backgroundColor: color('--gf-surface'),
-        borderWidth: 0, textStyle: { color: color('--gf-text-main') }, valueFormatter: (value: unknown) => value === null ? '—' : `${value}%` },
+        borderWidth: 0, textStyle: { color: color('--gf-text-main') }, valueFormatter: formatChartPercent },
       xAxis: { type: 'category', boundaryGap: false, data: props.presentation.points.map(point => point.date), axisTick: { show: false },
         axisLine: { show: false }, axisLabel: { color: color('--gf-text-muted'), hideOverlap: true } },
       yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: color('--gf-text-muted'), formatter: '{value}%' }, splitLine: { lineStyle: { color: color('--site-detail-border'), opacity: 0.3 } } },

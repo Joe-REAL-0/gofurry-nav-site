@@ -1,7 +1,10 @@
 <template>
   <div data-site-overview class="site-overview min-w-0 space-y-6">
-    <SiteOverviewHealth :health="presentation.health" :attention="presentation.attention" />
-    <SiteCapabilitySnapshot :groups="presentation.capabilityGroups" :state="presentation.capabilityState" :insights-to="insightsTo" :retrying="retrying" @retry="emit('retry')" />
+    <div data-site-overview-composite class="site-detail-surface">
+      <SiteOverviewHealth :health="presentation.health" :attention="presentation.attention" />
+      <div class="site-detail-inset-separator mx-3 my-5" aria-hidden="true" />
+      <SiteCapabilitySnapshot :groups="presentation.capabilityGroups" :state="presentation.capabilityState" :insights-to="insightsTo" :retrying="retrying" @retry="emit('retry')" />
+    </div>
     <SiteRecentChanges :items="presentation.recentChanges" :state="presentation.changesState" />
   </div>
 </template>

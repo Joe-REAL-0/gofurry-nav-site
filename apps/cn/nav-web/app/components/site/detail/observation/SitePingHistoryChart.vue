@@ -7,6 +7,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { finiteChartValue, formatChartNumber } from '~/utils/detailChartValues'
 import { useThemeStore } from '~/stores/theme'
 import type { PingHistoryRow } from '~/utils/siteObservationPresentation'
 const props = defineProps<{ rows: PingHistoryRow[] }>()
@@ -30,13 +31,13 @@ async function renderChart() {
   chart.value.setOption({ animation: false,
     grid: { top: 24, right: 16, bottom: 40, left: 52 },
     tooltip: { trigger: 'axis', confine: true, renderMode: 'richText', backgroundColor: color('--gf-surface'),
-      borderColor: color('--gf-border'), textStyle: { color: color('--gf-text-main') } },
+      borderColor: color('--gf-border'), textStyle: { color: color('--gf-text-main') }, valueFormatter: (value: unknown) => formatChartNumber(value, locale.value) },
     xAxis: { type: 'category', data: rows.map(row => row.time), axisTick: { show: false },
       axisLine: { lineStyle: { color: color('--gf-border') } },
       axisLabel: { color: color('--gf-text-muted'), hideOverlap: true, formatter: (value: string) => value.slice(5, 16) } },
     yAxis: { type: 'value', min: 0, name: 'ms', nameTextStyle: { color: color('--gf-text-muted') },
       axisLabel: { color: color('--gf-text-muted') }, splitLine: { lineStyle: { color: color('--gf-border'), opacity: 0.45 } } },
-    series: [{ name: t('siteObservation.fields.rtt'), type: 'line', data: rows.map(row => row.rtt), connectNulls: false,
+    series: [{ name: t('siteObservation.fields.rtt'), type: 'line', data: rows.map(row => finiteChartValue(row.rtt)), connectNulls: false,
       symbolSize: 6, showSymbol: rows.length <= 20, lineStyle: { color: color('--site-detail-positive'), width: 2 },
       itemStyle: { color: color('--site-detail-positive') } }],
   }, true)

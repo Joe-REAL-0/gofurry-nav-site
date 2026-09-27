@@ -1,3 +1,4 @@
+import { finiteChartValue, formatChartNumber, formatChartPercent, formatGameAverage } from '../../../app/utils/detailChartValues'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { Page } from '@playwright/test'
@@ -82,7 +83,7 @@ async function open(page: Page, path = '/en/site/41?tab=overview') {
 }
 
 async function assertAcrylic(page: Page) {
-  const panels = '[data-site-identity-note], [data-site-target-context], .site-detail-surface, [data-site-overview-status-composite], [data-site-overview-capability-composite], [data-site-change], .site-observation-composite, .site-observation-evidence'
+  const panels = '[data-site-identity-note], [data-site-target-context], .site-detail-surface, [data-site-overview-composite], .site-observation-composite, .site-observation-evidence'
   // Theme hydration can start the same color transition as hover. Observe its end,
   // without fixed sleep or a hard-coded color snapshot.
   await page.mouse.move(0, 0)
@@ -91,11 +92,11 @@ async function assertAcrylic(page: Page) {
     const css = (selector: string) => getComputedStyle(root.querySelector(selector)!)
     const alpha = (value: string) => Number(value.match(/\/\s*([\d.]+)\)$/)?.[1] ?? value.match(/rgba\([^)]*,\s*([\d.]+)\)$/)?.[1] ?? 1)
     const a = css('[data-site-identity-note]'), b = css('[data-site-target-context]')
-    const borders = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-hero], [data-site-health-strip], [data-site-health], [data-site-target-context], .site-detail-surface, [data-site-overview-status-composite], [data-site-overview-capability-composite], [data-site-change], .site-observation-composite, .site-observation-evidence, [data-site-workspace-subnav-header] [role="tablist"], .site-observation-facts > div, .site-observation-evidence-list > div, .site-security-row, .site-intelligence-row, .site-intelligence-chart-shell, .site-intelligence-change')).map(node => {
+    const borders = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-hero], [data-site-health-strip], [data-site-health], [data-site-target-context], .site-detail-surface, [data-site-overview-composite], .site-observation-composite, .site-observation-evidence, [data-site-workspace-subnav-header] [role="tablist"], .site-observation-facts > div, .site-observation-evidence-list > div, .site-security-row, .site-intelligence-row, .site-intelligence-chart-shell, .site-intelligence-change')).map(node => {
       const s = getComputedStyle(node)
       return { hook: node.tagName + ' ' + node.className, widths: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth], shadow: s.boxShadow }
     })
-    const panels = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-target-context], .site-detail-surface, [data-site-overview-status-composite], [data-site-overview-capability-composite], [data-site-change], .site-observation-composite, .site-observation-evidence')).map(node => ({ fill: getComputedStyle(node).backgroundColor, image: getComputedStyle(node).backgroundImage }))
+    const panels = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-target-context], .site-detail-surface, [data-site-overview-composite], .site-observation-composite, .site-observation-evidence')).map(node => ({ fill: getComputedStyle(node).backgroundColor, image: getComputedStyle(node).backgroundImage }))
     return { a: alpha(a.backgroundColor), b: alpha(b.backgroundColor), borders, panels }
   })
   expect(material.a).toBeLessThan(0.7); expect(material.b).toBe(material.a); expect(material.b).toBeGreaterThan(0)
@@ -210,7 +211,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await assertTitleNav(page, 'security'); await assertAcrylic(page)
     await expect(page.locator('[data-site-security-summary-plane] [data-site-security-summary]')).toHaveCount(6)
     await expect(page.locator('[data-site-security-summary="transport"]')).toContainText('TLS 1.3')
-    await expect(page.locator('[data-site-security-scope]')).toHaveCount(1)
+    await expect(page.locator('[data-site-security-scope]')).toHaveCount(0)
     await expect(page.locator('[data-site-security]')).not.toContainText('Current Target ·')
     await expect(page.locator('[data-site-security-summary="headers"]')).toContainText('6 / 6 observed')
     await expect(page.locator('[data-site-security-overview]')).not.toContainText(/X-Frame-Options|Content-Security-Policy|Security Score/)
@@ -335,5 +336,192 @@ test('first-round unavailable Insights retains its borderless explorer and share
   await expect(page.locator('[data-site-insights-state]')).toHaveAttribute('data-site-insights-state', 'ready')
   expect(runtime.count('/sites/41/insights')).toBe(before.insights + 1)
   expect(runtime.count('/sites/41/detail')).toBe(before.detail); expect(runtime.count('/sites/41/view')).toBe(before.view); expect(runtime.count('/trend')).toBe(before.trend)
+  runtime.assertQuiet()
+})
+
+
+test('Task D chart formatters preserve missing values and average precision', () => {
+  for (const value of [null, undefined, '4', NaN, Infinity, -Infinity, {}, []]) {
+    expect(finiteChartValue(value)).toBeNull()
+    expect(formatChartPercent(value)).toBe('—')
+    expect(formatChartNumber(value, 'en')).toBe('—')
+    expect(formatGameAverage(value, 'en')).toBe('—')
+  }
+  expect(formatChartPercent(0)).toBe('0%'); expect(formatChartNumber(0, 'en')).toBe('0')
+  expect([35386.394, 42.5, 42].map(value => formatGameAverage(value, 'en'))).toEqual(['35,386.4', '42.5', '42'])
+})
+
+async function taskDTooltip(page: Page) {
+  const trigger = page.locator('[data-site-help-trigger]').first(), tip = page.getByRole('tooltip')
+  await expect(trigger).not.toHaveAttribute('title')
+  await trigger.hover(); await expect(tip).toBeVisible()
+  await expect(trigger).toHaveAttribute('aria-describedby', await tip.getAttribute('id') as string)
+  const bounds = await tip.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+  await page.keyboard.press('Escape'); await expect(tip).toHaveCount(0)
+  await page.mouse.move(0, 0); await trigger.focus(); await expect(tip).toBeVisible()
+  await trigger.evaluate(node => (node as HTMLElement).blur()); await expect(tip).toHaveCount(0)
+  await trigger.click(); await expect(tip).toBeVisible()
+  await page.keyboard.press('Escape'); await expect(tip).toHaveCount(0)
+}
+
+async function taskDChanges(page: Page, selector: string, count: number, desktop = true) {
+  const section = page.locator(selector), rows = section.locator('[data-site-change-stream] > li')
+  await expect(rows).toHaveCount(count)
+  const dates = await rows.locator('time').allTextContents()
+  if (desktop) {
+    const boxes = await rows.evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y } }))
+    expect(boxes[0]!.y).toBe(boxes[2]!.y); expect(boxes[0]!.x).toBeLessThan(boxes[2]!.x)
+    expect(boxes[3]!.x).toBeCloseTo(boxes[2]!.x, 0); expect(boxes[3]!.y).toBeGreaterThan(boxes[2]!.y)
+    await section.locator('[data-site-change-mode="list"]').click()
+    await expect(section.locator('[data-site-change-stream]')).toHaveAttribute('data-mode', 'list')
+    expect(new Set(await rows.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x))).size).toBe(1)
+    expect(await rows.locator('time').allTextContents()).toEqual(dates)
+    await section.locator('[data-site-change-mode="compact"]').click()
+    await expect(section.locator('[data-site-change-stream]')).toHaveAttribute('data-mode', 'compact')
+    for (const arrow of await section.locator('.site-detail-flow-arrow').all()) await expect(arrow.locator('svg:visible')).toHaveCount(1)
+  } else {
+    await expect(section.locator('[data-site-change-modes]')).toBeHidden()
+    expect(new Set(await rows.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x))).size).toBe(1)
+  }
+}
+
+async function taskDTrendGap(page: Page) {
+  const chart = page.locator('[data-site-insight-chart]')
+  // ECharts richText tooltips paint on canvas; observe actual rendered text, not an HTML substitute.
+  await chart.evaluate(node => {
+    const original = CanvasRenderingContext2D.prototype.fillText
+    const capture = { text: [] as string[], restore: () => { CanvasRenderingContext2D.prototype.fillText = original } }
+    ;(window as typeof window & { taskDCanvas?: typeof capture }).taskDCanvas = capture
+    CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+      if (node.contains(this.canvas)) capture.text.push(text)
+      if (maxWidth === undefined) original.call(this, text, x, y)
+      else original.call(this, text, x, y, maxWidth)
+    }
+  })
+  try {
+    const width = (await chart.boundingBox())!.width
+    await chart.hover({ position: { x: (width + 32) / 2, y: 100 } })
+    const text = () => page.evaluate(() => (window as typeof window & { taskDCanvas: { text: string[] } }).taskDCanvas.text)
+    await expect.poll(text).toContain('2026-09-02')
+    await expect.poll(text).toContain('—')
+    expect((await text()).join(' ')).not.toMatch(/undefined|null|NaN|Infinity/)
+  } finally {
+    await page.evaluate(() => {
+      const target = window as typeof window & { taskDCanvas?: { restore: () => void } }
+      target.taskDCanvas?.restore(); delete target.taskDCanvas
+    })
+    await page.mouse.move(0, 0)
+  }
+}
+
+test('Task D Overview and Observation composites retain the default/history contract', async ({ page, runtime }) => {
+  Object.assign(runtime.state, { observationRich: true, fullCapabilities: true, manyChanges: true, historyCount: 100, redirectCount: 7, cdnScenario: 'reliable' })
+  await open(page)
+  const composite = page.locator('[data-site-overview-composite]')
+  await expect(composite.locator('[data-site-overview-health], [data-site-capability-snapshot]')).toHaveCount(2)
+  await expect(composite.locator('[data-site-overview-attention]')).toHaveCount(0)
+  await expect(composite.locator('[data-site-status-distribution]')).toHaveCount(0)
+  expect(await composite.locator('[data-site-overview-status-grid] > *').evaluateAll(nodes => nodes.map(node => node.children.length))).toEqual([2, 2, 2])
+  await expect(composite).not.toContainText('Site-wide')
+  await expect(page.locator('[data-site-hero-heading] .site-detail-hero__domain')).toHaveText('target.example')
+  await expect(page.locator('[data-site-hero-meta] [data-site-views]')).toHaveCount(1)
+  await expect(page.locator('[data-site-hero-meta] [data-site-cdn]')).toHaveText('Cloudflare CDN')
+  await taskDChanges(page, '[data-site-recent-changes]', 4)
+  expect(runtime.calls).toHaveLength(3)
+  await review(page, 'task-d-overview-1440-light')
+  await page.locator('[data-site-primary-tab="observation"]').click()
+  await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  await expect(page.locator('[data-site-performance-waterfall] h4, [data-site-performance-waterfall] [data-site-help-trigger]')).toHaveCount(0)
+  await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-points', '20')
+  for (const sample of [60, 100, 20]) {
+    await page.locator(`[data-site-performance-sample="${sample}"]`).click()
+    await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-points', String(sample))
+  }
+  await page.locator('[data-site-history-table] summary').click()
+  await expect(page.locator('[data-site-history-table] tbody tr')).toHaveCount(20)
+  expect(runtime.count('/observations')).toBe(1)
+  expect(Object.fromEntries(runtime.calls.find(call => call.url.pathname.endsWith('/observations'))!.url.searchParams)).toEqual({ protocol: 'ping', limit: '100', payload_mode: 'preview' })
+  await review(page, 'task-d-performance-1440-light')
+  await page.locator('[data-site-observation-tab="overview"]').click()
+  const observation = page.locator('[data-site-observation-overview-composite]')
+  await expect(observation.locator('[data-site-observation-current], [data-site-observation-endpoint], [data-site-observation-risks]')).toHaveCount(3)
+  await review(page, 'task-d-observation-overview-1440-light')
+  await page.locator('[data-site-observation-tab="http"]').click()
+  await expect(page.locator('[data-site-http-composite] [data-site-http-response], [data-site-http-composite] [data-site-http-redirects], [data-site-http-composite] [data-site-http-headers]')).toHaveCount(3)
+  const redirects = page.locator('[data-site-redirect-node]')
+  await expect(redirects).toHaveCount(7)
+  const positions = await redirects.evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y } }))
+  expect(positions[0]!.y).toBe(positions[2]!.y); expect(positions[3]!.x).toBeCloseTo(positions[2]!.x, 0)
+  expect(positions[5]!.x).toBeCloseTo(positions[0]!.x, 0); expect(positions[6]!.y).toBeGreaterThan(positions[5]!.y)
+  await expect(page.locator('[data-site-http-redirects]')).not.toContainText(/301|302/)
+  await page.locator('[data-site-http-all-headers] summary').click()
+  await expect(page.locator('[data-site-http-all-headers] dl')).toBeVisible()
+  await review(page, 'task-d-http-1440-light')
+  await page.locator('[data-site-observation-tab="dns"]').click()
+  await expect(page.locator('[data-site-dns-ledger] [data-site-dns-risks]')).toHaveCount(1)
+  await expect(page.locator('[data-site-dns-signal="ptr_empty"]')).not.toContainText('ptr_empty')
+  await expect(page.locator('[data-site-dns-signal="ptr_empty"] p')).toHaveAttribute('data-tone', 'neutral')
+  await expect(page.locator('[data-site-dns-signal="private_ip"] p')).toHaveAttribute('data-tone', 'warning')
+  await review(page, 'task-d-dns-1440-light')
+  await assertRuntimeSurface(page, '[data-site-detail]', 'light')
+  expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
+})
+
+test('Task D Security evidence and Insights help/changes preserve request ownership', async ({ page, runtime }) => {
+  Object.assign(runtime.state.security, { enabled: true, days: 7, stale: true })
+  runtime.state.intelligence.rich = true
+  await open(page, '/en/site/41?tab=security')
+  await expect(page.locator('[data-site-security-overview-composite] [data-site-security-attention]')).toHaveCount(1)
+  await expect(page.locator('[data-site-security-scope]')).toHaveCount(0)
+  await review(page, 'task-d-security-overview-1440-light')
+  await page.locator('[data-site-security-tab="tls"]').click()
+  const transport = page.locator('[data-site-security-transport-composite]')
+  await expect(transport).toBeVisible()
+  expect(await transport.locator(':scope > div > div').evaluateAll(nodes => nodes.map(node => node.children.length))).toEqual([2, 2, 2])
+  await expect(transport.locator('[data-site-transport-details]')).not.toHaveAttribute('open')
+  await taskDTooltip(page)
+  await transport.locator('[data-site-transport-details] summary').click()
+  await expect(transport.locator('[data-site-evidence="cipher_suite"]')).toBeVisible()
+  await expect(page.locator('[data-site-certificate-identity] [data-site-certificate-crypto]')).toHaveCount(1)
+  await expect(page.locator('[data-site-certificate-crypto]')).not.toHaveAttribute('open')
+  await page.locator('[data-site-certificate-crypto] summary').click()
+  await expect(page.locator('[data-site-evidence="cert_fingerprint_sha256"]')).toBeVisible()
+  await review(page, 'task-d-tls-1440-light')
+  await page.locator('[data-site-primary-tab="insights"]').click()
+  await expect(page.locator('[data-site-insight-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  await expect(page.locator('[data-site-insights-header]')).not.toContainText('Site-wide data')
+  await taskDTrendGap(page)
+  await taskDTooltip(page)
+  await taskDChanges(page, '[data-site-insight-changes]', 6)
+  await review(page, 'task-d-insights-1440-light')
+  const dates = await page.locator('[data-site-insight-change] time').allTextContents()
+  await page.locator('[data-site-target-trigger]').click(); await page.locator('[data-site-target-option="alt.example"]').click()
+  await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
+  expect(await page.locator('[data-site-insight-change] time').allTextContents()).toEqual(dates)
+  expect(runtime.count('/sites/41/detail')).toBe(2); expect(runtime.count('/sites/41/insights')).toBe(1)
+  expect(runtime.count('/sites/41/view')).toBe(1); expect(runtime.count('/trend')).toBe(1); expect(runtime.count('/observations')).toBe(0)
+  await assertRuntimeSurface(page, '[data-site-detail]', 'light'); runtime.assertQuiet()
+})
+
+for (const [width, theme] of [[390, 'light'], [1440, 'dark']] as const) test(`Task D focused responsive composition/help ${width}-${theme}`, async ({ page, context, runtime }) => {
+  Object.assign(runtime.state, { fullCapabilities: true, manyChanges: true, summaryScenario: 'mixed', observationRich: true, redirectCount: 7 })
+  await page.setViewportSize({ width, height: 900 }); await context.addInitScript(value => localStorage.setItem('theme', value), theme)
+  await open(page)
+  await expect(page.locator('[data-site-overview-composite] [data-site-overview-attention]')).toBeVisible()
+  await taskDChanges(page, '[data-site-recent-changes]', 4, width >= 768)
+  await review(page, `task-d-overview-${width}-${theme}`)
+  // Direct secondary deep link avoids activating Performance while checking HTTP layout.
+  await page.goto('/en/site/41?tab=observation&view=http', { waitUntil: 'load' })
+  await expect(page.locator('[data-site-redirect-node]')).toHaveCount(7)
+  for (const arrow of await page.locator('[data-site-redirect-node] .site-detail-flow-arrow').all()) await expect(arrow.locator('svg:visible')).toHaveCount(1)
+  if (width === 390) expect(new Set(await page.locator('[data-site-redirect-node]').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x))).size).toBe(1)
+  await assertRuntimeSurface(page, '[data-site-detail]', theme)
+  await review(page, `task-d-http-${width}-${theme}`)
+  await page.locator('[data-site-primary-tab="insights"]').click()
+  await expect(page.locator('[data-site-insight-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  await taskDTooltip(page)
+  await assertRuntimeSurface(page, '[data-site-detail]', theme)
+  await review(page, `task-d-help-${width}-${theme}`)
   runtime.assertQuiet()
 })

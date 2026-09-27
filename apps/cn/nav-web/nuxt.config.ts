@@ -59,6 +59,8 @@ const publicGameV2ApiBase = process.env.NUXT_PUBLIC_GAME_V2_API_BASE || deriveGa
 const gameV2ApiInternalBase = process.env.GAME_V2_API_INTERNAL_BASE || process.env.NUXT_GAME_V2_API_INTERNAL_BASE || deriveGameV2ApiBase(gameApiInternalBase)
 
 export default defineNuxtConfig({
+  // Opt-in isolated source runtime for focused checks that prohibit a production build.
+  ...(process.env.GOFURRY_FIXTURE_DEV === '1' ? { buildDir: '.nuxt/fixture', devtools: { enabled: false } } : {}),
   compatibilityDate: '2026-05-01',
   experimental: {
     appManifest: false
@@ -66,6 +68,7 @@ export default defineNuxtConfig({
   modules: ['@pinia/nuxt', '@nuxtjs/i18n'],
   css: ['~/assets/css/main.css', '~/assets/styles/index.less'],
   vite: {
+    ...(process.env.GOFURRY_FIXTURE_DEV === '1' ? { cacheDir: '.nuxt/fixture/vite' } : {}),
     plugins: [tailwindcss()],
     define: {
       'import.meta.env.VITE_NAV_API_BASE_URL': JSON.stringify(process.env.NUXT_PUBLIC_NAV_API_BASE || '/api/v1'),

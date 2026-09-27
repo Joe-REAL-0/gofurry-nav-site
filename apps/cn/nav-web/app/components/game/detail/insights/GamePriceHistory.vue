@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { finiteChartValue } from '~/utils/detailChartValues'
 import { readGameDetailChartPalette } from '@/utils/gameDetailChartPalette'
 import type { GameDetailInsightRange, GameInsightPricePoint, GameInsightRegion } from '@/types/insights'
 import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
@@ -54,6 +55,7 @@ let resizeObserver: ResizeObserver | null = null
 let active = false
 
 function pointLines(point: GameInsightPricePoint) {
+  if (point.state === 'priced' && finiteChartValue(point.final_amount) === null) return [`${t('insights.entity.currentPrice')}: —`]
   const display = publicPriceDisplay(point)
   if (display.kind === 'free') {
     return [`${t('insights.entity.currentPrice')}: ${t('insights.entity.priceFree')}`]
@@ -61,10 +63,10 @@ function pointLines(point: GameInsightPricePoint) {
   if (display.kind === 'priced') {
     const current = point.currency ? formatMinorAmount(display.amount, point.currency, locale.value) : t('insights.entity.priceStatusUnknown')
     const lines = [`${t('insights.entity.currentPrice')}: ${current}`]
-    if (point.initial_amount !== null && point.currency) {
-      lines.push(`${t('insights.entity.originalPriceLabel')}: ${formatMinorAmount(point.initial_amount, point.currency, locale.value)}`)
+    if (finiteChartValue(point.initial_amount) !== null && point.currency) {
+      lines.push(`${t('insights.entity.originalPriceLabel')}: ${formatMinorAmount(point.initial_amount!, point.currency, locale.value)}`)
     }
-    if (point.discount_percent !== null && point.discount_percent > 0) {
+    if (finiteChartValue(point.discount_percent) !== null && point.discount_percent! > 0) {
       lines.push(`${t('insights.entity.discount')}: -${point.discount_percent}%`)
     }
     return lines
@@ -93,6 +95,7 @@ async function renderChart() {
     current.indexes.push(index)
   })
   const unavailablePoints = props.points.map((point) => {
+    if (point.state === 'priced' && finiteChartValue(point.final_amount) === null) return null
     if (publicPriceDisplay(point).kind !== 'unavailable') return null
     return { value: 0, point }
   })
@@ -139,7 +142,7 @@ async function renderChart() {
         data: props.points.map((point, index) => {
           if (!segment.indexes.includes(index)) return null
           const display = publicPriceDisplay(point)
-          return { value: display.kind === 'priced' ? display.amount / 100 : 0, point }
+          return { value: display.kind === 'priced' ? display.amount / 100 : display.kind === 'free' ? 0 : null, point }
         }),
         connectNulls: false,
         symbol: 'circle',

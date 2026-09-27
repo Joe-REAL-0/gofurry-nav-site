@@ -1,6 +1,6 @@
 <template>
-  <div data-site-observation-overview class="space-y-5">
-    <section data-site-observation-current class="site-observation-composite">
+  <div data-site-observation-overview data-site-observation-overview-composite class="site-observation-composite">
+    <section data-site-observation-current>
       <h3 class="site-observation-heading">{{ t('siteObservation.currentObservation') }}</h3>
       <dl class="site-observation-protocol-strip mt-4 grid min-w-0 gap-4 md:grid-cols-3">
         <div v-for="item in presentation.protocols" :key="item.protocol" :data-site-observation-protocol="item.protocol" class="min-w-0">
@@ -14,10 +14,12 @@
         </div>
       </dl>
     </section>
-    <section v-if="presentation.endpoint.length" data-site-observation-endpoint class="site-observation-evidence" aria-labelledby="site-endpoint-title">
+    <div v-if="presentation.endpoint.length" class="site-detail-inset-separator mx-3 my-5" aria-hidden="true" />
+    <section v-if="presentation.endpoint.length" data-site-observation-endpoint aria-labelledby="site-endpoint-title">
       <h3 id="site-endpoint-title" class="site-observation-heading mb-3">{{ t('siteObservation.endpoint') }}</h3>
       <SiteObservationEvidence :items="presentation.endpoint" />
     </section>
+    <div v-if="presentation.risks.length" class="site-detail-inset-separator mx-3 my-5" aria-hidden="true" />
     <section v-if="presentation.risks.length" data-site-observation-risks class="site-observation-attention-rail">
       <h3 class="site-observation-heading flex items-center gap-2"><PhWarning class="site-detail-icon" data-tone="warning" aria-hidden="true" />{{ t('siteObservation.risks') }}</h3>
       <ul class="mt-2 space-y-2"><li v-for="message in presentation.risks" :key="message" class="break-words">{{ message }}</li></ul>

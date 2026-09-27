@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { finiteChartValue, formatChartNumber } from '~/utils/detailChartValues'
 import { readGameDetailChartPalette } from '@/utils/gameDetailChartPalette'
 import type { GameDetailInsightRange, GameInsightPlayerPoint } from '@/types/insights'
 import { formatGameInsightAxisDate } from '@/utils/insightHistoryRanges'
@@ -58,8 +59,8 @@ async function renderChart() {
   if (!chart.value) chart.value = echarts.init(chartRef.value, undefined, { renderer: 'canvas' })
 
   const colors = readGameDetailChartPalette(chartRef.value)
-  const peakSeries = props.points.map(point => ({ value: point.max, point }))
-  const averageSeries = props.points.map(point => ({ value: point.avg, point }))
+  const peakSeries = props.points.map(point => ({ value: finiteChartValue(point.max), point }))
+  const averageSeries = props.points.map(point => ({ value: finiteChartValue(point.avg), point }))
 
   chart.value.setOption({
     animation: false,
@@ -84,8 +85,8 @@ async function renderChart() {
         const point = entries.find(item => item.data?.point)?.data?.point
           ?? props.points.find(item => item.date === axisDate)
         if (!point) return ''
-        const average = point.avg === null ? t('insights.entity.dataUnavailable') : new Intl.NumberFormat(locale.value).format(point.avg)
-        return `${point.date}<br/>${t('insights.entity.playerTooltipPeak')}: ${new Intl.NumberFormat(locale.value).format(point.max)}<br/>${t('insights.entity.playerTooltipAverage')}: ${average}`
+        const average = formatChartNumber(point.avg, locale.value)
+        return `${point.date}<br/>${t('insights.entity.playerTooltipPeak')}: ${formatChartNumber(point.max, locale.value)}<br/>${t('insights.entity.playerTooltipAverage')}: ${average}`
       },
     },
     xAxis: {

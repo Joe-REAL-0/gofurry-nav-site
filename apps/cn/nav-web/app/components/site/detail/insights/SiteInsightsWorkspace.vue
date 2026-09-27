@@ -8,7 +8,6 @@
           <NuxtLink data-site-insights-compare :to="localePath({ path: '/insights/sites/compare', query: { ids: siteId } })" class="site-detail-text-link inline-flex items-center gap-1">{{ t('siteIntelligence.compare') }}<PhArrowsLeftRight class="site-detail-icon" aria-hidden="true" /></NuxtLink>
         </div>
       </div>
-      <p class="site-detail-note mt-2">{{ t('siteIntelligence.scope') }}</p>
       <div v-if="presentation.state === 'unavailable'" data-site-insights-unavailable class="mt-3 flex flex-wrap items-baseline gap-3" :aria-busy="retrying">
         <p role="status" class="site-detail-note">{{ t('siteIntelligence.unavailable') }}</p>
         <button data-site-insights-retry type="button" :disabled="retrying" class="site-detail-text-link" @click="emit('retry')">{{ t(retrying ? 'siteIntelligence.loading' : 'siteIntelligence.retry') }}</button>

@@ -17,7 +17,7 @@
       <span class="site-intelligence-context col-span-2 flex flex-wrap gap-x-3 gap-y-1 lg:contents">
         <span class="inline-flex min-w-0 items-baseline gap-1"><span class="site-detail-note lg:hidden">{{ t('siteIntelligence.adoptionShort') }}</span><span data-site-capability-adoption>{{ row.adoption }}</span></span>
         <span class="inline-flex min-w-0 items-baseline gap-1"><span class="site-detail-note lg:hidden">{{ t('siteIntelligence.coverage') }}</span><span data-site-capability-coverage>{{ row.coverage }}</span></span>
-        <time data-site-capability-date :datetime="row.dateTime" :title="row.date" class="min-w-0 break-words"><template v-if="row.dateTime"><span class="lg:hidden">{{ row.shortDate }}</span><span class="hidden lg:inline">{{ row.date }}</span></template><template v-else>—</template></time>
+        <time data-site-capability-date :datetime="row.dateTime" :aria-label="row.date" class="min-w-0 break-words"><template v-if="row.dateTime"><span class="lg:hidden">{{ row.shortDate }}</span><span class="hidden lg:inline">{{ row.date }}</span></template><template v-else>—</template></time>
       </span>
     </button>
     </section>

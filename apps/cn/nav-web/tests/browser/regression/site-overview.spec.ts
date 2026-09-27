@@ -21,7 +21,7 @@ async function reviewOverview(page: Page, name: string) {
 
 async function assertOverviewComposition(page: Page, width: number) {
   const overview = page.locator('[data-site-overview]')
-  await expect(overview.locator(':scope > section')).toHaveCount(3)
+  await expect(overview.locator(':scope > *')).toHaveCount(2)
   await expect(overview.locator('[data-site-overview-columns]')).toHaveCount(0)
   await expect(overview.locator('[data-site-overview-status-composite]')).toHaveCount(1)
   await expect(overview.locator('[data-site-overview-capability-composite]')).toHaveCount(1)
@@ -52,9 +52,9 @@ async function assertOverviewComposition(page: Page, width: number) {
   if (width >= 768) expect(new Set(layout.groups.map(group => group.y)).size).toBe(1)
   else expect(layout.groups[1]!.y).toBeGreaterThan(layout.groups[0]!.bottom)
   expect(layout.cards).toHaveLength(4)
-  expect(layout.cards.every(card => card.border === '0px' && card.radius === '8px' && card.shadow === 'none')).toBe(true)
+  expect(layout.cards.every(card => card.border === '0px' && card.radius === '7px' && card.shadow === 'none')).toBe(true)
   const firstRow = layout.cards.filter(card => card.y === layout.cards[0]!.y)
-  expect(firstRow).toHaveLength(width === 1440 ? 4 : width === 768 ? 2 : 1)
+  expect(firstRow).toHaveLength(width >= 768 ? 3 : 1)
 }
 
 for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as const) {
@@ -66,7 +66,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     const html = await openOverview(page)
     for (const hook of ['data-site-overview-health', 'data-site-capability-snapshot', 'data-site-recent-changes']) expect(html).toContain(hook)
     await expect(page.locator('[data-site-overview-health]')).toHaveAttribute('data-site-status', 'healthy')
-    await expect(page.locator('[data-site-status-distribution]')).toHaveText('2 / 2 targets healthy')
+    await expect(page.locator('[data-site-status-distribution]')).toHaveCount(0)
     await expect(page.locator('[data-site-overview-health] time')).toHaveText('2026-09-26 12:18:00 UTC')
     await expect(page.locator('[data-site-overview-attention]')).toHaveCount(0)
     await expect(page.locator('[data-site-capability]')).toHaveCount(7)
@@ -130,18 +130,18 @@ for (const scenario of ['stale', 'missing', 'unknown', 'zero', 'mixed'] as const
     await expect(health).toHaveAttribute('data-site-summary-state', scenario === 'missing' ? 'missing' : scenario === 'stale' ? 'stale' : 'ready')
     if (scenario === 'stale') {
       await expect(health).toContainText('Healthy')
-      await expect(health).toContainText('Summary may be stale')
+      await expect(attention).toBeVisible()
     } else if (scenario === 'missing') {
       await expect(health).toContainText('No complete site health summary')
       await expect(health).not.toHaveAttribute('data-site-status')
       await expect(page.locator('[data-site-health="status"]')).toContainText('Healthy')
     } else if (scenario === 'unknown') {
       await expect(health).toHaveAttribute('data-site-status', 'unknown')
-      await expect(page.locator('[data-site-status-distribution]')).toHaveText('2 Unknown')
+      await expect(page.locator('[data-site-status-distribution]')).toHaveCount(0)
       await expect(attention.locator('[data-site-attention-target]')).toHaveCount(0)
-    } else if (scenario === 'zero') await expect(health).toContainText('No collected targets')
+    } else if (scenario === 'zero') await expect(page.locator('[data-site-overview-target-count]')).toHaveText('0 targets')
     else {
-      await expect(page.locator('[data-site-status-distribution]')).toHaveText('1 Healthy · 2 Down')
+      await expect(page.locator('[data-site-status-distribution]')).toHaveCount(0)
       await expect(attention.locator('li')).toHaveText(['2 targets · HTTP is currently unreachable'])
       await expect(attention).not.toContainText('后端旧中文')
     }

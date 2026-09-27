@@ -486,6 +486,39 @@ switches still fetch Detail only. Neither recounts View or refetches Site Insigh
 P4/P6 cache/race internals, API shape, Site/Target ownership and Entity-only SEO
 remain unchanged. No final Visual golden or P8 work is authorized by Task C.
 
+## Site Detail Task D composites, help and focused defects (pre-P8)
+
+Task D retains Task C material/default-entry and all data identities. It groups
+Overview Summary/Attention/Capabilities, Observation Current/Endpoint/Attention,
+HTTP Response/Redirects/Headers, Security Summary/Attention and Certificate
+Identity/Crypto under their respective single panel owners. Inset dashed lines
+may separate these related sections; they do not introduce perimeter borders or
+Hero perforations. Summary fields have only a label and primary value; TLS
+auxiliary evidence remains in a native disclosure. Security and Site Insights
+scope copy is removed without changing either ownership contract.
+
+`SiteDetailHelpTooltip` owns active Site Info hover/focus/click, Escape/blur and
+ARIA association; native `title` is not its visible help. Waterfall has no extra
+heading/help. `SiteChangeStream` adds local Compact/List controls with the same
+three-column serpentine geometry as Game Timeline (`serpentineSequence.ts`).
+Mobile remains a list; chronology, date precision, Overview's four-event bound
+and Insights' complete recent set are unchanged. Redirects use this geometry
+without inventing hop status. Hero name/domain share a heading row, while views
+share the badge row; Current Target CDN selection is unchanged.
+
+The four touched charts normalize non-finite/non-numeric/missing values to a gap
+and `—`, never zero. Game `average_30d` has an independent one-decimal maximum;
+current/peak counts stay integer. No new chart/tooltip dependency is introduced.
+The Gallery test's expected abort is single-use, exact-request/exact-resource,
+`net::ERR_ABORTED` only, and must follow intentional Gallery unmount and actually
+occur. Other failed requests and browser errors remain fatal.
+
+Task D explicitly limits local validation to focused cases, typecheck and relevant
+lint/style checks, without full build/suites. The opt-in local source fixture
+mode is documented in the testing guide and is not production/remote acceptance.
+Keep Site/deep/legacy-dark debt zero, #108/ambient budgets and accepted Visual
+inventory unchanged. Stop before P8.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**

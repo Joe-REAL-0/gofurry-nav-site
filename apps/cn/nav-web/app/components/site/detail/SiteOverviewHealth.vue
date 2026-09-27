@@ -1,16 +1,13 @@
 <template>
-  <section data-site-overview-health data-site-overview-status-composite :data-site-summary-state="health.summaryState" :data-site-status="health.status" class="site-overview-status-composite" aria-labelledby="site-overview-health-title">
+  <section data-site-overview-health data-site-overview-status-composite :data-site-summary-state="health.summaryState" :data-site-status="health.status" class="min-w-0" aria-labelledby="site-overview-health-title">
     <div data-site-overview-status-grid class="site-overview-status-grid grid min-w-0 grid-cols-2 gap-x-5 gap-y-4 md:grid-cols-3">
       <div class="site-overview-status-item col-span-2 min-w-0 md:col-span-1">
         <h3 id="site-overview-health-title" class="site-overview-heading">{{ t('siteOverview.health') }}</h3>
         <p class="site-overview-status-value mt-3 inline-flex items-center gap-2" :data-tone="health.tone"><span class="site-overview-dot shrink-0" aria-hidden="true" />{{ health.statusLabel }}</p>
-        <p v-if="health.freshnessLabel" class="site-overview-state mt-1" data-tone="warning">{{ health.freshnessLabel }}</p>
-        <p v-if="health.summaryText" data-site-status-distribution class="site-overview-summary mt-2">{{ health.summaryText }}</p>
       </div>
       <dl class="site-overview-status-item min-w-0">
         <dt class="site-overview-meta-label">{{ t('siteOverview.observedTargets') }}</dt>
         <dd data-site-overview-target-count class="site-overview-status-value mt-3 break-words">{{ health.targetCount === null ? t('siteOverview.countUnavailable') : t('siteOverview.targetCount', { count: health.targetCount }) }}</dd>
-        <dd class="site-detail-note mt-2">{{ t('siteOverview.scope') }}</dd>
       </dl>
       <dl class="site-overview-status-item min-w-0">
         <dt class="site-overview-meta-label">{{ t('siteOverview.updated') }}</dt>

@@ -24,14 +24,15 @@
         </div>
       </section>
       <p v-if="!presentation.groups.length" class="site-observation-caption mt-3">{{ t('siteObservation.noEvidence') }}</p>
-    </section>
-    <section v-if="presentation.signals.length" data-site-dns-risks class="site-observation-signal-rail">
-      <h3 class="site-observation-heading">{{ t('siteObservation.dnsObservationSignals') }}</h3>
-      <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-3"><li v-for="signal in presentation.signals" :key="signal.code" :data-site-dns-signal="signal.code" class="flex min-w-0 items-start gap-2">
-        <PhWarning v-if="signal.tone === 'warning'" class="site-detail-icon mt-1 shrink-0" data-tone="warning" aria-hidden="true" />
-        <PhInfo v-else class="site-detail-icon mt-1 shrink-0" aria-hidden="true" />
-        <p :data-tone="signal.tone" class="min-w-0 break-words">{{ signal.label }}</p>
-      </li></ul>
+      <div v-if="presentation.signals.length" class="site-detail-inset-separator mx-3 my-5" aria-hidden="true" />
+      <section v-if="presentation.signals.length" data-site-dns-risks class="site-observation-signal-rail">
+        <h3 class="site-observation-heading">{{ t('siteObservation.dnsObservationSignals') }}</h3>
+        <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-3"><li v-for="signal in presentation.signals" :key="signal.code" :data-site-dns-signal="signal.code" class="flex min-w-0 items-start gap-2">
+          <PhWarning v-if="signal.tone === 'warning'" class="site-detail-icon mt-1 shrink-0" data-tone="warning" aria-hidden="true" />
+          <PhInfo v-else class="site-detail-icon mt-1 shrink-0" aria-hidden="true" />
+          <p :data-tone="signal.tone" class="min-w-0 break-words">{{ signal.label }}</p>
+        </li></ul>
+      </section>
     </section>
   </div>
 </template>

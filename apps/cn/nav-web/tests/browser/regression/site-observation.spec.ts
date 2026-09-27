@@ -278,6 +278,7 @@ test('no redirect and no CNAME do not invent chains or history requests', async 
   runtime.state.observationRich = true; runtime.state.noRedirects = true; runtime.state.noCname = true
   await openObservation(page, 'http')
   await expect(page.locator('[data-site-http-redirects]')).toHaveCount(0)
+  await expect(page.locator('[data-site-redirect-separator]')).toHaveCount(0)
   await tab(page, 'dns').click()
   await expect(page.locator('[data-site-dns-chain], [data-site-dns-group="CNAME"]')).toHaveCount(0)
   expect(runtime.calls).toHaveLength(3)

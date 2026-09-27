@@ -13,7 +13,7 @@
         </div>
         <div>
           <dt>{{ $t('insights.entity.average30d') }}</dt>
-          <dd>{{ formatPlayerCount(summary.players.average_30d) }}</dd>
+          <dd data-average-players>{{ formatAveragePlayers(summary.players.average_30d) }}</dd>
         </div>
       </dl>
       <div class="game-insights-overview__quality">
@@ -63,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+import { finiteChartValue, formatGameAverage } from '~/utils/detailChartValues'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { GameInsightRegion, GameInsightRegionalPrice, GameInsights } from '@/types/insights'
@@ -108,14 +109,19 @@ const releaseStateText = computed(() => {
   return t('insights.entity.booleanUnknown')
 })
 
+function formatAveragePlayers(value: unknown) {
+  const count = formatGameAverage(value, locale.value)
+  return count === '—' ? count : t('insights.entity.playerCount', { count })
+}
+
 function formatPlayerCount(value: number | null) {
-  if (value === null) return t('insights.entity.dataUnavailable')
-  return t('insights.entity.playerCount', { count: new Intl.NumberFormat(locale.value).format(value) })
+  if (finiteChartValue(value) === null) return t('insights.entity.dataUnavailable')
+  return t('insights.entity.playerCount', { count: new Intl.NumberFormat(locale.value, { maximumFractionDigits: 0 }).format(value!) })
 }
 
 function formatCoverage(value: number | null) {
-  if (value === null) return t('insights.entity.dataUnavailable')
-  return new Intl.NumberFormat(locale.value, { style: 'percent', maximumFractionDigits: 0 }).format(value)
+  if (finiteChartValue(value) === null) return t('insights.entity.dataUnavailable')
+  return new Intl.NumberFormat(locale.value, { style: 'percent', maximumFractionDigits: 0 }).format(value!)
 }
 
 function formatObservationTime(value: string | null) {
