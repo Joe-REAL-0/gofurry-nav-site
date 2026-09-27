@@ -4,7 +4,7 @@
       ref="trigger"
       type="button"
       data-site-target-trigger
-      class="gf-button gf-button--surface w-full justify-between"
+      class="gf-button gf-button--surface gf-button--no-motion w-full justify-between"
       :aria-label="t('siteDetail.selectTarget') + ': ' + (displayTarget || selected)"
       aria-haspopup="listbox"
       aria-controls="site-target-listbox"

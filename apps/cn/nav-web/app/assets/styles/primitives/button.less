@@ -25,6 +25,15 @@
   transform: translateY(-1px);
 }
 
+// Opt-in stationary controls keep color/focus feedback without hover motion.
+.gf-button--no-motion {
+  transition: none;
+}
+
+.gf-button--no-motion:hover {
+  transform: none;
+}
+
 .gf-button:focus-visible {
   .gf-focus-ring();
 }
