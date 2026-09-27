@@ -563,14 +563,26 @@ with tab semantics/keyboard order, no URL/history entry and no independent SEO.
 Desktop resize clears the local selection and restores the underlying route
 workspace without navigation. Primary tabs scroll horizontally only when needed.
 One Site Detail appearance owner supplies borderless rows and 500ms tint; list
-content is limited to managed icon, name, one-line info, display domain and
-formatted view snapshot. Links use localized query-free Entity paths; the Similar
+content is limited to managed icon, name, one-line info and formatted view
+snapshot. P8 preflight removes the display domain only; the recommendation API's
+SiteVo domain stays unchanged. Links use localized query-free Entity paths; the Similar
 component never increments views. The destination page retains exactly-once View.
 
 Task E keeps verification focused on recommendation/group Go tests, recommendation
 SSR/request/discovery Browser cases, typecheck and relevant lint/style checks.
 Do not run full frontend tests/build or create final Visual goldens. Stop before
 P8 and await maintainer visual acceptance.
+
+P8 preflight aligns Functional assertions with the accepted Task D/E product:
+Waterfall has no native-title or Info help; redirects assert ordered nodes and
+the semantic connector wrapper, never Phosphor SVG internals. Capability/header/
+port/change tests own counts, states, category/date and Compact/List interaction.
+Exact gaps, typography sizes and serpentine pixel placement belong to the future
+Visual contract. Existing overflow, keyboard, accessible tooltip and request
+checks remain. Trend tests must wait for URL, pressed controls and metric/range
+identity before ready: tls13|90d → csp|90d → csp|all still requires three requests,
+cached Back/Forward adds none, and reload adds a fourth. Preflight grants no
+runtime/cache change or final-golden authorization.
 
 ## Styling ownership
 

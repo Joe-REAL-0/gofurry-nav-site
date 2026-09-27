@@ -5,13 +5,12 @@
     <ul v-if="items.length" class="site-detail-similar-list grid min-w-0 gap-1.5">
       <li v-for="site in items" :key="site.id" class="min-w-0">
         <NuxtLink :to="localePath(siteEntityPath(site.id))" :data-site-similar-id="site.id" class="site-detail-similar-item grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3">
-          <ManagedAssetImage :object-key="site.icon || undefined" alt="" class="site-detail-similar-icon row-span-3 object-contain" />
+          <ManagedAssetImage :object-key="site.icon || undefined" alt="" class="site-detail-similar-icon row-span-2 object-contain" />
           <div class="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
             <span class="site-detail-similar-name min-w-0 break-words">{{ site.name }}</span>
             <span data-site-similar-views class="site-detail-similar-views inline-flex shrink-0 items-center gap-1" :aria-label="t('siteDetail.views') + ' ' + views(site.view_count)"><PhEye class="site-detail-icon" aria-hidden="true" />{{ views(site.view_count) }}</span>
           </div>
           <p v-if="site.info" class="site-detail-similar-info col-start-2 min-w-0 line-clamp-1">{{ site.info }}</p>
-          <p class="site-detail-similar-domain col-start-2 min-w-0 truncate">{{ siteRecommendationDomain(site.domain) }}</p>
         </NuxtLink>
       </li>
     </ul>
@@ -22,7 +21,6 @@
 import { PhEye } from '@phosphor-icons/vue'
 import ManagedAssetImage from '~/components/common/ManagedAssetImage.vue'
 import type { Site } from '~/types/nav'
-import { siteRecommendationDomain } from '~/utils/siteRecommendationDomain'
 import { siteEntityPath } from '~/utils/siteRoutes'
 defineProps<{ items: Site[]; variant: 'aside' | 'panel' }>()
 const { t, locale } = useI18n(), localePath = useLocalePath()

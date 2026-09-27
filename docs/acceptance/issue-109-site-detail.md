@@ -1148,3 +1148,49 @@ Task E engineering criteria are satisfied within the requested focused budget.
 Maintainer visual acceptance remains pending; remote CI is unverified. No P8 or
 final golden was started. Both Nav Backend and Nav Web require normal deployment
 for the feature; no database or Redis migration is required.
+
+## P8 preflight — contract alignment and CI recovery (2026-09-28)
+
+This preflight is not a new visual round or #109 closure. Its only production
+presentation change removes the domain row from Similar Sites and makes its icon
+span the remaining two rows. The consumer-free domain parser/import and domain
+CSS are deleted. Recommendation API/SiteVo, Home Top-8/daily shuffle, Site/language
+identity, mode filtering, localized navigation and destination View remain intact.
+
+Functional contracts now follow Task D: Waterfall retains six timing rows, four
+KPIs, total and ready history, and explicitly rejects the retired native-title/
+Info help. Exact row gaps, typography dimensions and serpentine pixel placement
+leave Functional ownership. Counts, fact states, category/date ownership,
+Compact/List controls, accessible tooltips and request/error capture remain.
+Redirects inspect ordered nodes and the aria-hidden directional connector wrapper,
+not Phosphor's internal SVG structure. No UI was restored to satisfy old tests.
+
+Insights metric/range navigation waits for the URL, pressed controls and displayed
+trend identity before readiness. The required sequence remains tls13|90d,
+csp|90d, csp|all: three reads before reload, no reads for cached Back/Forward,
+and a fourth csp|all read after reload. No request budget is reduced and no force
+reload is introduced. `useSiteInsightTrend` and all other runtime owners are
+unchanged.
+
+The baseline [Task E CI run](https://github.com/gofurry/gofurry-nav-site/actions/runs/36329241205)
+confirmed Browser shards 2/3 failures in these stale/synchronization assertions;
+build, image, Visual, Nav Backend and PostgreSQL passed there. That baseline is
+diagnostic evidence only, not acceptance of this preflight.
+
+Local source-fixture verification passed **39/39** Chromium cases, workers=1 and
+zero retries: six Performance/Waterfall, the metric/range history/cache/reload
+case, eighteen final Shell/Security/Insights cases, four recommendation cases,
+six affected Task C entry cases and four affected Task D composite/help cases.
+The synchronized trend case observed exactly tls13|90d, csp|90d, csp|all, then
+csp|all after reload; runtime changes were unnecessary. This is the existing
+`GOFURRY_FIXTURE_DEV=1` owner, not a production-build acceptance claim.
+
+Typecheck, focused ESLint, Site Detail stylelint, style policy and whitespace
+checks passed. Site appearance/arbitrary/raw debt, deep selector and legacy dark
+remain zero; ambient raw 75 and #108 important 5 are unchanged. No budget update,
+full local frontend/Browser suite or local production build was run. Accepted
+Visual files and the baseline manifest are unchanged.
+
+The preflight commit will be pushed to dev for a fresh production CI gate;
+remote acceptance is pending until that run completes.
+No final Visual golden is created or updated; formal P8 remains a separate task.

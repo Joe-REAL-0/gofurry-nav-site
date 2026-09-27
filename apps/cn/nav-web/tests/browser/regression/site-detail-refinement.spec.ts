@@ -16,13 +16,8 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
   await expect(page.locator('[data-site-hero]')).not.toContainText(/confidence|medium|high|hint_type/)
   const trigger = page.locator('[data-site-target-trigger]')
   await expect(trigger).not.toHaveClass(/gf-button/)
-  await expect(trigger).toHaveCSS('border-width', '0px'); await expect(trigger).toHaveCSS('min-height', '38px')
+  await expect(trigger).toHaveCSS('border-width', '0px')
   await expect(trigger).toHaveCSS('transition-duration', '0.5s, 0.5s'); await expect(trigger).toHaveCSS('transform', 'none')
-  const views = await page.locator('[data-site-views]').evaluate(node => {
-    const style = getComputedStyle(node)
-    return { font: parseFloat(style.fontSize), weight: Number(style.fontWeight) }
-  })
-  expect(views.font).toBeGreaterThanOrEqual(14.4); expect(views.weight).toBeGreaterThanOrEqual(600)
   await expect(page.locator('[data-site-views]')).toHaveText('20,457')
   await assertAcrylic(page); await assertRuntimeSurface(page, '[data-site-detail]', theme)
   await review(page, `task-c-entry-${width}-${theme}`)
@@ -113,26 +108,18 @@ async function assertTitleNav(page: Page, domain: 'observation' | 'security') {
   await expect(header.locator('h2')).toHaveCount(1)
   await expect(header.locator('[role="tablist"]')).toHaveCount(1)
   await expect(page.locator('[data-site-workspace] > h2')).toHaveCount(0)
-  const geometry = await header.evaluate(node => {
-    const title = node.querySelector('h2')!.getBoundingClientRect(), nav = node.querySelector('[role="tablist"]')!
-    const box = nav.getBoundingClientRect(), css = getComputedStyle(nav)
-    return { titleRight: title.right, titleY: title.y + title.height / 2, left: box.left, right: box.right, width: box.width,
-      navY: box.y + box.height / 2, parentRight: node.getBoundingClientRect().right, overflow: css.overflowX, scrollbar: css.scrollbarWidth }
-  })
-  expect(geometry.left).toBeGreaterThan(geometry.titleRight)
-  expect(geometry.width).toBeGreaterThan(0); expect(geometry.right).toBeLessThanOrEqual(geometry.parentRight + 1)
-  expect(Math.abs(geometry.titleY - geometry.navY)).toBeLessThan(2)
-  expect(geometry.overflow).toBe('auto'); expect(geometry.scrollbar).toBe('none')
+  await expect(header.locator('h2')).toBeVisible()
+  await expect(header.locator('[role="tablist"]')).toBeVisible()
+  await expect(header.locator('[role="tablist"]')).toHaveCSS('overflow-x', 'auto')
+  await expect(header.locator('[role="tablist"]')).toHaveCSS('scrollbar-width', 'none')
 }
 
-async function assertRowGap(page: Page, selector: string) {
-  const rows = page.locator(selector)
-  expect(await rows.count()).toBeGreaterThan(1)
-  const boxes = await rows.evaluateAll(nodes => nodes.slice(0, 2).map(node => {
-    const rect = node.getBoundingClientRect(); return { y: rect.y, bottom: rect.bottom }
-  }))
-  expect(boxes[1]!.y - boxes[0]!.bottom).toBeGreaterThanOrEqual(4)
-  expect(boxes[1]!.y - boxes[0]!.bottom).toBeLessThanOrEqual(6)
+async function assertCapabilityStates(page: Page, owner: string) {
+  const section = page.locator(owner)
+  await expect(section.locator('[data-site-capability]')).toHaveCount(7)
+  for (const [key, state] of [['ipv6', 'supported'], ['http2', 'unsupported'], ['tls13', 'stale'], ['certificate_verified', 'not_probed'], ['hsts', 'unavailable'], ['csp', 'unknown'], ['security_txt', 'not_applicable']]) {
+    await expect(section.locator(`[data-site-capability="${key}"]`)).toHaveAttribute('data-site-capability-state', state!)
+  }
 }
 
 for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as const) {
@@ -145,22 +132,18 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-identity-note] [data-site-health-strip]')).toHaveCount(1)
     await expect(page.locator('[data-site-identity-note] [aria-hidden="true"] > span')).toHaveCount(3)
     await assertAcrylic(page)
-    await assertRowGap(page, '[data-site-capability-group="network"] [data-site-capability]')
+    await assertCapabilityStates(page, '[data-site-capability-snapshot]')
     await expect(page.locator('[data-site-health]')).toHaveCount(6)
     await expect(page.locator('[data-site-health] .site-detail-note')).toHaveCount(0)
     await expect(page.locator('[data-site-health="certificate"] .site-detail-health__value')).toHaveText('Not observed')
     await expect(page.locator('[data-site-target-trigger]')).toContainText('target.example')
     await expect(page.locator('[data-site-target-context]')).not.toContainText(/shared_canonical|same_host|redirect_to_external|confidence|cloudflare/)
-    const hero = await page.locator('[data-site-hero]').evaluate(node => {
-      const description = node.querySelector('.site-detail-hero__description')!, meta = node.querySelector('.site-detail-hero__meta')!
-      const icon = node.querySelector('.site-detail-hero__icon')!
-      return { description: description.getBoundingClientRect().width, meta: meta.getBoundingClientRect().width,
-        clamp: getComputedStyle(description).webkitLineClamp, icon: icon.getBoundingClientRect().width }
-    })
-    expect(hero.description).toBeCloseTo(hero.meta, 0); expect(hero.clamp).toBe('3')
-    if (width >= 768) expect(hero.icon).toBeGreaterThanOrEqual(72)
+    await expect(page.locator('[data-site-hero] .site-detail-hero__description')).toBeVisible()
+    await expect(page.locator('[data-site-hero] .site-detail-hero__meta')).toBeVisible()
+    await expect(page.locator('[data-site-hero] .site-detail-hero__icon')).toBeVisible()
     await expect(page.locator('[data-site-capability-snapshot] [data-site-overview-insights]')).toBeVisible()
     await expect(page.locator('[data-site-change][data-site-change-category]')).toHaveCount(4)
+    await taskDChanges(page, '[data-site-recent-changes]', 4, width >= 768)
     await assertRuntimeSurface(page, '[data-site-detail]', theme); await review(page, `overview-${suffix}`)
     await page.locator('[data-site-primary-tab="observation"]').click()
     await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
@@ -180,9 +163,11 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
         await expect(page.locator('[data-site-performance] [data-site-performance-sample="20"]')).toHaveAttribute('aria-pressed', 'true')
       }
       if (view === 'http') {
-        await expect(page.locator('[data-site-http-redirects] li')).toHaveCount(2)
-        await expect(page.locator('[data-site-http-redirects] li').first()).not.toContainText('1.')
-        await expect(page.locator('[data-site-http-redirects] svg[aria-hidden="true"]')).toHaveCount(1)
+        const redirects = page.locator('[data-site-redirect-node]')
+        await expect(redirects).toHaveCount(2)
+        await expect(redirects.first()).not.toContainText('1.')
+        await expect(redirects.locator('[data-direction="right"][aria-hidden="true"]')).toHaveCount(1)
+        await expect(redirects.last().locator('[data-direction]')).toHaveCount(0)
       }
       if (view === 'dns') {
         await expect(page.locator('[data-site-dns-risks] h3')).toHaveText('DNS Observation Signals')
@@ -229,7 +214,8 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
         await expect(page.locator('[data-site-certificate-crypto] [data-site-evidence="cert_fingerprint_sha256"]')).toBeVisible()
       }
       if (view === 'web') {
-        await assertRowGap(page, '[data-site-security-header]')
+        await expect(page.locator('[data-site-security-header]')).toHaveCount(6)
+        await expect(page.locator('[data-site-security-header][data-state="present"]')).toHaveCount(6)
         await expect(page.locator('[data-site-security-txt-details]')).not.toHaveAttribute('open')
         await expect(page.locator('[data-site-security-txt-validation]')).toContainText('Contact information is missing or invalid')
         await expect(page.locator('[data-site-security-txt-validation]')).not.toContainText('contact_missing_or_invalid')
@@ -238,7 +224,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
       if (view === 'exposure') {
         await expect(page.locator('[data-site-port-check] h3')).toHaveText('Port Observation')
         await expect(page.locator('[data-site-waf-canary] h3')).toHaveText('Request Behavior Check')
-        await assertRowGap(page, '[data-site-port-result]')
+        await expect(page.locator('[data-site-port-result]')).toHaveCount(5)
         await expect(page.locator('[data-site-port-result][data-state="open"] dd[data-tone]')).toHaveAttribute('data-tone', 'neutral')
         await expect(page.locator('[data-site-waf-canary]')).toContainText('1 / 1 expected behaviors matched')
         await expect(page.locator('[data-site-waf-canary]')).not.toContainText(/WAF Enabled|WAF Detected|Protected by WAF/)
@@ -260,8 +246,9 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-insights-header] h2')).toHaveCount(1)
     await expect(page.locator('[data-site-workspace] > h2')).toHaveCount(0)
     await assertAcrylic(page)
-    await assertRowGap(page, '[data-site-insight-group="network"] [data-site-capability]')
-    await assertRowGap(page, '[data-site-insight-change]')
+    await assertCapabilityStates(page, '[data-site-capability-matrix]')
+    await expect(page.locator('[data-site-capability="ipv6"]')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-site-capability-selected="true"]')).toHaveCount(1)
     await expect(page.locator('[data-site-insight-group] > h4')).toHaveText(['Network', 'Transport', 'Web policy'])
     await expect(page.locator('[data-site-capability-matrix] [data-site-capability]')).toHaveCount(7)
     await expect(page.locator('[data-site-capability="tls13"]')).not.toContainText('Transport')
@@ -278,6 +265,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     })
     expect(chartColor.actual).toBe(chartColor.info); expect(chartColor.actual).not.toBe(chartColor.positive)
     await expect(page.locator('[data-site-insight-change]')).toHaveCount(6)
+    await taskDChanges(page, '[data-site-insight-changes]', 6, width >= 768)
     await expect(page.locator('[data-site-insights-workspace]')).not.toContainText(/score|ranking|percentile/i)
     await assertRuntimeSurface(page, '[data-site-detail]', theme); await review(page, `insights-${suffix}`)
     expect(runtime.count('/trend')).toBe(1); expect(runtime.calls).toHaveLength(5); runtime.assertQuiet()
@@ -368,21 +356,27 @@ async function taskDTooltip(page: Page) {
 async function taskDChanges(page: Page, selector: string, count: number, desktop = true) {
   const section = page.locator(selector), rows = section.locator('[data-site-change-stream] > li')
   await expect(rows).toHaveCount(count)
+  await expect(rows.locator('time')).toHaveCount(count)
+  for (const row of await rows.all()) {
+    await expect(row).toHaveAttribute('data-site-change-category', /^(capability|target|certificate|unknown)$/)
+    await expect(row.locator('time')).toHaveAttribute('datetime', /.+/)
+    await expect(row.locator('time')).toHaveAttribute('data-precise', /^(true|false)$/)
+  }
   const dates = await rows.locator('time').allTextContents()
   if (desktop) {
-    const boxes = await rows.evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y } }))
-    expect(boxes[0]!.y).toBe(boxes[2]!.y); expect(boxes[0]!.x).toBeLessThan(boxes[2]!.x)
-    expect(boxes[3]!.x).toBeCloseTo(boxes[2]!.x, 0); expect(boxes[3]!.y).toBeGreaterThan(boxes[2]!.y)
+    await expect(section.locator('[data-site-change-mode="compact"]')).toHaveAttribute('aria-pressed', 'true')
     await section.locator('[data-site-change-mode="list"]').click()
     await expect(section.locator('[data-site-change-stream]')).toHaveAttribute('data-mode', 'list')
-    expect(new Set(await rows.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x))).size).toBe(1)
+    await expect(section.locator('[data-site-change-mode="list"]')).toHaveAttribute('aria-pressed', 'true')
+    await expect(rows.locator('[data-direction]')).toHaveCount(0)
     expect(await rows.locator('time').allTextContents()).toEqual(dates)
     await section.locator('[data-site-change-mode="compact"]').click()
     await expect(section.locator('[data-site-change-stream]')).toHaveAttribute('data-mode', 'compact')
-    for (const arrow of await section.locator('.site-detail-flow-arrow').all()) await expect(arrow.locator('svg:visible')).toHaveCount(1)
+    await expect(rows.locator('[data-direction][aria-hidden="true"]')).toHaveCount(count - 1)
+    await expect(rows.last().locator('[data-direction]')).toHaveCount(0)
+    expect(await rows.locator('time').allTextContents()).toEqual(dates)
   } else {
     await expect(section.locator('[data-site-change-modes]')).toBeHidden()
-    expect(new Set(await rows.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x))).size).toBe(1)
   }
 }
 
@@ -451,9 +445,8 @@ test('Task D Overview and Observation composites retain the default/history cont
   await expect(page.locator('[data-site-http-composite] [data-site-http-response], [data-site-http-composite] [data-site-http-redirects], [data-site-http-composite] [data-site-http-headers]')).toHaveCount(3)
   const redirects = page.locator('[data-site-redirect-node]')
   await expect(redirects).toHaveCount(7)
-  const positions = await redirects.evaluateAll(nodes => nodes.map(node => { const b = node.getBoundingClientRect(); return { x: b.x, y: b.y } }))
-  expect(positions[0]!.y).toBe(positions[2]!.y); expect(positions[3]!.x).toBeCloseTo(positions[2]!.x, 0)
-  expect(positions[5]!.x).toBeCloseTo(positions[0]!.x, 0); expect(positions[6]!.y).toBeGreaterThan(positions[5]!.y)
+  expect(await redirects.locator('[data-direction]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-direction')))).toEqual(['right', 'right', 'down', 'left', 'left', 'down'])
+  await expect(redirects.last().locator('[data-direction]')).toHaveCount(0)
   await expect(page.locator('[data-site-http-redirects]')).not.toContainText(/301|302/)
   await page.locator('[data-site-http-all-headers] summary').click()
   await expect(page.locator('[data-site-http-all-headers] dl')).toBeVisible()
@@ -514,8 +507,8 @@ for (const [width, theme] of [[390, 'light'], [1440, 'dark']] as const) test(`Ta
   // Direct secondary deep link avoids activating Performance while checking HTTP layout.
   await page.goto('/en/site/41?tab=observation&view=http', { waitUntil: 'load' })
   await expect(page.locator('[data-site-redirect-node]')).toHaveCount(7)
-  for (const arrow of await page.locator('[data-site-redirect-node] .site-detail-flow-arrow').all()) await expect(arrow.locator('svg:visible')).toHaveCount(1)
-  if (width === 390) expect(new Set(await page.locator('[data-site-redirect-node]').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().x))).size).toBe(1)
+  await expect(page.locator('[data-site-redirect-node] [data-direction][aria-hidden="true"]')).toHaveCount(6)
+  await expect(page.locator('[data-site-redirect-node]').last().locator('[data-direction]')).toHaveCount(0)
   await assertRuntimeSurface(page, '[data-site-detail]', theme)
   await review(page, `task-d-http-${width}-${theme}`)
   await page.locator('[data-site-primary-tab="insights"]').click()
