@@ -452,7 +452,179 @@ html.dark .site-detail-page {
 }
 
 .site-overview {
+  // Overview alone composes status, grouped facts and lighter event planes.
+  // Derived theme colors preserve the surrounding Site workspaces unchanged.
+  --site-overview-plane: color-mix(in srgb, var(--gf-surface) 85%, transparent);
+  --site-overview-plane-strong: color-mix(in srgb, var(--gf-surface-strong) 92%, transparent);
+  --site-overview-plane-soft: color-mix(in srgb, var(--gf-surface) 48%, transparent);
+  --site-overview-line: color-mix(in srgb, var(--gf-border) 75%, transparent);
+  --site-overview-accent-tint: color-mix(in srgb, var(--gf-accent) 5%, transparent);
+  --site-overview-warning-tint: color-mix(in srgb, var(--site-detail-warning) 6%, transparent);
+  --site-overview-positive-tint: color-mix(in srgb, var(--site-detail-positive) 6%, transparent);
+  --site-overview-negative-tint: color-mix(in srgb, var(--site-detail-danger) 6%, transparent);
+
   color: var(--gf-text-main);
+}
+
+.site-overview-status-composite,
+.site-overview-capability-composite {
+  border: 1px solid var(--site-overview-line);
+  border-radius: var(--site-detail-radius);
+  padding: 1.2rem;
+}
+
+.site-overview-status-composite {
+  background: linear-gradient(115deg, var(--site-overview-plane), var(--site-overview-plane-soft));
+}
+
+.site-overview-status-composite[data-site-status="healthy"] {
+  background:
+    linear-gradient(115deg, var(--site-overview-positive-tint), transparent 70%),
+    linear-gradient(115deg, var(--site-overview-plane), var(--site-overview-plane-soft));
+}
+
+.site-overview-status-composite[data-site-status="warning"] {
+  background:
+    linear-gradient(115deg, var(--site-overview-warning-tint), transparent 70%),
+    linear-gradient(115deg, var(--site-overview-plane), var(--site-overview-plane-soft));
+}
+
+.site-overview-status-composite[data-site-status="degraded"],
+.site-overview-status-composite[data-site-status="down"] {
+  background:
+    linear-gradient(115deg, var(--site-overview-negative-tint), transparent 70%),
+    linear-gradient(115deg, var(--site-overview-plane), var(--site-overview-plane-soft));
+}
+
+.site-overview-heading {
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-overview-meta-label,
+.site-overview-capability-group-title {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.site-overview-status-value {
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-overview-updated {
+  font-size: 0.8rem;
+  line-height: 1.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-overview-status-item:last-child {
+  border-left: 1px solid var(--site-overview-line);
+  padding-left: 1.2rem;
+}
+
+.site-overview-attention-row {
+  border-top: 1px solid var(--site-overview-line);
+  padding-top: 0.85rem;
+  background: linear-gradient(90deg, var(--site-overview-warning-tint), transparent 85%);
+}
+
+.site-overview-attention-message {
+  font-size: 0.825rem;
+  line-height: 1.6;
+}
+
+.site-overview-attention-message + .site-overview-attention-message {
+  border-top: 1px solid var(--site-overview-line);
+  padding-top: 0.5rem;
+}
+
+.site-overview-capability-composite {
+  background:
+    linear-gradient(125deg, var(--site-overview-accent-tint), transparent 55%),
+    linear-gradient(180deg, var(--site-overview-plane-strong), var(--site-overview-plane));
+}
+
+.site-overview-section-line {
+  height: 1px;
+  background: linear-gradient(90deg, var(--site-overview-line), transparent);
+}
+
+.site-overview-ecosystem-link {
+  color: var(--gf-text-main);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.site-overview-ecosystem-link:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-overview-capability-group + .site-overview-capability-group {
+  border-top: 1px solid var(--site-overview-line);
+  padding-top: 1rem;
+}
+
+.site-overview-capability-group-title::before {
+  width: 0.8rem;
+  height: 2px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--gf-accent) 45%, transparent);
+  content: '';
+}
+
+.site-overview-capability-row {
+  border-radius: calc(var(--gf-radius-sm) - 2px);
+  padding: 0.5rem 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.site-overview-capability-row:hover {
+  background: var(--site-overview-accent-tint);
+}
+
+.site-overview-change-card {
+  border: 1px solid var(--site-overview-line);
+  border-radius: var(--gf-radius-sm);
+  padding: 0.9rem;
+  background: linear-gradient(135deg, var(--site-overview-plane-soft), transparent);
+}
+
+.site-overview-change-event {
+  font-size: 0.85rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.site-overview-change-card[data-site-change-category="capability"] .site-overview-change-category {
+  color: var(--gf-accent);
+}
+
+.site-overview-change-card[data-site-change-category="target"] .site-overview-change-category {
+  color: var(--site-detail-info);
+}
+
+.site-overview-change-card[data-site-change-category="certificate"] .site-overview-change-category {
+  color: var(--site-detail-positive);
+}
+
+@media (min-width: 768px) {
+  .site-overview-status-item:nth-child(2),
+  .site-overview-capability-group + .site-overview-capability-group {
+    border-left: 1px solid var(--site-overview-line);
+    padding-left: 1.2rem;
+  }
+
+  .site-overview-capability-group + .site-overview-capability-group {
+    border-top: 0;
+    padding-top: 0;
+  }
 }
 
 .site-overview-title {

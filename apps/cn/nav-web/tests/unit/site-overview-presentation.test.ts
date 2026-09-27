@@ -100,6 +100,15 @@ describe('Site overview health and attention', () => {
     ] }))
     expect(vm.attention.map(item => item.message)).toEqual(['a.example · Degraded', 'b.example · Reported signal: raw_code'])
   })
+  it('keeps Collector as health owner and never blacklists named informational reasons in the frontend', () => {
+    const codes = ['dns_risk_ptr_empty', 'dns_risk_low_ttl', 'ping_failed_but_http_ok']
+    const vm = present(summary({ status: 'warning', reason_codes: codes, targets: [target('a.example', 'warning', { reason_codes: codes })] }))
+    expect(vm.health.status).toBe('warning')
+    expect(vm.attention.map(item => item.key)).toEqual(codes)
+    expect(vm.attention.map(item => item.message)).toEqual(codes.map(code => 'a.example · ' + translator()('siteDetail.reasons.' + code)))
+    // Task A's recomputed healthy, reason-free summary remains healthy and quiet.
+    expect(present(summary()).attention).toEqual([])
+  })
 })
 
 describe('Site capability snapshot', () => {
@@ -133,6 +142,13 @@ describe('Site capability snapshot', () => {
 })
 
 describe('compact Site changes', () => {
+  it('keeps category identity independent of positive or negative capability events', () => {
+    const vm = present(summary(), facts({ recent_changes: [
+      change('2026-09-26', null, 'site.ipv6.enabled'), change('2026-09-25', null, 'site.ipv6.disabled'),
+      change('2026-09-24', null, 'site.primary_target.changed'), change('2026-09-23', null, 'site.tls_certificate.changed'),
+    ] }))
+    expect(vm.recentChanges.map(item => item.category)).toEqual(['capability', 'capability', 'target', 'certificate'])
+  })
   it('sorts a copy, limits it to four and preserves day-only and exact precision', () => {
     const items = [change('2026-09-21'), change('2026-09-25'), change('2026-09-24', '2026-09-24T12:34:00Z'),
       change('2026-09-22'), change('2026-09-23')]

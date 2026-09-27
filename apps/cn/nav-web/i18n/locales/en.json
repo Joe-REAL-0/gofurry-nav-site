@@ -328,6 +328,7 @@
   },
   "siteOverview": {
     "health": "Overall health",
+    "observedTargets": "Observed targets",
     "scope": "Site-wide",
     "updated": "Updated",
     "summaryMissing": "No complete site health summary",

@@ -1,4 +1,6 @@
 import type { Page } from '@playwright/test'
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '../fixtures/site-detail'
 
 async function openOverview(page: Page, path = '/en/site/41') {
@@ -6,6 +8,53 @@ async function openOverview(page: Page, path = '/en/site/41') {
   const html = await openRuntime(page, path)
   await (await view).finished()
   return html
+}
+
+async function reviewOverview(page: Page, name: string) {
+  const directory = process.env.GOFURRY_OVERVIEW_REVIEW_DIR
+  if (!directory) return
+  await mkdir(directory, { recursive: true })
+  await settleRuntime(page)
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({ path: join(directory, name + '.png'), fullPage: true })
+}
+
+async function assertOverviewComposition(page: Page, width: number) {
+  const overview = page.locator('[data-site-overview]')
+  await expect(overview.locator(':scope > section')).toHaveCount(3)
+  await expect(overview.locator('[data-site-overview-columns]')).toHaveCount(0)
+  await expect(overview.locator('[data-site-overview-status-composite]')).toHaveCount(1)
+  await expect(overview.locator('[data-site-overview-capability-composite]')).toHaveCount(1)
+  const layout = await overview.evaluate(root => {
+    const box = (node: Element) => {
+      const rect = node.getBoundingClientRect(), style = getComputedStyle(node)
+      return { x: rect.x, y: rect.y, width: rect.width, bottom: rect.bottom,
+        border: style.borderTopWidth, radius: style.borderTopLeftRadius, shadow: style.boxShadow }
+    }
+    return {
+      sections: Array.from(root.children).map(box),
+      groups: Array.from(root.querySelectorAll('[data-site-capability-group]')).map(node => ({ ...box(node),
+        fill: getComputedStyle(node).backgroundColor, bottomBorder: getComputedStyle(node).borderBottomWidth })),
+      cards: Array.from(root.querySelectorAll('[data-site-change]')).map(box),
+      rowBorders: Array.from(root.querySelectorAll('[data-site-capability]')).map(node => getComputedStyle(node).borderBottomWidth),
+      statusColumns: getComputedStyle(root.querySelector('[data-site-overview-status-grid]')!).gridTemplateColumns.split(' ').length,
+    }
+  })
+  for (let index = 1; index < layout.sections.length; index++) {
+    expect(layout.sections[index]!.y).toBeGreaterThan(layout.sections[index - 1]!.bottom)
+    expect(layout.sections[index]!.width).toBeCloseTo(layout.sections[0]!.width, 0)
+    expect(layout.sections[index]!.x).toBeCloseTo(layout.sections[0]!.x, 0)
+  }
+  expect(layout.statusColumns).toBe(width >= 768 ? 3 : 2)
+  expect(layout.groups).toHaveLength(3)
+  expect(layout.groups.every(group => group.fill === 'rgba(0, 0, 0, 0)' && group.bottomBorder === '0px' && group.shadow === 'none')).toBe(true)
+  expect(layout.rowBorders.every(border => border === '0px')).toBe(true)
+  if (width >= 768) expect(new Set(layout.groups.map(group => group.y)).size).toBe(1)
+  else expect(layout.groups[1]!.y).toBeGreaterThan(layout.groups[0]!.bottom)
+  expect(layout.cards).toHaveLength(4)
+  expect(layout.cards.every(card => card.border === '1px' && card.radius === '8px' && card.shadow === 'none')).toBe(true)
+  const firstRow = layout.cards.filter(card => card.y === layout.cards[0]!.y)
+  expect(firstRow).toHaveLength(width === 1440 ? 4 : width === 768 ? 2 : 1)
 }
 
 for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as const) {
@@ -33,22 +82,40 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-change] time').nth(1)).toHaveText('2026-09-23')
     await expect(page.locator('[data-site-overview]')).not.toContainText('%')
     await expect(page.locator('[data-site-overview] [data-site-protocol], [data-site-overview] [data-site-history-points], [data-site-insights]')).toHaveCount(0)
-    const boxes = await page.locator('[data-site-overview-columns] > section').evaluateAll(nodes => nodes.map(node => {
-      const rect = node.getBoundingClientRect()
-      return { x: rect.x, y: rect.y, width: rect.width, bottom: rect.bottom }
-    }))
-    if (width === 1440) {
-      expect(boxes[0]!.y).toBe(boxes[1]!.y)
-      expect(boxes[0]!.width / boxes[1]!.width).toBeCloseTo(1.5, 1)
-    } else {
-      expect(boxes[1]!.y).toBeGreaterThan(boxes[0]!.bottom)
-      expect(boxes[0]!.width).toBeCloseTo(boxes[1]!.width, 0)
-    }
+    await expect(page.locator('[data-site-overview-target-count]')).toHaveText('2 targets')
+    await assertOverviewComposition(page, width)
     await assertRuntimeSurface(page, '[data-site-overview]', theme)
+    await reviewOverview(page, `healthy-${width}-${theme}`)
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([
       '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view',
     ])
     runtime.assertQuiet()
+  })
+}
+
+for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as const) {
+  test(`Overview embeds Attention within its status composite ${width} ${theme}`, async ({ page, context, runtime }) => {
+    runtime.state.summaryScenario = 'mixed'; runtime.state.extraTargets = ['third.example']
+    runtime.state.fullCapabilities = true; runtime.state.intelligence.rich = true
+    await page.setViewportSize({ width, height: 900 })
+    await context.addInitScript(value => localStorage.setItem('theme', value), theme)
+    await openOverview(page)
+    const status = page.locator('[data-site-overview-status-composite]')
+    const attention = status.locator('[data-site-overview-attention]')
+    await expect(attention).toHaveCount(1)
+    await expect(attention.locator('li')).toHaveText(['2 targets · HTTP is currently unreachable'])
+    await expect(attention).not.toContainText('后端旧中文')
+    const borders = await attention.evaluate(node => {
+      const style = getComputedStyle(node)
+      return [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth, style.boxShadow]
+    })
+    expect(borders).toEqual(['1px', '0px', '0px', '0px', 'none'])
+    await expect(status.locator('[data-site-overview-target-count]')).toHaveText('3 targets')
+    await expect(page.locator('[data-site-change][data-site-change-category="certificate"]')).toHaveCount(1)
+    await assertOverviewComposition(page, width)
+    await assertRuntimeSurface(page, '[data-site-overview]', theme)
+    await reviewOverview(page, `attention-${width}-${theme}`)
+    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
   })
 }
 
@@ -100,6 +167,9 @@ for (const scenario of ['empty', 'unavailable', 'view-failure'] as const) {
       await expect(page.locator('[data-site-recent-changes]')).toHaveAttribute('data-site-changes-state', scenario)
       await expect(page.locator('[data-site-recent-changes]')).toContainText(scenario === 'empty' ? 'No recent changes' : 'temporarily unavailable')
       await expect(page.locator('[data-site-change]')).toHaveCount(0)
+      const empty = await page.locator('[data-site-recent-changes]').boundingBox()
+      expect(empty!.height).toBeLessThan(100)
+      await expect(page.locator('[data-site-overview-change-grid]')).toHaveCount(0)
     } else {
       await expect(page.locator('[data-site-capability="ipv6"]')).toHaveAttribute('data-site-capability-state', 'unknown')
       await expect(page.locator('[data-site-capability="http2"]')).toHaveAttribute('data-site-capability-state', 'missing')

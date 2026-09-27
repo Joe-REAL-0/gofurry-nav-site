@@ -328,6 +328,7 @@
   },
   "siteOverview": {
     "health": "整体健康",
+    "observedTargets": "观测目标",
     "scope": "整个站点",
     "updated": "更新于",
     "summaryMissing": "暂无完整站点级健康摘要",
