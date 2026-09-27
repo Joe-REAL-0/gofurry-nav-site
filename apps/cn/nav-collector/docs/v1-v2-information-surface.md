@@ -172,7 +172,7 @@ collector 查询目标时会 join `gfn_site` 并排除 `gfn_site.deleted IS TRUE
 | `mx_priorities[]` | `host`、`priority` |
 | `soa` | `ns`、`mbox`、`serial`、`refresh`、`retry`、`expire`、`minttl` |
 
-v2 不再输出 v1 的 `hijacked` 字段，改用 `risk_flags` 表达风险信号。
+v2 不再输出 v1 的 `hijacked` 字段，改用 `risk_flags` 保留更广泛的诊断 evidence，并非所有 flag 都参与健康聚合。`ptr_empty`、`low_ttl` 与未分类 flag 仅为 informational；`private_ip` / `nxdomain_with_answer` 仍参与 Warning 判断。原始 `risk_flags`、`reverse_ptr` 与检测逻辑保持不变。
 
 ### Summary v2
 
@@ -189,7 +189,24 @@ v2 不再输出 v1 的 `hijacked` 字段，改用 `risk_flags` 表达风险信�
 | site 级 `target_relation_hints[]` | `relation`、`host`、`targets` |
 | `collector:v2:summary:site_targets:{site_id}` | target summary 索引集合，members 为 target 字符串。 |
 
-`status` 取值：`healthy`、`warning`、`degraded`、`unknown`、`down`。summary 当前只把 Ping / HTTP / DNS / TLS 作为健康聚合信号，light probe、edge hints、trend、change 都是旁路参考。
+`status` 取值：`healthy`、`warning`、`degraded`、`unknown`、`down`。summary 根据 HTTP / DNS / TLS 的健康证据聚合，light probe、edge hints、trend、change 都是旁路参考。
+
+Target / Site summary 的 `reason_codes` / `reason_messages` 只解释影响健康的结论；辅助 reason 聚合同时尊重 `AffectsHealth` 与 `Severity`：
+
+| reason code | severity | affects_health |
+|---|---|---|
+| `ping_failed_but_http_ok` | info | false |
+| `dns_risk_ptr_empty` | info | false |
+| `dns_risk_low_ttl` | info | false |
+| `dns_risk_other` | info | false |
+| `dns_risk_private_ip` | warning | true |
+| `dns_risk_nxdomain_with_answer` | warning | true |
+| `dns_failed_but_http_ok` | warning | true |
+| `dns_missing_or_stale` | warning | true |
+
+HTTP 正常时，Ping 失败仅为诊断/治理参考，原始 Ping status 与 `protocols.ping.status` 仍保留 failure。informational reason 不进入 summary reasons，也不提高 Target / Site health 等级；只有这些信号的多个 target 均为 healthy，Site warning 计数为 0。真实 DNS 告警、HTTP 缺失/过期/失败、TLS 验证失败与证书到期规则保持不变。
+
+这是 Collector 派生语义修正，不改 API / payload shape、稳定 reason code、`schema_version` 或 Redis keys，不需要 DB / Redis migration。已存 summary 会在部署后的正常采集中重算，不清空 Redis，也不删除历史证据。
 
 ### Trend v2
 
@@ -202,6 +219,8 @@ v2 不再输出 v1 的 `hijacked` 字段，改用 `risk_flags` 表达风险信�
 | `ping` | `avg_rtt_ms`、`avg_loss_rate`、`avg_jitter_ms`、`latest_loss_rate`、`latest_avg_rtt_ms`、`latest_jitter_ms` |
 | `dns` | `success_rate`、`latest_ttl_min`、`latest_ttl_max`、`latest_ttl_avg`、`previous_ttl_min`、`previous_ttl_max`、`previous_ttl_avg`、`risk_flag_counts`、`latest_risk_flags` |
 | `tls` | `latest_cert_days_left`、`previous_cert_days_left`、`cert_issuer_changed`、`cert_fingerprint_changed`、`latest_cert_issuer`、`latest_cert_fingerprint_sha256`、`latest_cert_not_after`、`latest_cert_observed_at` |
+
+DNS trend 的 `risk_flag_counts` / `latest_risk_flags` 继续包含 `ptr_empty`、`low_ttl` 和未分类 flag 等 informational evidence，不按健康 reason 过滤。
 
 ### Change v2
 

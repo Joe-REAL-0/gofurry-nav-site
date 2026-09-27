@@ -1,6 +1,8 @@
 package observation
 
 import (
+	"encoding/json"
+	"slices"
 	"testing"
 	"time"
 
@@ -32,21 +34,25 @@ func TestTargetFromSummaryKey(t *testing.T) {
 	}
 }
 
-func TestBuildTargetSummaryHTTPHealthyPingFailureWarning(t *testing.T) {
+func TestBuildTargetSummaryHTTPHealthyPingFailureInformational(t *testing.T) {
 	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
 	docs := map[string]LatestDocument{
 		ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), map[string]any{
 			"tls_handshake": "not_tls",
 		}),
 		ProtocolPing: latestDoc(ProtocolPing, StatusFailure, now.Add(-time.Minute), nil),
+		ProtocolDNS:  latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), nil),
 	}
 
 	summary := BuildTargetSummary(1, "example.com", docs, now)
-	if summary.Status != StatusWarning {
-		t.Fatalf("Status = %q, want warning, reasons=%v", summary.Status, summary.ReasonCodes)
+	if summary.Status != StatusHealthy {
+		t.Fatalf("Status = %q, want healthy, reasons=%v", summary.Status, summary.ReasonCodes)
 	}
-	if !contains(summary.ReasonCodes, "ping_failed_but_http_ok") {
-		t.Fatalf("missing ping warning reason: %v", summary.ReasonCodes)
+	if len(summary.ReasonCodes) != 0 || len(summary.ReasonMessages) != 0 {
+		t.Fatalf("informational Ping failure must not become a health reason: %+v", summary)
+	}
+	if summary.Protocols[ProtocolPing].Status != StatusFailure || docs[ProtocolPing].Status != StatusFailure {
+		t.Fatal("Ping failure evidence must remain unchanged")
 	}
 }
 
@@ -142,36 +148,54 @@ func TestBuildTargetSummaryTLSVerifyFailureDegraded(t *testing.T) {
 	}
 }
 
-func TestBuildTargetSummaryDNSRiskWarning(t *testing.T) {
+func TestBuildTargetSummaryDNSRiskClassification(t *testing.T) {
 	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
-	docs := map[string]LatestDocument{
-		ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), nil),
-		ProtocolDNS: latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), map[string]any{
-			"risk_flags": []any{"private_ip"},
-		}),
+	for _, tc := range []struct {
+		name       string
+		flags      []string
+		wantStatus string
+		wantCodes  []string
+	}{
+		{"ptr empty", []string{"ptr_empty"}, StatusHealthy, nil},
+		{"low ttl", []string{"low_ttl"}, StatusHealthy, nil},
+		{"unknown flag", []string{"future_risk"}, StatusHealthy, nil},
+		{"private ip", []string{"private_ip"}, StatusWarning, []string{"dns_risk_private_ip"}},
+		{"nxdomain with answer", []string{"nxdomain_with_answer"}, StatusWarning, []string{"dns_risk_nxdomain_with_answer"}},
+		{"mixed signals", []string{"ptr_empty", "private_ip", "low_ttl", "future_risk"}, StatusWarning, []string{"dns_risk_private_ip"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			decodedFlags := make([]any, len(tc.flags))
+			for i, flag := range tc.flags {
+				decodedFlags[i] = flag
+			}
+			for _, flags := range []any{tc.flags, decodedFlags} {
+				dnsPayload := map[string]any{"risk_flags": flags, "reverse_ptr": ""}
+				before, _ := json.Marshal(dnsPayload)
+				docs := map[string]LatestDocument{
+					ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), nil),
+					ProtocolDNS:  latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), dnsPayload),
+				}
+				summary := BuildTargetSummary(1, "example.com", docs, now)
+				if summary.Status != tc.wantStatus || !slices.Equal(summary.ReasonCodes, tc.wantCodes) {
+					t.Fatalf("Status=%s reasons=%v, want %s %v", summary.Status, summary.ReasonCodes, tc.wantStatus, tc.wantCodes)
+				}
+				var wantMessages []string
+				for _, code := range tc.wantCodes {
+					definition, _ := ReasonDefinitionByCode(code)
+					wantMessages = append(wantMessages, definition.MessageZH)
+				}
+				if !slices.Equal(summary.ReasonMessages, wantMessages) {
+					t.Fatalf("health messages=%v, want %v", summary.ReasonMessages, wantMessages)
+				}
+				after, _ := json.Marshal(dnsPayload)
+				if string(after) != string(before) {
+					t.Fatalf("raw DNS evidence changed: %+v", dnsPayload)
+				}
+			}
+		})
 	}
-
-	summary := BuildTargetSummary(1, "example.com", docs, now)
-	if summary.Status != StatusWarning {
-		t.Fatalf("Status = %q, want warning, reasons=%v", summary.Status, summary.ReasonCodes)
-	}
-	if !contains(summary.ReasonCodes, "dns_risk_private_ip") {
-		t.Fatalf("missing DNS risk reason: %v", summary.ReasonCodes)
-	}
-}
-
-func TestBuildTargetSummaryUnknownDNSRiskFallsBackToOther(t *testing.T) {
-	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
-	docs := map[string]LatestDocument{
-		ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), nil),
-		ProtocolDNS: latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), map[string]any{
-			"risk_flags": []any{"future_risk"},
-		}),
-	}
-
-	summary := BuildTargetSummary(1, "example.com", docs, now)
-	if !contains(summary.ReasonCodes, "dns_risk_other") {
-		t.Fatalf("missing fallback DNS risk reason: %v", summary.ReasonCodes)
+	if got := dnsRiskReasonCode("future_risk"); got != "dns_risk_other" {
+		t.Fatalf("unknown flags must retain the stable reason code, got %q", got)
 	}
 }
 
@@ -188,6 +212,116 @@ func TestBuildTargetSummaryUnknownTLSVerifyCategoryFallsBackToOther(t *testing.T
 	summary := BuildTargetSummary(1, "example.com", docs, now)
 	if !contains(summary.ReasonCodes, "tls_verify_other") {
 		t.Fatalf("missing fallback TLS reason: %v", summary.ReasonCodes)
+	}
+}
+
+func TestBuildTargetSummaryPreservesHealthAffectingFailures(t *testing.T) {
+	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
+	oldV2 := env.GetServerConfig().Collector.V2
+	env.GetServerConfig().Collector.V2 = env.CollectorV2Config{
+		Enabled: true, LatestRedis: true, Protocols: env.CollectorProtocols{HTTP: true, DNS: true, Ping: true},
+	}
+	t.Cleanup(func() { env.GetServerConfig().Collector.V2 = oldV2 })
+	for _, tc := range []struct {
+		name       string
+		httpStatus string
+		dnsStatus  string
+		stale      string
+		payload    map[string]any
+		wantStatus string
+		wantCodes  []string
+	}{
+		{"DNS failed", StatusSuccess, StatusFailure, "", nil, StatusWarning, []string{"dns_failed_but_http_ok"}},
+		{"DNS missing", StatusSuccess, "", "", nil, StatusWarning, []string{"dns_missing_or_stale"}},
+		{"DNS stale", StatusSuccess, StatusSuccess, ProtocolDNS, nil, StatusWarning, []string{"dns_missing_or_stale"}},
+		{"HTTP failed", StatusFailure, StatusSuccess, "", nil, StatusDegraded, []string{"http_failed"}},
+		{"HTTP and DNS failed", StatusFailure, StatusFailure, "", nil, StatusDown, []string{"http_failed", "dns_failed"}},
+		{"HTTP missing", "", StatusSuccess, "", nil, StatusUnknown, []string{"http_missing_or_stale"}},
+		{"HTTP stale", StatusSuccess, StatusSuccess, ProtocolHTTP, nil, StatusUnknown, []string{"http_missing_or_stale"}},
+		{"TLS verify failed", StatusSuccess, StatusSuccess, "", map[string]any{
+			"tls_handshake": "collected", "cert_verified": false, "verify_error_category": "hostname_mismatch",
+		}, StatusDegraded, []string{"tls_verify_hostname_mismatch"}},
+		{"certificate expired", StatusSuccess, StatusSuccess, "", map[string]any{
+			"tls_handshake": "collected", "cert_verified": true, "cert_not_after": now.Add(-48 * time.Hour).Format(time.RFC3339),
+		}, StatusDegraded, []string{"tls_cert_expired"}},
+		{"certificate 30 days", StatusSuccess, StatusSuccess, "", map[string]any{
+			"tls_handshake": "collected", "cert_verified": true, "cert_not_after": now.Add(30 * 24 * time.Hour).Format(time.RFC3339),
+		}, StatusWarning, []string{"tls_cert_expiring_soon"}},
+		{"certificate 31 days", StatusSuccess, StatusSuccess, "", map[string]any{
+			"tls_handshake": "collected", "cert_verified": true, "cert_not_after": now.Add(31 * 24 * time.Hour).Format(time.RFC3339),
+		}, StatusHealthy, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			docs := map[string]LatestDocument{
+				ProtocolPing: latestDoc(ProtocolPing, StatusFailure, now.Add(-time.Minute), nil),
+			}
+			if tc.httpStatus != "" {
+				docs[ProtocolHTTP] = latestDoc(ProtocolHTTP, tc.httpStatus, now.Add(-time.Minute), tc.payload)
+			}
+			if tc.dnsStatus != "" {
+				docs[ProtocolDNS] = latestDoc(ProtocolDNS, tc.dnsStatus, now.Add(-time.Minute), map[string]any{
+					"risk_flags": []string{"ptr_empty", "low_ttl", "future_risk"},
+				})
+			}
+			if tc.stale != "" {
+				doc := docs[tc.stale]
+				doc.ObservedAt = now.Add(-staleAfterForProtocol(tc.stale) - time.Minute)
+				docs[tc.stale] = doc
+			}
+			summary := BuildTargetSummary(1, "example.com", docs, now)
+			if summary.Status != tc.wantStatus || !slices.Equal(summary.ReasonCodes, tc.wantCodes) {
+				t.Fatalf("Status=%s reasons=%v, want %s %v", summary.Status, summary.ReasonCodes, tc.wantStatus, tc.wantCodes)
+			}
+			if len(summary.ReasonMessages) != len(tc.wantCodes) {
+				t.Fatalf("unexpected health reason messages: %v", summary.ReasonMessages)
+			}
+		})
+	}
+}
+
+func TestBuildSiteSummaryInformationalSignalsDoNotWarn(t *testing.T) {
+	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
+	var targets []TargetSummaryDocument
+	for _, target := range []struct {
+		host       string
+		flags      []string
+		pingStatus string
+	}{
+		{"a.example.com", []string{"ptr_empty"}, StatusSuccess},
+		{"b.example.com", []string{"low_ttl"}, StatusSuccess},
+		{"c.example.com", nil, StatusFailure},
+	} {
+		summary := BuildTargetSummary(1, target.host, map[string]LatestDocument{
+			ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), nil),
+			ProtocolDNS: latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), map[string]any{
+				"risk_flags": target.flags,
+			}),
+			ProtocolPing: latestDoc(ProtocolPing, target.pingStatus, now.Add(-time.Minute), nil),
+		}, now)
+		if summary.Status != StatusHealthy || len(summary.ReasonCodes) != 0 || len(summary.ReasonMessages) != 0 {
+			t.Fatalf("informational-only target must be healthy: %+v", summary)
+		}
+		targets = append(targets, summary)
+	}
+	summary := BuildSiteSummary(1, targets, now)
+	if summary.Status != StatusHealthy || summary.StatusCounts[StatusHealthy] != 3 || summary.StatusCounts[StatusWarning] != 0 {
+		t.Fatalf("informational-only site must be healthy: %+v", summary)
+	}
+	if len(summary.ReasonCodes) != 0 || len(summary.ReasonMessages) != 0 {
+		t.Fatalf("informational-only site must have no health reasons: %+v", summary)
+	}
+	warning := BuildTargetSummary(1, "d.example.com", map[string]LatestDocument{
+		ProtocolHTTP: latestDoc(ProtocolHTTP, StatusSuccess, now.Add(-time.Minute), nil),
+		ProtocolDNS: latestDoc(ProtocolDNS, StatusSuccess, now.Add(-time.Minute), map[string]any{
+			"risk_flags": []string{"private_ip", "ptr_empty"},
+		}),
+	}, now)
+	summary = BuildSiteSummary(1, append(targets, warning), now)
+	if summary.Status != StatusWarning || summary.StatusCounts[StatusWarning] != 1 || summary.StatusCounts[StatusHealthy] != 3 {
+		t.Fatalf("one true warning must still warn at site level: %+v", summary)
+	}
+	if !slices.Equal(summary.ReasonCodes, []string{"some_targets_warning"}) {
+		t.Fatalf("missing site health explanation: %v", summary.ReasonCodes)
 	}
 }
 
@@ -270,6 +404,30 @@ func TestReasonDefinitionsAreStableAndComplete(t *testing.T) {
 	}
 }
 
+func TestAuxiliaryReasonClassification(t *testing.T) {
+	for _, tc := range []struct {
+		code          string
+		severity      string
+		affectsHealth bool
+	}{
+		{"ping_failed_but_http_ok", ReasonSeverityInfo, false},
+		{"dns_risk_ptr_empty", ReasonSeverityInfo, false},
+		{"dns_risk_low_ttl", ReasonSeverityInfo, false},
+		{"dns_risk_other", ReasonSeverityInfo, false},
+		{"dns_risk_private_ip", ReasonSeverityWarning, true},
+		{"dns_risk_nxdomain_with_answer", ReasonSeverityWarning, true},
+		{"dns_failed_but_http_ok", ReasonSeverityWarning, true},
+		{"dns_missing_or_stale", ReasonSeverityWarning, true},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			definition, ok := ReasonDefinitionByCode(tc.code)
+			if !ok || definition.Severity != tc.severity || definition.AffectsHealth != tc.affectsHealth {
+				t.Fatalf("classification=%+v, want severity=%s affects_health=%t", definition, tc.severity, tc.affectsHealth)
+			}
+		})
+	}
+}
+
 func TestSummaryReasonCodesHaveDefinitions(t *testing.T) {
 	now := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
 	targetSummaries := []TargetSummaryDocument{
@@ -327,8 +485,10 @@ func validReasonSeverity(value string) bool {
 func assertReasonCodesDefined(t *testing.T, codes []string) {
 	t.Helper()
 	for _, code := range codes {
-		if _, ok := ReasonDefinitionByCode(code); !ok {
+		if definition, ok := ReasonDefinitionByCode(code); !ok {
 			t.Fatalf("reason code %q has no definition", code)
+		} else if !definition.AffectsHealth || definition.Severity == ReasonSeverityInfo {
+			t.Fatalf("summary reason must explain a health-affecting conclusion: %+v", definition)
 		}
 	}
 }

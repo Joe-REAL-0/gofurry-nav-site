@@ -113,6 +113,26 @@ func TestDetectDNSRiskFlagsIncludesIPv6PrivateAndSpecialRanges(t *testing.T) {
 	}
 }
 
+func TestDNSPayloadPreservesInformationalEvidence(t *testing.T) {
+	risks := detectDNSRiskFlags(net.ParseIP("8.8.8.8"), &dns.Msg{}, 5, "")
+	assertContainsRisk(t, risks, dnsRiskLowTTL)
+	assertContainsRisk(t, risks, dnsRiskPTREmpty)
+	if len(risks) != 2 {
+		t.Fatalf("expected only informational flags, got %v", risks)
+	}
+	payload := buildDNSObservationPayload(map[string][]models.DNSRecord{
+		"A": {{Type: "A", Value: "8.8.8.8", TTL: 5, ReversePTR: "", RiskFlags: risks}},
+	})
+	record := payload["A"].([]map[string]any)[0]
+	for _, flags := range [][]string{payload["risk_flags"].([]string), record["risk_flags"].([]string)} {
+		assertContainsRisk(t, flags, dnsRiskLowTTL)
+		assertContainsRisk(t, flags, dnsRiskPTREmpty)
+	}
+	if ptr, exists := record["reverse_ptr"]; !exists || ptr != "" {
+		t.Fatalf("empty reverse_ptr evidence must remain present: %+v", record)
+	}
+}
+
 func TestDNSRecordBudgetTracksExhaustion(t *testing.T) {
 	budget := newDNSRecordBudget(2)
 	if !budget.Take() || !budget.Take() {

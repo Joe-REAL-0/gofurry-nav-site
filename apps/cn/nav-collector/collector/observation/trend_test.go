@@ -1,6 +1,7 @@
 package observation
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -56,7 +57,7 @@ func TestBuildTargetTrendDerivesHTTPPingDNSTLSWindows(t *testing.T) {
 			"jitter_ms": 7
 		}`),
 		trendRow(ProtocolDNS, StatusSuccess, now.Add(-1*time.Hour), 30, `{
-			"risk_flags": ["low_ttl", "ptr_empty"],
+			"risk_flags": ["low_ttl", "ptr_empty", "future_risk"],
 			"response_summary": {
 				"A": {"ttl_min": 30, "ttl_max": 60, "ttl_avg": 45}
 			}
@@ -107,8 +108,14 @@ func TestBuildTargetTrendDerivesHTTPPingDNSTLSWindows(t *testing.T) {
 	if dnsTrend.DNS == nil {
 		t.Fatal("dns trend should not be nil")
 	}
-	if dnsTrend.DNS.RiskFlagCounts["low_ttl"] != 2 || dnsTrend.DNS.RiskFlagCounts["ptr_empty"] != 1 {
-		t.Fatalf("dns risk counts wrong: %+v", dnsTrend.DNS.RiskFlagCounts)
+	for name, trendWindow := range doc.Windows {
+		dns := trendWindow.Protocols[ProtocolDNS].DNS
+		if dns == nil || dns.RiskFlagCounts["low_ttl"] != 2 || dns.RiskFlagCounts["ptr_empty"] != 1 || dns.RiskFlagCounts["future_risk"] != 1 {
+			t.Fatalf("%s must retain informational DNS counts: %+v", name, dns)
+		}
+		if !slices.Equal(dns.LatestRiskFlags, []string{"future_risk", "low_ttl", "ptr_empty"}) {
+			t.Fatalf("%s must retain latest informational DNS flags: %v", name, dns.LatestRiskFlags)
+		}
 	}
 	if dnsTrend.DNS.LatestTTLMin == nil || *dnsTrend.DNS.LatestTTLMin != 30 {
 		t.Fatalf("latest ttl min wrong: %+v", dnsTrend.DNS)

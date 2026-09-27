@@ -28,12 +28,12 @@
 
 ## Summary Status
 
-v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合；RDAP、robots.txt、security.txt、page_assets、port_check、waf_canary 和 edge hints 都是旁路参考，不直接改变健康状态。
+v2 summary 根据 HTTP / DNS / TLS 的健康证据聚合；Ping 失败但 HTTP 当前可访问时仅保留诊断证据。RDAP、robots.txt、security.txt、page_assets、port_check、waf_canary 和 edge hints 都是旁路参考，不直接改变健康状态。
 
 | status | 中文含义 | 使用边界 |
 |---|---|---|
 | `healthy` | 当前主要访问链路健康 | HTTP 可用，且没有参与聚合的 warning/degraded/down 信号。 |
-| `warning` | 需要关注 | HTTP 可用，但 DNS、Ping、TLS 即将过期或 DNS risk_flags 等出现观察信号。 |
+| `warning` | 需要关注 | HTTP 可用，但 DNS 失败、应有的 DNS 观测缺失/过期、`private_ip` / `nxdomain_with_answer`，或 TLS 证书将在 30 天内过期。 |
 | `degraded` | 降级 | HTTP 失败但尚未满足 down 条件，或 TLS 校验失败等影响访问信任的信号出现。 |
 | `unknown` | 状态未知 | 缺少可用 HTTP 观测、观测过期，或站点没有可聚合 target。 |
 | `down` | 不可用 | HTTP 与 DNS 均失败，或站点下所有 target 均为 down。 |
@@ -42,6 +42,14 @@ v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合�
 
 `reason_codes` 是稳定英文 key，`reason_messages` 是中文说明。后端 v2 应优先使用 `reason_codes` 做逻辑判断，用本表或后端自己的 i18n 字典做展示文案。`affects_health=true` 表示该 reason 当前参与 summary 状态聚合。
 
+Target / Site summary 的 reasons 只解释影响健康的结论。辅助 reason 必须同时依据 `affects_health` 与 `severity` 聚合；`info / false` 不提升健康等级，也不进入 `reason_codes` / `reason_messages`，即使同一 target 还有其他真实告警。
+
+DNS `risk_flags` 是更广泛的诊断 evidence，并非每个 flag 都影响健康：`ptr_empty`、`low_ttl` 和未分类 flag（`dns_risk_other`）仅为 informational；`private_ip`、`nxdomain_with_answer` 仍为 Warning。Ping 失败但 HTTP 正常同样仅为 informational，Ping 的原始 status 与 `protocols.ping.status` 仍保留 failure。
+
+上述调整不删除 DNS `risk_flags`、`reverse_ptr`，也不筛除 trend 的 `risk_flag_counts` / `latest_risk_flags`。多个 target 若仅有这些 informational 信号，Target / Site 均为 healthy，warning 计数为 0；混入真实 Warning target 后 Site 仍为 warning。
+
+这是派生健康语义修正，稳定 reason code、payload shape、`schema_version` 和 Redis key 均不变，无需 DB / Redis migration。部署 Collector 后，现有 summary 随正常采集重新计算；无需清空 Redis 或历史 observation。
+
 | code | message_zh | severity | scope | affects_health |
 |---|---|---|---|---|
 | `http_missing_or_stale` | HTTP 观测缺失或已过期，无法判断访客是否可打开 | unknown | target | true |
@@ -49,12 +57,12 @@ v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合�
 | `dns_failed` | DNS 解析也失败 | down | target | true |
 | `dns_missing_or_stale` | DNS 观测缺失或已过期 | warning | target | true |
 | `dns_failed_but_http_ok` | DNS 失败但 HTTP 当前仍可访问 | warning | target | true |
-| `ping_failed_but_http_ok` | Ping 失败但 HTTP 当前仍可访问 | warning | target | true |
+| `ping_failed_but_http_ok` | Ping 不可达，但 HTTP 当前可访问 | info | target | false |
 | `dns_risk_private_ip` | DNS observation 出现风险信号: private_ip | warning | target | true |
-| `dns_risk_low_ttl` | DNS observation 出现风险信号: low_ttl | warning | target | true |
+| `dns_risk_low_ttl` | DNS TTL 较低 | info | target | false |
 | `dns_risk_nxdomain_with_answer` | DNS observation 出现风险信号: nxdomain_with_answer | warning | target | true |
-| `dns_risk_ptr_empty` | DNS observation 出现风险信号: ptr_empty | warning | target | true |
-| `dns_risk_other` | DNS observation 出现未知风险信号 | warning | target | true |
+| `dns_risk_ptr_empty` | DNS 反向解析（PTR）为空 | info | target | false |
+| `dns_risk_other` | DNS 出现未分类观测信号 | info | target | false |
 | `tls_verify_expired` | TLS 证书校验未通过: expired | degraded | target | true |
 | `tls_verify_not_yet_valid` | TLS 证书校验未通过: not_yet_valid | degraded | target | true |
 | `tls_verify_hostname_mismatch` | TLS 证书校验未通过: hostname_mismatch | degraded | target | true |
@@ -89,7 +97,7 @@ v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合�
 | `status` | string | 否 | summary builder | 是 |
 | `reason_codes` | string[] | 否 | reason 字典 | 是 |
 | `reason_messages` | string[] | 否 | reason 字典中文文案 | 否 |
-| `protocols` | object | target summary 否 | Ping / HTTP / DNS latest | 是 |
+| `protocols` | object | target summary 否 | Ping / HTTP / DNS latest，保留原协议状态 | 按上述健康规则 |
 | `canonical_target_hint` | object | 是 | HTTP target / final URL / canonical URL 保守比较 | 否 |
 | `target_relation_hints` | object[] | 是 | target host、final host、canonical host 关系判断 | 否 |
 | `edge_provider_hints` | object[] | 是 | HTTP / DNS / TLS 被动推断 | 否 |
@@ -153,7 +161,7 @@ v2 summary 目前只由 Ping / HTTP / DNS / TLS 相关信号参与健康聚合�
 
 | 字段 | 类型 | 可空 | 来源 | 参与 summary |
 |---|---|---:|---|---:|
-| `risk_flags` | string[] | 是 | DNS payload builder | 是 |
+| `risk_flags` | string[] | 是 | DNS payload builder | 仅 `private_ip` / `nxdomain_with_answer` |
 | `response_summary` | object | 是 | DNS response | 否 |
 | `has_a` / `has_aaaa` / `ipv4_count` / `ipv6_count` | bool / number | 否 | DNS records | 否 |
 | `cname_chain_depth` / `cname_terminal` | number / string | 是 | DNS recursive result | 否 |
