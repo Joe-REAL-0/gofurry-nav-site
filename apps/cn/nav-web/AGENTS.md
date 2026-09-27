@@ -60,7 +60,7 @@ contracts remain authoritative; completion does not authorize redesign or more c
 Site Detail #109 P1 runtime follows the contract's Site/Target ownership section.
 Use `siteDetailRouteState.ts` for UI query and `siteRoutes.ts` for links; keep
 Insights keyed only by Site ID and View counted once per hydrated Site session.
-Use the complete `siteCapabilityRegistry.ts`, not its existing three-item preview,
+Use the complete `siteCapabilityRegistry.ts`,
 as the catalog. `site-detail-contract.spec.ts` owns Target-switch request counts
 and failure isolation; SEO remains Entity-only. P1 grants no appearance/debt or
 Visual baseline changes; P2–P8 and #108 require their own scope.
@@ -100,6 +100,15 @@ Preserve collector booleans, missing/failure distinctions and verification versu
 validity. `site-security.spec.ts` owns requests/states/disclosures/responsive checks.
 Only its replaced Metric Grid/Light Probe debt is removed; deep remains zero.
 P6 requires maintainer review and no P8 golden is created here.
+
+P6 Insights uses `siteInsightsPresentation.ts` for Site facts and full recent
+changes. Page-owned `useSiteInsights` shares SSR data/state/retry with Overview;
+`useSiteInsightTrend` activates only hydrated Insights and caches metric + range.
+Target never enters either identity. Use route helpers for metric/range, preserve
+slice/fact failure distinctions and classify every active chart state. Public
+copy keeps Ecosystem naming. `site-insights.spec.ts` and real Nuxt tests own this
+contract; Site Detail owns appearance, #108 remains separate. Manual review precedes
+P7, and accepted Visual files are unchanged.
 
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never

@@ -8,6 +8,7 @@ async function openSite(page: Page, path = '/en/site/41') {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   await openRuntime(page, path)
   await (await view).finished()
+  if (path.includes('tab=insights')) await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
 }
 async function activeTab(page: Page, key: string) {
   await expect(tab(page, key)).toHaveAttribute('aria-selected', 'true')
@@ -90,15 +91,19 @@ test('router tabs survive history/reload, clear foreign state and support roving
     await expect(tab(page, expected!)).toBeFocused()
   }
   await settleRuntime(page)
-  expect(runtime.calls).toHaveLength(3)
+  await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
+  expect(runtime.calls).toHaveLength(5)
+  expect(runtime.count('/trend')).toBe(2)
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   expect((await page.reload({ waitUntil: 'domcontentloaded' }))?.status()).toBe(200)
   await (await view).finished()
   await activeTab(page, 'insights')
+  await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
   expect(runtime.count('/sites/41/detail')).toBe(2)
   expect(runtime.count('/sites/41/insights')).toBe(2)
   expect(runtime.count('/sites/41/view')).toBe(2)
+  expect(runtime.count('/trend')).toBe(3)
   runtime.assertQuiet()
 })
 

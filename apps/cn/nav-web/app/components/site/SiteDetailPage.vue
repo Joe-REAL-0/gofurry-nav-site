@@ -14,9 +14,10 @@
           @select="changeTarget"
         />
         <SiteDetailWorkspace
-          :data="sitePageData" :active="routeState.tab"
-          :insights="siteInsightsSnapshot.insights"
-          :insights-unavailable="siteInsightsSnapshot.unavailable" :pending="pending"
+          :data="sitePageData" :active="routeState.tab" :site-id="siteId" :pending="pending"
+          :insights="insightsPresentation" :insights-retrying="siteInsights.retrying.value" :trend="insightTrend.current.value"
+          :insight-metric="insightMetric" :insight-range="insightRange"
+          @insights-retry="siteInsights.retry" @trend-retry="insightTrend.retry" @insight-metric="changeInsightMetric" @insight-range="changeInsightRange"
           :overview="overviewPresentation" :insights-to="insightsTo"
           :observation-view="routeState.tab === 'observation' ? routeState.view : 'overview'"
           :observation="observationPresentation" :history="historyPresentation"
@@ -36,41 +37,30 @@ import SiteHealthStrip from './detail/SiteHealthStrip.vue'
 import SitePrimaryTabs from './detail/SitePrimaryTabs.vue'
 import SiteTargetContext from './detail/SiteTargetContext.vue'
 import SiteDetailWorkspace from './detail/SiteDetailWorkspace.vue'
-import { getSiteInsights } from '@/services/nav'
-import type { SiteInsights } from '@/types/insights'
+import { useSiteInsights } from '~/composables/useSiteInsights'
+import { useSiteInsightTrend } from '~/composables/useSiteInsightTrend'
+import { presentSiteInsights } from '~/utils/siteInsightsPresentation'
 import { useSiteDetailPage } from '~/composables/useSiteDetailPage'
 import { buildSiteDetailSeo } from '~/utils/seo'
 import { authoritativePageStatus } from '~/utils/authoritativePageError'
-import { buildSiteDetailQuery, selectSiteDetailTab, selectSiteDetailTarget, selectSiteObservationView, selectSiteSecurityView, type SiteDetailTab, type SiteObservationView, type SiteSecurityView } from '~/utils/siteDetailRouteState'
+import { buildSiteDetailQuery, selectSiteDetailTab, selectSiteDetailTarget, selectSiteObservationView, selectSiteSecurityView, selectSiteInsightMetric, selectSiteInsightRange, type SiteDetailTab, type SiteObservationView, type SiteSecurityView, type SiteInsightMetric, type SiteInsightRange } from '~/utils/siteDetailRouteState'
 import { presentSiteTarget } from '~/utils/siteTargetPresentation'
 import { presentSiteOverview } from '~/utils/siteOverviewPresentation'
 import { presentSiteObservation } from '~/utils/siteObservationPresentation'
 import { presentSiteSecurity } from '~/utils/siteSecurityPresentation'
 import { useSiteObservationHistory } from '~/composables/useSiteObservationHistory'
 
-interface SiteInsightsSnapshot {
-  insights: SiteInsights | null
-  unavailable: boolean
-}
 const route = useRoute()
 const router = useRouter()
 const { locale, t } = useI18n()
 const requestedSiteId = computed(() => String(route.params.id ?? ''))
 const detailRequest = useSiteDetailPage()
-const insightsRequest = useAsyncData<SiteInsightsSnapshot>(
-  () => `site-insights:${requestedSiteId.value}`,
-  async () => {
-    try {
-      return { insights: await getSiteInsights(requestedSiteId.value), unavailable: false }
-    } catch {
-      return { insights: null, unavailable: true }
-    }
-  },
-  { default: () => ({ insights: null, unavailable: false }) },
-)
-const [detailState, insightsState] = await Promise.all([detailRequest, insightsRequest])
+const [detailState, siteInsights] = await Promise.all([detailRequest, useSiteInsights(requestedSiteId)])
 const { data, pending, error, siteId, routeState } = detailState
-const siteInsightsSnapshot = computed(() => insightsState.data.value)
+const insightMetric = computed(() => routeState.value.tab === 'insights' ? routeState.value.metric : 'ipv6')
+const insightRange = computed(() => routeState.value.tab === 'insights' ? routeState.value.range : '30d')
+const insightsPresentation = computed(() => presentSiteInsights(siteInsights.data.value, siteInsights.state.value, insightMetric.value, t, locale.value))
+const insightTrend = useSiteInsightTrend({ active: () => routeState.value.tab === 'insights', metric: insightMetric, range: insightRange })
 // Overview keeps the first authoritative Site/language snapshot for this page
 // session. A Target detail refresh cannot replace it; reload starts a new one.
 const siteSnapshot = shallowRef({ identity: data.value.siteIdentity, summary: data.value.siteHealthSummary })
@@ -79,8 +69,8 @@ watch(data, value => {
     siteSnapshot.value = { identity: value.siteIdentity, summary: value.siteHealthSummary }
   }
 })
-const overviewPresentation = computed(() => presentSiteOverview(siteSnapshot.value.summary, siteInsightsSnapshot.value.insights,
-  siteInsightsSnapshot.value.unavailable, (key, values = {}) => t(key, values), locale.value))
+const overviewPresentation = computed(() => presentSiteOverview(siteSnapshot.value.summary, siteInsights.data.value,
+  siteInsights.state.value === 'unavailable', (key, values = {}) => t(key, values), locale.value))
 const insightsTo = computed(() => tabLocation('insights'))
 const navV2Api = useApi('navV2')
 // The reactive async key owns cancellation/stale-result isolation. Preserve the
@@ -126,6 +116,12 @@ function changeObservationView(view: SiteObservationView) {
 }
 function changeSecurityView(view: SiteSecurityView) {
   void router.push({ path: route.path, query: buildSiteDetailQuery(selectSiteSecurityView(routeState.value, view)) })
+}
+function changeInsightMetric(metric: SiteInsightMetric) {
+  void router.push({ path: route.path, query: buildSiteDetailQuery(selectSiteInsightMetric(routeState.value, metric)) })
+}
+function changeInsightRange(range: SiteInsightRange) {
+  void router.push({ path: route.path, query: buildSiteDetailQuery(selectSiteInsightRange(routeState.value, range)) })
 }
 const seo = computed(() => buildSiteDetailSeo({
   name: sitePageData.value.siteInfo?.name,

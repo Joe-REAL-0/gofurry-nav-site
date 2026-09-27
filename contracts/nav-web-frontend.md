@@ -53,9 +53,10 @@ Detail GET, one Insights GET and one View POST. Outside P4 Performance, switchin
 Target within the same hydrated Site session MUST fetch only Detail; no Target
 switch may recount View. UI-only
 state MUST NOT introduce trend/history, comparison or other data requests except
-the explicit P4 Performance history slice below. P1 initially made the legacy Ping
+the explicit P4 Performance history and P6 ecosystem trend slices below. P1 initially made the legacy Ping
 chart sample-triggered. P4 replaces that behavior with hydration-only lazy history
-on entering Performance; every other workspace retains the original budget.
+on entering Performance; P6 adds one selected ecosystem trend on hydrated Insights
+activation. Overview and Security retain the original budget.
 
 Detail 404 (missing Site or foreign Target) and Detail 503 are authoritative page
 failures, including a failed client Target switch. Insights failure is optional:
@@ -88,8 +89,8 @@ Entity URLs without Domain or UI query. Existing SEO copy remains unchanged.
 
 `siteCapabilityRegistry.ts` owns the seven-capability presentation catalog,
 stable order, categories and translation keys, never API facts or coverage.
-Its explicit three-item `preview` preserves the current panel presentation;
-that subset MUST NOT be used as the full catalog in P3/P6.
+P1 retained an explicit three-item preview for the old panel. P6 retires that
+subset metadata together with the old panel; all active consumers use the catalog.
 
 P1 is runtime-only. Its Browser owner is `site-detail-contract.spec.ts`, using
 the existing deterministic Nitro/upstream fixture and strict request/error
@@ -291,6 +292,60 @@ and lowers only actual removed debt. Other cleanup remains P7; Insights remains 
 and #108. `site-security.spec.ts` and pure projection tests own the contract. No
 accepted Visual file changes or final P8 goldens; maintainer visual review is still
 required before P6, independently of local gates and remote CI status.
+
+## Site Insights workspace (#109 P6)
+
+`SiteInsightsWorkspace` replaces the three-item legacy panel with a lightweight
+Site-wide header, seven selectable registry rows, selected Site fact and ecosystem
+context, lazy ecosystem adoption trend and the complete returned recent-change set.
+There are no secondary tabs, embedded Dimension Explorer or Compare components.
+Links lead to localized `/insights/sites` and `/insights/sites/compare?ids=<siteId>`.
+The existing public Ecosystem / 生态观测 naming remains authoritative; the P6
+brief's Insights / 洞察 examples do not reintroduce the retired product name.
+
+`siteInsightsPresentation.ts` is pure and has no Target input. Registry categories
+and order drive the matrix. Slice `ready/empty/unavailable` is separate from the
+seven backend fact states and frontend `missing`. A failed slice exposes null fact
+state and a dash, never seven invented backend unavailable facts. Successful empty
+capabilities yield seven missing rows. P3 follows the same failure distinction.
+Adoption value and known/eligible coverage have separate labels; null is not zero.
+
+`useSiteInsights`, instantiated only by the page, owns SSR data/state/retry shared
+by P3 and P6. It is keyed by Site ID, validates returned identity, and guards the
+published snapshot against a changed Site ID. Retry refreshes only this slice;
+the old Site's retry cannot replace a new Site's result. It never refreshes Detail,
+View, or trend. Existing transport behavior is unchanged; owners do not schedule
+automatic retries. A failed optional slice never becomes an authoritative error.
+
+`selectSiteInsightMetric` and `selectSiteInsightRange` own URL transitions and
+retain Target and the other selection. `useSiteInsightTrend` belongs to the page,
+activates only after hydration in Insights, and caches by metric + range without
+Target or Site identity. It uses the existing `getNavInsightsTrend` service. Every
+active identity has loading/ready/empty/unavailable state. Empty and failed results
+are cached; only explicit retry reloads them. Late results populate only their own
+entry. Normal activation adds exactly one uncached trend; SSR still loads only
+Detail and Site Insights. Target changes add only Detail, including while trend or
+Site data is pending, and never reset the Site workspace.
+
+Site and trend failures are independent. ECharts is lazy canvas with a shallow
+instance, ResizeObserver, disposal and import revision protection. It plots only
+ecosystem adoption, uses `connectNulls: false`, and reads Site Detail/global tokens.
+Loading includes chart initialization; import failure is classified unavailable.
+One-point and all-null samples retain explicit usable/unknown presentation. No
+state may leave an unclassified blank chart. #108 chart appearance is not imported.
+
+Recent Site Changes uses all returned items, shared order/date/label/category
+helpers, unknown fallback and exact UTC versus day-only precision. It is never
+described as complete history. The old SiteInsightsPanel and its sole-consumer
+InsightsEntityTimeline are retired after consumer audit. Their isolated styles
+are removed; shared Game rules and #108 important/domain debt remain untouched.
+New appearance belongs to `site-detail.less`, with deep zero and no added debt.
+
+`site-insights.spec.ts`, pure presentation tests and real Nuxt owner tests verify
+this contract. P1–P5 and Entity tests retain their existing invariants while
+accounting explicitly for P6's first activated trend. SEO remains Entity-only.
+No backend/schema changes, accepted Visual updates or P8 golden are authorized.
+Maintainer visual acceptance is required before P7; remote CI is a separate status.
 
 ## Styling ownership
 

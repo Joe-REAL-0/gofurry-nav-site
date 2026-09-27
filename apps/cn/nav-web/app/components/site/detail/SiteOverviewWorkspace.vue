@@ -13,6 +13,7 @@
       <SiteCapabilitySnapshot :groups="presentation.capabilityGroups" :state="presentation.capabilityState" />
       <SiteRecentChanges :items="presentation.recentChanges" :state="presentation.changesState" />
     </div>
+    <button v-if="presentation.capabilityState === 'unavailable'" data-site-insights-retry type="button" :disabled="retrying" class="gf-button gf-button--ghost mt-4" @click="emit('retry')">{{ t(retrying ? 'siteIntelligence.loading' : 'siteIntelligence.retry') }}</button>
     <NuxtLink :to="insightsTo" data-site-overview-insights class="gf-button gf-button--ghost mt-5">
       {{ t('siteOverview.fullEcosystem') }} <span aria-hidden="true">→</span>
     </NuxtLink>
@@ -25,6 +26,7 @@ import type { SiteOverviewPresentation } from '~/utils/siteOverviewPresentation'
 import SiteOverviewHealth from './SiteOverviewHealth.vue'
 import SiteCapabilitySnapshot from './SiteCapabilitySnapshot.vue'
 import SiteRecentChanges from './SiteRecentChanges.vue'
-defineProps<{ presentation: SiteOverviewPresentation; insightsTo: RouteLocationRaw }>()
+defineProps<{ presentation: SiteOverviewPresentation; insightsTo: RouteLocationRaw; retrying: boolean }>()
+const emit = defineEmits<{ retry: [] }>()
 const { t } = useI18n()
 </script>

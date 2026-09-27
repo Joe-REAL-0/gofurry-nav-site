@@ -446,3 +446,96 @@ density, Header missing tones, security.txt state copy, neutral Port results and
 bounded WAF interpretation. Check desktop/mobile Exposure, long values and theme
 consistency. P5 exit criterion 40 remains pending until the maintainer accepts
 these visuals. Local tests and screenshots are not that approval; do not enter P6.
+
+## P6: Site Insights workspace and Target-independence closure
+
+The maintainer declared P1–P5 complete and explicitly requested P6 on current
+`dev`. Earlier manual-review history remains intact. P7, #108 appearance,
+backend/schema changes and P8 goldens are outside this phase.
+
+### Ownership, scope and explicit contract reconciliation
+
+Five Site-owned components replace the legacy preview with seven grouped selectable
+registry rows, the selected Site fact/date/adoption/coverage, ecosystem adoption
+trend and the full recent-change set. There are no secondary tabs. External links
+lead to the localized ecosystem and Compare with only this Site preselected.
+
+The P6 brief uses Insights / 洞察 in example public copy, while the existing
+executable semantic contract explicitly retires those product names in favor of
+Ecosystem / 生态观测. New public copy preserves that accepted naming; internal
+owners still use Insights names. The required ecosystem adoption trend and recent
+Site changes titles are preserved. No semantic guard was relaxed.
+
+`siteInsightsPresentation.ts` has no Target input. Slice unavailable yields null
+fact states/dashes, not seven fabricated backend unavailable facts. Success-empty
+retains seven missing facts. P3's older fabricated unavailable row state was also
+corrected; real backend unavailable/unknown states remain meaningful. Adoption
+and coverage stay distinct and null never becomes zero. `insightChanges.ts` adds
+shared presentation categories for known public events, retaining unknown fallback,
+the full returned set and explicit UTC versus date-only precision.
+
+Page-owned `useSiteInsights` shares SSR data/state/retry with P3 and P6. Retry only
+refreshes Site Insights, validates response identity and cannot let an old Site
+response overwrite the new Site. `useSiteInsightTrend` owns hydrated activation,
+metric/range cache, classified states, explicit retry and late-response isolation.
+Neither owner accepts Target identity. Existing transport retry behavior remains;
+the new owners add no automatic retry loop.
+
+SSR remains Detail + Site Insights. Normal hydration adds View; entering Insights
+adds exactly one selected uncached metric/range trend. Metric/range are URL-owned,
+with helpers retaining Target and the other selection. Target switching adds only
+Detail and cannot reset matrix/detail/chart/recent changes, including while pending.
+The two optional slices fail and recover independently.
+
+The Site-owned ECharts surface uses lazy canvas, a shallow instance, ResizeObserver,
+import revision protection and disposal. Only adoption is plotted and null points
+remain gaps. Chart initialization itself is classified loading; load/render failure
+is unavailable, and one-point/all-null samples have meaningful presentation.
+No #108 rail/workspace or appearance owner is imported.
+
+### Legacy and measured style debt
+
+Consumer audit found SiteInsightsPanel was InsightsEntityTimeline's only remaining
+consumer. Both are removed; their isolated Site panel/timeline styles are deleted.
+Shared Game rules and all #108 important/domain appearance debt remain unchanged.
+The obsolete three-item registry preview metadata is retired, without a new catalog.
+
+Policy initially failed only on the stale six raw-visual entries in insights.less.
+After real removal, style:policy:update removed exactly that budget. Raw visual
+**114 → 108**; Tailwind appearance **147**, arbitrary **2**, important **5**, deep
+**0**, legacy dark **0** are unchanged. No budget increase, transfer or new exception.
+
+### Verification status
+
+Added 20 Unit cases and nine real Nuxt cases for presentation, route selection,
+trend activation/cache/race/retry and old Site retry isolation. Added 26 Functional
+Browser cases using the existing deterministic Nitro/upstream owner. P1–P3/Entity
+assertions now explicitly account for the authorized first trend and new hooks,
+retaining original Site request/failure/SEO guarantees and strict error capture.
+
+Frozen install, Unit (198), Nuxt (20), combined Vitest (218), lint, stylelint,
+style-policy tooling (75), exact policy, typecheck, Insights semantics, SEO recovery,
+production build and Chromium installation have passed. The first combined P1–P6,
+Entity and SEO run passed 168/169. The new cache-remount test issued Back before
+its Overview navigation settled; it now waits for the semantic panel state before
+Back, retaining canvas/cache assertions without sleeps or retries. All 26 P6 tests
+then passed with ten temporary review captures (36 cases, 31.5 seconds). The capture
+test was deleted before full acceptance; its images are outside the repository,
+not a runner or accepted baseline. Final `pnpm run test:browser --workers=1`
+passed **557 cases in 13.2 minutes**, with no failures, skips or retries. The final
+unchanged production build passed P1–P6, Entity, SEO, failure boundaries and the
+remaining frontend suite. Final lint/stylelint/typecheck and combined Vitest (218)
+also passed. Protected Visual/PNG/suppression files remain unchanged.
+
+Inventory is 557 Functional Browser / 119 Visual / 118 accepted PNGs. No accepted
+Visual files are changed and no P8 golden is generated. Remote CI and the pinned
+Linux Visual comparison are unverified; prior CI runs are not current acceptance.
+
+### Required maintainer review before P7
+
+Review the seven-row desktop matrix, supported/stale/unknown/missing facts,
+30d/all trends, Site unavailable and trend unavailable independently, full recent
+changes, mobile stacking and representative Dark views. Confirm Fact/Adoption/
+Coverage separation, Site/Target scope, chart prominence and change-list density.
+Local tests and screenshots do not substitute for P6 exit criterion 37: maintainer
+visual acceptance. Do not enter P7 automatically.

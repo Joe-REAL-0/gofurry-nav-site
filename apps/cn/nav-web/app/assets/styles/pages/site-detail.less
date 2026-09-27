@@ -9,6 +9,82 @@
   color: var(--gf-text-main);
 }
 
+.site-intelligence {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.site-intelligence-link {
+  color: var(--gf-text-main);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.site-intelligence-matrix-heading {
+  padding: 0.65rem 0.75rem;
+  color: var(--gf-text-muted);
+  font-size: 0.7rem;
+}
+
+.site-intelligence-row {
+  border-bottom: 1px solid var(--site-detail-border);
+  border-left: 2px solid transparent;
+  padding: 0.9rem 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-intelligence-row:hover,
+.site-intelligence-range:hover {
+  background: var(--site-detail-surface);
+}
+
+.site-intelligence-row[aria-pressed="true"] {
+  border-left-color: var(--site-detail-positive);
+  background: var(--site-detail-surface);
+}
+
+.site-intelligence-capability {
+  font-weight: 600;
+}
+
+.site-intelligence-facts {
+  border-top: 1px solid var(--site-detail-border);
+  padding-top: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-intelligence-range {
+  border-bottom: 2px solid transparent;
+  padding: 0.4rem 0.7rem;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+}
+
+.site-intelligence-range[aria-pressed="true"] {
+  border-bottom-color: var(--site-detail-positive);
+  color: var(--gf-text-main);
+}
+
+.site-intelligence-link:focus-visible,
+.site-intelligence-row:focus-visible,
+.site-intelligence-range:focus-visible {
+  outline: 2px solid var(--gf-focus-ring);
+  outline-offset: 2px;
+}
+
+.site-intelligence-chart {
+  height: 15rem;
+}
+
+.site-intelligence-chart-shell {
+  border-bottom: 1px solid var(--site-detail-border);
+}
+
+.site-intelligence-change {
+  border-bottom: 1px solid var(--site-detail-border);
+  padding: 0.85rem 0;
+}
+
 html.dark .site-detail-page {
   --site-detail-positive: #93dabb;
   --site-detail-warning: #f2c47a;

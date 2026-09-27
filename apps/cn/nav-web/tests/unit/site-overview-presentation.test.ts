@@ -125,7 +125,7 @@ describe('Site capability snapshot', () => {
     expect(vm.capabilityState).toBe('unavailable')
     expect(vm.changesState).toBe('unavailable')
     expect(vm.capabilities).toHaveLength(7)
-    expect(vm.capabilities.every(item => item.state === 'unavailable')).toBe(true)
+    expect(vm.capabilities.every(item => item.state === null && item.stateLabel === '—')).toBe(true)
   })
 })
 

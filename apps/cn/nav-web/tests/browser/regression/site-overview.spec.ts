@@ -95,7 +95,8 @@ for (const scenario of ['empty', 'unavailable', 'view-failure'] as const) {
     await expect(page.locator('[data-site-capability]')).toHaveCount(7)
     if (scenario !== 'view-failure') {
       await expect(page.locator('[data-site-capability-snapshot]')).toHaveAttribute('data-site-capabilities-state', scenario)
-      await expect(page.locator(`[data-site-capability-state="${scenario === 'empty' ? 'missing' : 'unavailable'}"]`)).toHaveCount(7)
+      if (scenario === 'empty') await expect(page.locator('[data-site-capability-state="missing"]')).toHaveCount(7)
+      else await expect(page.locator('[data-site-capability][data-site-capability-state]')).toHaveCount(0)
       await expect(page.locator('[data-site-recent-changes]')).toHaveAttribute('data-site-changes-state', scenario)
       await expect(page.locator('[data-site-recent-changes]')).toContainText(scenario === 'empty' ? 'No recent changes' : 'temporarily unavailable')
       await expect(page.locator('[data-site-change]')).toHaveCount(0)
@@ -111,7 +112,7 @@ for (const scenario of ['empty', 'unavailable', 'view-failure'] as const) {
   })
 }
 
-test('Site snapshot survives pending Target switch, Overview remount and history without extra requests', async ({ page, runtime }) => {
+test('Site snapshot survives pending Target switch, Overview remount and history without extra Site requests', async ({ page, runtime }) => {
   runtime.state.summaryChangesOnTarget = true
   runtime.state.fullCapabilities = true
   runtime.state.manyChanges = true
@@ -134,6 +135,7 @@ test('Site snapshot survives pending Target switch, Overview remount and history
     await expect(overview).toHaveText(before!)
     await page.locator('[data-site-overview-insights]').click()
     await expect(page.locator('[data-site-insights]')).toBeVisible()
+    await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
     await expect(overview).toHaveCount(0)
     expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'insights' })
     await page.goBack()
@@ -146,7 +148,8 @@ test('Site snapshot survives pending Target switch, Overview remount and history
     expect(runtime.count('/sites/41/detail')).toBe(2)
     expect(runtime.count('/sites/41/insights')).toBe(1)
     expect(runtime.count('/sites/41/view')).toBe(1)
-    expect(runtime.calls).toHaveLength(4)
+    expect(runtime.calls).toHaveLength(5)
+    expect(runtime.count('/trend')).toBe(1)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
     // A new page session adopts the new Site summary; client Target switching did not.
     const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
@@ -154,7 +157,7 @@ test('Site snapshot survives pending Target switch, Overview remount and history
     await (await view).finished()
     await expect(page.locator('[data-site-overview-health]')).toHaveAttribute('data-site-status', 'degraded')
     await expect(page.locator('[data-site-overview-health] time')).toHaveText('2026-09-26 13:00:00 UTC')
-    expect(runtime.calls).toHaveLength(7)
+    expect(runtime.calls).toHaveLength(8)
     runtime.assertQuiet()
   } finally { held.release() }
 })

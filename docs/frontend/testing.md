@@ -9,7 +9,8 @@ P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
 shell/context cases for 435 Functional Browser. #109 P3 adds 16 Overview cases
 for 451 Functional Browser. #109 P4 adds 30 Observation cases for
 481 Functional Browser. #109 P5 adds 50 Security cases for
-**531 Functional Browser /119 Visual /118 PNG**. The
+531 Functional Browser. #109 P6 adds 26 Site intelligence cases for
+**557 Functional Browser /119 Visual /118 PNG**. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
@@ -163,6 +164,23 @@ regressions also reject uncollected certificate defaults; Browser asserts the He
 Strip agrees with Security. No new Nuxt fetch
 composable or runner is introduced. The shared Site fixture adds pure Security data
 only. All P1–P4 and Visual contracts remain required; manual review is separate.
+
+## Site Detail #109 P6
+
+`site-insights.spec.ts` owns SSR without trend dependency, seven registry rows,
+route/keyboard/history/reload, external links, exact lazy/cache request accounting,
+classified chart states, independent Site/trend retries and Target independence
+including pending. One-point, all-null and empty samples cannot leave a blank
+unclassified surface. Full recent changes retain categories and exact/day precision.
+390/768/1440 × Light/Dark checks stacked rows, canvas and no horizontal overflow.
+
+`site-insights-presentation.test.ts` adds 20 Unit cases for registry grouping,
+slice versus fact state, missing, nullable adoption/coverage, selected fact,
+change order/category/precision, gaps and route transitions. Nine real Nuxt cases
+exercise the trend and shared Site owners, including old Site retry isolation.
+P1–P3/Entity tests are adjusted only for P6's authorized trend and new semantic
+hooks; original Site request, failure and SEO assertions remain strict. No new
+runner or accepted Visual baseline is introduced. Human review remains separate.
 
 ## Migrated regression knowledge
 

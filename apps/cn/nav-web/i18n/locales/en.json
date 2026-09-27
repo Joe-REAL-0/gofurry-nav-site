@@ -1,4 +1,38 @@
 {
+  "siteIntelligence": {
+    "scope": "Ecosystem observations describe this Site entity and stay the same when you switch Target.",
+    "ecosystem": "Site ecosystem",
+    "compare": "Compare with other sites",
+    "matrix": "Capability matrix",
+    "capability": "Capability",
+    "siteState": "Site state",
+    "siteFact": "Current Site fact",
+    "adoption": "Ecosystem adoption",
+    "sameDayAdoption": "Same-day ecosystem adoption",
+    "coverage": "Coverage",
+    "coverageHint": "Adoption is the ecosystem ratio; coverage is known evidence divided by the eligible population.",
+    "factDate": "Fact date",
+    "unavailable": "Site ecosystem observations are temporarily unavailable.",
+    "retry": "Reload",
+    "loading": "Loading…",
+    "trendTitle": "Ecosystem adoption trend",
+    "trendScope": "Adoption across the Site ecosystem; this curve does not describe this Site’s history.",
+    "range": "Trend range",
+    "noObservedValues": "The returned dates contain no observed adoption values. Gaps remain unknown.",
+    "trendStates": {
+      "loading": "Loading ecosystem adoption trend…",
+      "empty": "No ecosystem trend data yet.",
+      "unavailable": "Ecosystem adoption trend could not be loaded."
+    },
+    "recentChanges": "Recent Site Changes",
+    "noChanges": "No recent Site changes returned.",
+    "changeCategories": {
+      "capability": "Capability",
+      "target": "Target",
+      "certificate": "Certificate",
+      "unknown": "Other change"
+    }
+  },
   "siteSecurity": {
     "navigation": "Security views",
     "currentTarget": "Current Target",

@@ -1,4 +1,4 @@
-import type { InsightChange } from '@/types/insights'
+import type { InsightChange, SiteInsightChangeCategory } from '@/types/insights'
 
 const publicChangeI18nKeys: Record<string, string> = {
   'site.ipv6.enabled': 'siteIpv6Enabled',
@@ -39,6 +39,14 @@ const publicChangeI18nKeys: Record<string, string> = {
 
 export function insightChangeI18nKey(type: string) {
   return `insights.changes.events.${publicChangeI18nKeys[type] ?? 'unknown'}`
+}
+
+/** Presentation category for known public Site events; unknown events retain fallback. */
+export function siteInsightChangeCategory(type: string): SiteInsightChangeCategory | null {
+  if (!type.startsWith('site.') || !publicChangeI18nKeys[type]) return null
+  if (type.startsWith('site.tls_certificate.')) return 'certificate'
+  if (type === 'site.primary_target.changed') return 'target'
+  return 'capability'
 }
 
 export function insightChangeOrder(change: InsightChange) {

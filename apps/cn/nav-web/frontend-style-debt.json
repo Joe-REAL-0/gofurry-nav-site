@@ -11,7 +11,6 @@
       "app/components/site/SiteOverview.vue": 1
     },
     "raw-visual-value": {
-      "app/assets/styles/pages/insights.less": 6,
       "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
       "app/components/site/SiteChangeEvents.vue": 22,
       "app/components/site/SiteSignalCards.vue": 11

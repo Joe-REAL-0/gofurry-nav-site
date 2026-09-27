@@ -1,6 +1,7 @@
 import { runtimeTest } from './insights-runtime'
 import { seoState, seoResponse } from './seo-recovery'
 import { securityState, securityEvidence } from './site-security-data'
+import { isSiteTrend, siteInsightScenario, siteRecentChanges, siteTrendResponse } from './site-insights-data'
 
 export const longTarget = 'a-long-collected-target-name-for-layout-review.community.infrastructure.example'
 
@@ -9,10 +10,11 @@ export const longTarget = 'a-long-collected-target-name-for-layout-review.commun
 export const test = runtimeTest(
   () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
-    observationRich: false, historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState() }),
+    observationRich: false, historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
   url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
-    || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname),
+    || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
   (url, media, _body, state) => {
+    if (isSiteTrend(url)) return siteTrendResponse(url, state.intelligence.trend)
     if (url.pathname.endsWith('/view') && state.viewFailure) return { status: 503 }
     if (url.pathname.endsWith('/insights') && state.insightsEmpty) return {
       data: { site: { id: 41, name: 'Site fixture 41' }, capabilities: [], recent_changes: [] },
@@ -40,6 +42,8 @@ export const test = runtimeTest(
           ['site.ipv6.enabled', '2026-09-20', null], ['site.http2.enabled', '2026-09-24', '2026-09-24T12:34:00Z'],
           ['site.tls13.enabled', '2026-09-23', null], ['site.hsts.added', '2026-09-22', null], ['site.csp.added', '2026-09-21', null],
         ].map(([type, date, occurred_at]) => ({ type, date, occurred_at, entity: { id: 41, name: 'Site fixture 41' }, detail: null })) } : {}),
+        ...(state.intelligence.rich ? { recent_changes: siteRecentChanges() } : {}),
+        ...(state.intelligence.nullEcosystem ? { capabilities: [{ key: 'ipv6', state: 'unknown', as_of: null, ecosystem: { value: null, coverage: 0 } }] } : {}),
       } }
     }
     if (url.pathname.endsWith('/detail') && !reply.status) {

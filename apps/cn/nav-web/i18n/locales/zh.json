@@ -1,4 +1,38 @@
 {
+  "siteIntelligence": {
+    "scope": "生态观测属于 Site 实体，不随当前 Target 切换而改变。",
+    "ecosystem": "网站生态",
+    "compare": "与其他站点对比",
+    "matrix": "能力矩阵",
+    "capability": "能力",
+    "siteState": "站点状态",
+    "siteFact": "当前站点事实",
+    "adoption": "生态采用率",
+    "sameDayAdoption": "同日生态采用率",
+    "coverage": "覆盖率",
+    "coverageHint": "采用率反映生态中的能力采用情况；覆盖率是已知证据占符合条件对象的比例。",
+    "factDate": "事实日期",
+    "unavailable": "站点生态观测暂时不可用。",
+    "retry": "重新加载",
+    "loading": "加载中…",
+    "trendTitle": "生态采用趋势",
+    "trendScope": "此曲线展示站点生态的采用情况，不代表当前站点自身的变化历史。",
+    "range": "趋势范围",
+    "noObservedValues": "返回的日期中尚无已观测的采用率，缺口保持未知。",
+    "trendStates": {
+      "loading": "正在加载生态采用趋势…",
+      "empty": "暂无生态趋势数据。",
+      "unavailable": "生态采用趋势暂时无法加载。"
+    },
+    "recentChanges": "最近站点变化",
+    "noChanges": "暂无返回的近期站点变化。",
+    "changeCategories": {
+      "capability": "能力",
+      "target": "目标",
+      "certificate": "证书",
+      "unknown": "其他变化"
+    }
+  },
   "siteSecurity": {
     "navigation": "安全二级导航",
     "currentTarget": "当前目标",

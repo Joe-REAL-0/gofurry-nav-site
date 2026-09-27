@@ -32,12 +32,13 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
     await expect(page.getByText('HTTP 200', { exact: true }).first()).toBeVisible()
     const startsInInsights = query.includes('tab=insights')
     if (!startsInInsights) await page.locator('[data-site-primary-tab="insights"]').click()
+    await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
     const insightsBefore = await page.locator('[data-site-insights]').textContent()
     if (!startsInInsights) {
       await page.goBack()
       await expect(page).toHaveURL('/site/41' + query)
     }
-    expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths)
+    expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...initialPaths, `/api/v2/nav/insights/metrics/${startsInInsights ? 'tls13' : 'ipv6'}/trend`].sort())
 
     await page.locator('[data-site-target-trigger]').click()
     const option = page.locator('[data-site-target-option="alt.example"]')
@@ -58,11 +59,12 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
     if (!startsInInsights) await page.locator('[data-site-primary-tab="insights"]').click()
     await expect(page.locator('[data-site-insights]')).toHaveText(insightsBefore!)
     await assertRuntimeSurface(page, '[data-site-detail]', 'light')
-    expect(runtime.calls.slice(3).map(call => [call.url.pathname, call.url.searchParams.get('target')])).toEqual([
+    expect(runtime.calls.slice(4).map(call => [call.url.pathname, call.url.searchParams.get('target')])).toEqual([
       ['/api/v2/nav/sites/41/detail', 'alt.example'],
     ])
     expect(runtime.count('/sites/41/insights')).toBe(1)
     expect(runtime.count('/sites/41/view')).toBe(1)
+    expect(runtime.count('/trend')).toBe(1)
     expect(runtime.calls.every(call => call.completed)).toBe(true)
     expect(new URL((await page.locator('link[rel="canonical"]').getAttribute('href'))!).search).toBe('')
     runtime.assertQuiet()
@@ -115,8 +117,9 @@ for (const scenario of ['empty', 'unavailable', 'view-failure'] as const) {
     await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
     await expect(page.locator('[data-site-insights]')).toHaveAttribute('data-site-insights-state', state)
     await expect(page.locator('[data-site-insights-unavailable]')).toHaveCount(scenario === 'unavailable' ? 1 : 0)
-    await expect(page.locator('[data-entity-timeline]')).toHaveCount(scenario === 'unavailable' ? 0 : 1)
-    if (scenario === 'empty') await expect(page.locator('[data-entity-timeline] li')).toHaveCount(0)
+    await expect(page.locator('[data-site-insight-changes]')).toHaveAttribute('data-site-changes-state', state)
+    if (scenario !== 'view-failure') await expect(page.locator('[data-site-insight-change]')).toHaveCount(0)
+    await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
     await settleRuntime(page)
     expect(runtime.count('/sites/41/detail')).toBe(1)
     expect(runtime.count('/sites/41/view')).toBe(1)

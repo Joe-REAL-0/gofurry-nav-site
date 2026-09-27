@@ -18,11 +18,10 @@ it('provides valid categories and existing bilingual presentation metadata witho
       expect(typeof label).toBe('string')
       expect(label).not.toBe('')
     }
-    expect(Object.keys(item).sort()).toEqual(['category', 'key', 'labelKey', 'order', 'preview'])
+    expect(Object.keys(item).sort()).toEqual(['category', 'key', 'labelKey', 'order'])
   }
 })
 
-it('keeps the existing three-item preview explicitly separate from the complete catalog', () => {
-  expect(siteCapabilityRegistry.filter(item => item.preview).map(item => item.key)).toEqual(['ipv6', 'tls13', 'security_txt'])
-  expect(siteCapabilityRegistry.filter(item => !item.preview)).toHaveLength(4)
+it('retires the legacy preview subset instead of keeping a second catalog', () => {
+  expect(siteCapabilityRegistry.every(item => !('preview' in item))).toBe(true)
 })

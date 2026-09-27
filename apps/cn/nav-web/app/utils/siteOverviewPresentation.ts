@@ -14,7 +14,7 @@ const timestamp = (value?: string) => value && value !== '0001-01-01T00:00:00Z' 
   ? new Date(value).toISOString() : null
 const healthTone = (status: HealthStatus | null): Tone => status === 'healthy' ? 'good' : status === 'down' ? 'bad'
   : status === 'warning' || status === 'degraded' ? 'warning' : 'muted'
-const capabilityTone = (state: CapabilityState): Tone => state === 'supported' ? 'good'
+const capabilityTone = (state: CapabilityState | null): Tone => state === 'supported' ? 'good'
   : state === 'stale' || state === 'unavailable' ? 'warning' : state === 'unsupported' ? 'neutral' : 'muted'
 
 function needsAttention(target: TargetHealthSummaryItem) {
@@ -83,9 +83,9 @@ export function presentSiteOverview(
   const unavailable = insightsUnavailable || insights === null
   const records = new Map((insights?.capabilities ?? []).map(item => [item.key, item]))
   const capabilities = siteCapabilityRegistry.map(item => {
-    const state: CapabilityState = unavailable ? 'unavailable' : records.get(item.key)?.state ?? 'missing'
+    const state: CapabilityState | null = unavailable ? null : records.get(item.key)?.state ?? 'missing'
     return { key: item.key, category: item.category, label: t(item.labelKey), state, tone: capabilityTone(state),
-      stateLabel: t(state === 'missing' ? 'siteOverview.capabilityMissing' : `insights.entity.states.${state}`) }
+      stateLabel: state === null ? '—' : t(state === 'missing' ? 'siteOverview.capabilityMissing' : `insights.entity.states.${state}`) }
   })
   const capabilityState = unavailable ? 'unavailable' : capabilities.every(item => item.state === 'missing') ? 'empty' : 'ready'
   const capabilityGroups = [...new Set(siteCapabilityRegistry.map(item => item.category))].map(category => ({
