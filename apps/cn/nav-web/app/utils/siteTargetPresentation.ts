@@ -48,9 +48,9 @@ export function presentSiteTarget(source: TargetSource, t: Translate) {
   const tlsVersion = text(payload.tls_version)
   const handshake = text(payload.tls_handshake)
   const tlsTone = handshake === 'failed' ? 'bad' : handshake !== 'not_tls' && /TLS\s*1\.[23]/i.test(tlsVersion) ? 'good' : 'neutral'
-  const expiry = presentSiteCertificateExpiry(payload, t)
+  const expiry = presentSiteCertificateExpiry(payload, t, http?.observed_at)
   const certificate = readSiteCertificateEvidence(payload) ?? {}
-  const certificateDays = number(certificate.cert_days_left)
+  const certificateDays = expiry.days
   const certificateVerified = typeof certificate.cert_verified === 'boolean' ? certificate.cert_verified : null
   const certificateLabel = certificateVerified === null ? t('siteDetail.notObserved')
     : t(certificateVerified ? 'siteDetail.verified' : 'siteDetail.notVerified')

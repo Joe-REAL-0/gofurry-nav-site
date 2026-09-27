@@ -100,6 +100,23 @@ for (const [days, expiry] of [[31, 'normal'], [30, 'attention'], [7, 'warning'],
     expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
+for (const [legacyDays, days, state] of [[undefined, 45, 'normal'], [7, 7, 'warning']] as const) {
+  test('Certificate observation-time fallback shares all displays: ' + (legacyDays === undefined ? 'V2 missing days' : 'explicit days win'), async ({ page, runtime }) => {
+    Object.assign(runtime.state.security, { enabled: true, days: legacyDays })
+    const html = await openSecurity(page, 'tls')
+    expect(html).toContain(`${days} days left`)
+    await expect(page.locator('[data-site-health="certificate"]')).toContainText(`${days} days left`)
+    await expect(page.locator('[data-site-certificate-expiry]')).toHaveText(`${days} days left`)
+    await expect(page.locator('[data-site-certificate-expiry]')).toHaveAttribute('data-expiry', state)
+    await expect(page.locator('[data-site-certificate-verification]')).toHaveAttribute('data-state', 'verified')
+    await page.locator('[data-site-transport-details] summary').click()
+    await expect(page.locator('[data-site-evidence="cert_days_left"] dd')).toHaveText(String(days))
+    await tab(page, 'overview').click()
+    await expect(page.locator('[data-site-security-summary="certificate"]')).toContainText(`${days} days left`)
+    expect(runtime.calls).toHaveLength(4)
+    runtime.assertQuiet()
+  })
+}
 for (const [headers, found, missing] of [['all', 6, 0], ['some', 2, 4], ['missing', 0, 6], ['not_observed', 0, 0]] as const) {
   test('Security header evidence: ' + headers, async ({ page, runtime }) => {
     Object.assign(runtime.state.security, { enabled: true, headers })

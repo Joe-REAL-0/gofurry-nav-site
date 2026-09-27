@@ -279,7 +279,12 @@ prevent Go false/zero defaults from becoming failed certificate evidence. Explic
 verification facts remain meaningful when the older payload lacks the collection
 flag. `readSiteCertificateEvidence` is shared with the Target presentation owner,
 so the Health Strip cannot contradict Security with uncollected default values.
-Remaining days come from the collector, never the client clock; >30 is normal,
+Remaining days prefer finite `cert_days_left`; when absent or invalid, derive
+whole days (floor) from `cert_not_after` minus the HTTP envelope's `observed_at`.
+Both timestamps must be valid and timezone-qualified; missing/invalid or Go-zero
+times remain not observed. Never use the client clock or a Site/Target summary
+timestamp. Health Strip, Security summary and validity facts share the same
+expiry projection. Verification remains independent. >30 is normal,
 8–30 attention, 1–7 warning and <=0 expired. These tones belong to expiry alone.
 SAN, chain and crypto facts use native disclosure; fingerprints wrap in monospace.
 False OCSP and zero/missing SCT do not produce a security conclusion.

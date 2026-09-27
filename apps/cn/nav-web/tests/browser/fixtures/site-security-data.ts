@@ -1,6 +1,6 @@
 // #109 P5 scenario data only. Uses the existing Site/Nitro/upstream owner.
 export function securityState() {
-  return { enabled: false, tls: 'verified' as 'verified' | 'failed' | 'missing_verification' | 'not_collected' | 'missing' | 'not_tls', days: 45 as number | null,
+  return { enabled: false, tls: 'verified' as 'verified' | 'failed' | 'missing_verification' | 'not_collected' | 'missing' | 'not_tls', days: 45 as number | null | undefined,
     headers: 'all' as 'all' | 'some' | 'missing' | 'not_observed', txt: 'found' as 'found' | 'issues' | 'not_found' | 'unavailable' | 'not_observed',
     ports: 'mixed' as 'mixed' | 'empty' | 'skipped' | 'unavailable' | 'not_observed',
     waf: 'matched' as 'matched' | 'unexpected_pass' | 'network_error' | 'unexpected_status' | 'truncated' | 'unavailable' | 'not_observed',

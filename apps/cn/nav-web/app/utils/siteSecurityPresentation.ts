@@ -31,9 +31,23 @@ export function readSiteCertificateEvidence(value: unknown): Record<string, unkn
   return observed ? payload : null
 }
 
-/** Shared expiry presentation uses collector evidence, never the client clock. */
-export function presentSiteCertificateExpiry(payload: unknown, t: Translate) {
-  const days = number(readSiteCertificateEvidence(payload)?.cert_days_left)
+// Require an explicit timezone so SSR and the browser use the same evidence time.
+const certificateTimestamp = (value: unknown) => {
+  const raw = text(value)
+  if (!/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(raw) || raw.startsWith('0001-01-01T')) return NaN
+  const timestamp = Date.parse(raw), day = raw.slice(0, 10)
+  // Date.parse normalizes impossible dates such as February 30; those are not evidence.
+  return Number.isFinite(timestamp) && new Date(day).toISOString().slice(0, 10) === day ? timestamp : NaN
+}
+
+/** Legacy days take precedence; V2 falls back to whole days at HTTP observation time. */
+export function presentSiteCertificateExpiry(payload: unknown, t: Translate, observedAt?: unknown) {
+  const certificate = readSiteCertificateEvidence(payload)
+  let days = number(certificate?.cert_days_left)
+  if (days === null && certificate) {
+    const expires = certificateTimestamp(certificate.cert_not_after), observed = certificateTimestamp(observedAt)
+    if (Number.isFinite(expires) && Number.isFinite(observed)) days = Math.floor((expires - observed) / 86_400_000)
+  }
   const state = days === null ? 'not_observed' : days <= 0 ? 'expired' : days <= 7 ? 'warning' : days <= 30 ? 'attention' : 'normal'
   return { state, days, label: t('siteSecurity.states.' + state),
     value: days === null ? t('siteDetail.notObserved') : days <= 0 ? t('siteDetail.expired') : `${days} ${t('siteDetail.days')}`,
@@ -78,10 +92,10 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   const collected = bool(payload.cert_collected)
   const evidence = readSiteCertificateEvidence(payload), hasCertificate = evidence !== null
   const cert = evidence ?? {}
-  const verified = bool(cert.cert_verified), days = number(cert.cert_days_left)
+  const verified = bool(cert.cert_verified)
   const verification = verified === true ? 'verified' : verified === false ? 'failed'
     : httpMeta.state === 'unavailable' && !hasCertificate ? 'unavailable' : handshake === 'not_tls' ? 'not_applicable' : 'not_observed'
-  const expiryPresentation = presentSiteCertificateExpiry(payload, t), expiry = expiryPresentation.state
+  const expiryPresentation = presentSiteCertificateExpiry(payload, t, http?.observed_at), expiry = expiryPresentation.state, days = expiryPresentation.days
   const certificate = {
     verification: { ...state(verification), tone: siteProtocolTone(verification) }, expiry: expiryPresentation, days, collected,
     errors: compact(facts(cert, ['verify_error_category', 'verify_error'])),

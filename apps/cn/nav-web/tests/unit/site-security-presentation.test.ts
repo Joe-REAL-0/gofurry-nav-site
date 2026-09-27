@@ -72,7 +72,7 @@ describe('Current Target security projection', () => {
     const data = source(); delete payload(data).cert_collected
     expect(presentSiteSecurity(data, translate()).certificate.verification.state).toBe('verified')
   })
-  it.each([[31, 'normal'], [30, 'attention'], [8, 'attention'], [7, 'warning'], [1, 'warning'], [0, 'expired'], [-2, 'expired'], [null, 'not_observed']] as const)('expiry %s stays separate from verification', (days, state) => {
+  it.each([[31, 'normal'], [30, 'attention'], [8, 'attention'], [7, 'warning'], [1, 'warning'], [0, 'expired'], [-2, 'expired']] as const)('expiry %s stays separate from verification', (days, state) => {
     const vm = present({ days })
     expect(vm.certificate.verification.state).toBe('verified')
     expect(vm.certificate.expiry.state).toBe(state)
