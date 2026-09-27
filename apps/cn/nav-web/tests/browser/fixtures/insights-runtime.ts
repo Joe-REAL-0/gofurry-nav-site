@@ -41,6 +41,7 @@ export function runtimeTest<S>(
   allowed: (url: URL) => boolean,
   respond: (url: URL, media: string, body: unknown, state: S) => Reply | Promise<Reply>,
   runtimeOverrides: Record<string, string> = {},
+  options: { fixedTime?: string } = {},
 ) {
   return base.extend<{ runtime: Runtime<S> }, { runtimeApp: Worker<S> }>({
     // eslint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture arguments.
@@ -130,15 +131,17 @@ export function runtimeTest<S>(
         if (response.status() === 503 && runtime.expectedURLs.has(response.url())) received.add(response.request())
         else unexpectedHTTP.push(response.status() + ' ' + response.url())
       })
-      await context.addInitScript(({ origin, steamKey, sample }) => {
+      await context.addInitScript(({ origin, steamKey, sample, fixedTime }) => {
         if (location.origin !== origin) return
         if (!localStorage.getItem('theme')) localStorage.setItem('theme', 'light')
-        const checkedAt = Date.now()
+        // Fixed-clock Visual scenes must seed the same evidence time regardless
+        // of Playwright clock/addInitScript installation order. Other owners stay live.
+        const checkedAt = fixedTime ? Date.parse(fixedTime) : Date.now()
         localStorage.setItem('gf_asset_cdn_diagnostics', JSON.stringify({ selected: 'primary', checkedAt,
           primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
         localStorage.setItem(steamKey, JSON.stringify({ version: 1, selected: 'china', checkedAt, sample,
           china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' } }))
-      }, { origin: runtime.app.base, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0] })
+      }, { origin: runtime.app.base, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0], fixedTime: options.fixedTime })
       await context.route('**/*', route => {
         const request = route.request(), url = new URL(request.url())
         const image = runtime.assets.has(url.href) || (url.origin === runtime.app.base && url.pathname === '/defaultLogo.svg')

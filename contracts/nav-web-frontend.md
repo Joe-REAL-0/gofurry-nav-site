@@ -584,6 +584,80 @@ identity before ready: tls13|90d → csp|90d → csp|all still requires three re
 cached Back/Forward adds none, and reload adds a fourth. Preflight grants no
 runtime/cache change or final-golden authorization.
 
+## Site Detail final Visual contract and closure (#109 P8)
+
+P8 freezes the current product. The phase-labelled P1–P7 and Task A–E records
+remain historical evidence; their intermediate layouts are not the final Visual
+contract. Task C supersedes the early default Overview and acrylic-level hierarchy,
+Task D supplies the final composites/help/flows, Task E adds Site-level discovery,
+and preflight removes Similar's display domain. Task A's Collector health reasons
+and the later evidence-derived certificate fix remain in force. P8 adds no route,
+feature, API, recommendation rule or runtime change.
+
+The final route owner still has four workspaces: Overview, Observation, Security
+and Insights. Blank/domain-only entry means Observation/Performance. Mobile Similar
+is local state with no URL/history/SEO mutation. Site ID owns Insights and View;
+Site ID/language owns Recommendations and the initial Site summary. Current Target
+owns Detail evidence and Ping history. SSR loads Detail + Insights + Recommendations;
+hydration counts View once and activates only the current lazy slice. Target changes
+never reload Insights/Recommendations or recount View. Active Performance may fetch
+the new Target's uncached Ping history; elsewhere the switch reads Detail only.
+Insights trend is ecosystem-wide, cached by metric/range without Target. Keep both
+lazy/cache/race owners, optional-slice failure isolation and Entity-only SEO intact.
+
+Certificate expiry has one projection shared by Health, Security summary and
+validity detail: finite explicit `cert_days_left` wins, otherwise derive whole days
+from `cert_not_after - HTTP observed_at`. Never consult the client clock. Missing or
+invalid evidence remains not observed; <=0/<=7/<=30/>30 retain expired/warning/
+attention/normal meanings. Verification remains distinct from validity.
+
+Recommendations retain full-group membership, per-group Home Top-8 eligibility,
+union/dedupe/self exclusion and deterministic UTC-day selection capped at eight;
+there is no global backfill or score. Target/mode/tab changes add no recommendation
+request. SSR markup is SFW; mode filtering is local. Similar shows managed icon,
+Name + Info + Views, no domain line, and only the destination page counts View.
+
+`tests/browser/fixtures/site-detail-visual.ts` and `visual/site-detail.spec.ts` own
+exactly eight initial Site Detail PNGs under the latter spec's snapshot directory:
+
+| Viewport | Theme / scene | Golden |
+| --- | --- | --- |
+| 1440×900 | Light Performance | `site-detail-performance-light-desktop.png` |
+| 1440×900 | Dark Performance | `site-detail-performance-dark-desktop.png` |
+| 1440×900 | Light Overview | `site-detail-overview-light-desktop.png` |
+| 1440×900 | Light TLS | `site-detail-security-tls-light-desktop.png` |
+| 1440×900 | Light Insights | `site-detail-insights-light-desktop.png` |
+| 1440×900 | Light HTTP | `site-detail-http-light-desktop.png` |
+| 390×900 | Light Performance | `site-detail-performance-light-mobile.png` |
+| 390×900 | Light Similar | `site-detail-similar-light-mobile.png` |
+
+These are Site Detail root captures at the listed viewports, so image height may
+exceed 900px to include the representative workspace/aside. Reuse the existing
+digest-pinned Linux Visual runner, not a separate config. Fixed UTC evidence/browser
+time, local managed assets, fixed history/trend/changes/recommendations and strict
+network diagnostics make the fixture deterministic. Its opt-in diagnostic timestamp
+uses that same instant; existing runtime fixtures retain live timestamps. Wait for
+hydration, active chart readiness, loaded images/fonts and finite animations;
+blur focus, move the pointer away and check overflow. No sleep/networkidle or
+diagnostic suppression. HTTP has seven redirect nodes; TLS derives 45 days without
+legacy days; Mobile Similar retains the URL and omits domain text.
+
+Visual owns composition, spacing, material, density, typography and responsive
+arrangement. Functional owns route/history, requests/cache/race, semantics, a11y,
+errors, exactly-once View, mode filtering, certificate derivation and SEO; do not
+restore exact pixel-gap assertions there. The eight existing Site Detail regression
+owners remain mandatory, including recommendation/refinement owners. Scoped golden
+generation MUST be followed by an independent compare with updates disabled.
+
+Site Detail measured appearance/arbitrary/raw/important/deep/legacy-dark debt stays
+zero. Unrelated ambient raw 75 and #108 important 5 remain unchanged. Narrow cleanup
+may remove proven consumer-free owners only. A real product defect blocks closure;
+never update a golden to conceal it. Current-code remote build, all Browser shards,
+Visual and repository-policy must pass. The acceptance ledger records actual local
+and remote results separately from explicit maintainer approval of the eight PNGs.
+Until that approval, the new baselines are review candidates, not accepted design.
+After approval #109 is closure-ready; subsequent product work uses a new task, not P9.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**

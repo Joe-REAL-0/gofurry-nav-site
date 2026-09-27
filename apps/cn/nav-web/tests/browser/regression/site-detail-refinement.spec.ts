@@ -87,7 +87,7 @@ async function assertAcrylic(page: Page) {
     const css = (selector: string) => getComputedStyle(root.querySelector(selector)!)
     const alpha = (value: string) => Number(value.match(/\/\s*([\d.]+)\)$/)?.[1] ?? value.match(/rgba\([^)]*,\s*([\d.]+)\)$/)?.[1] ?? 1)
     const a = css('[data-site-identity-note]'), b = css('[data-site-target-context]')
-    const borders = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-hero], [data-site-health-strip], [data-site-health], [data-site-target-context], .site-detail-surface, [data-site-overview-composite], .site-observation-composite, .site-observation-evidence, [data-site-workspace-subnav-header] [role="tablist"], .site-observation-facts > div, .site-observation-evidence-list > div, .site-security-row, .site-intelligence-row, .site-intelligence-chart-shell, .site-intelligence-change')).map(node => {
+    const borders = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-hero], [data-site-health-strip], [data-site-health], [data-site-target-context], .site-detail-surface, [data-site-overview-composite], .site-observation-composite, .site-observation-evidence, [data-site-workspace-subnav-header] [role="tablist"], .site-observation-facts > div, .site-observation-evidence-list > div, .site-security-row, .site-intelligence-row, .site-intelligence-chart-shell')).map(node => {
       const s = getComputedStyle(node)
       return { hook: node.tagName + ' ' + node.className, widths: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth], shadow: s.boxShadow }
     })

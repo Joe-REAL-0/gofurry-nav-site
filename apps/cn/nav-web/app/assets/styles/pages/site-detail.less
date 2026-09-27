@@ -54,11 +54,6 @@
   line-height: 1.6;
 }
 
-.site-intelligence-link {
-  color: var(--gf-text-main);
-  font-size: 0.8rem;
-}
-
 .site-intelligence-matrix-heading {
   padding: 0.65rem 0.75rem;
   color: var(--gf-text-muted);
@@ -89,7 +84,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.site-intelligence-link:focus-visible,
 .site-intelligence-row:focus-visible,
 .site-intelligence-range:focus-visible {
   outline: 2px solid var(--gf-focus-ring);
@@ -99,10 +93,6 @@
 .site-intelligence-chart {
   color: var(--site-detail-info);
   height: 14.5rem;
-}
-
-.site-intelligence-change {
-  padding: 0.85rem 0;
 }
 
 html.dark .site-detail-page {
@@ -296,7 +286,6 @@ html.dark .site-detail-page {
 
 .site-observation-tab,
 .site-security-tab,
-.site-observation-sample,
 .site-intelligence-range {
   border-radius: calc(var(--gf-radius-sm) - 2px);
   padding: 0.45rem 0.7rem;
@@ -307,7 +296,6 @@ html.dark .site-detail-page {
 
 .site-observation-tab[aria-selected="true"],
 .site-security-tab[aria-selected="true"],
-.site-observation-sample[aria-pressed="true"],
 .site-intelligence-range[aria-pressed="true"] {
   background: var(--site-detail-selected);
   color: var(--gf-text-main);
@@ -316,8 +304,7 @@ html.dark .site-detail-page {
 }
 
 .site-observation-tab:hover,
-.site-security-tab:hover,
-.site-observation-sample:hover {
+.site-security-tab:hover {
   background: var(--site-detail-hover);
 }
 
@@ -325,21 +312,14 @@ html.dark .site-detail-page {
 .site-security-tab:focus-visible,
 .site-security-disclosure > summary:focus-visible,
 .site-security-panel:focus-visible,
-.site-security-link:focus-visible,
-.site-observation-sample:focus-visible,
 .site-observation-disclosure > summary:focus-visible,
 .site-observation-panel:focus-visible {
   outline: 2px solid var(--gf-text-main);
   outline-offset: -2px;
 }
 
-.site-observation-facts > div,
-.site-observation-record {
+.site-observation-facts > div {
   padding: 0.55rem 0;
-}
-
-.site-observation-protocols > div {
-  padding: 0.5rem 0;
 }
 
 .site-observation-disclosure > summary,
@@ -350,30 +330,9 @@ html.dark .site-detail-page {
   cursor: pointer;
 }
 
-.site-observation-chain {
-  color: var(--gf-text-main);
-  font-size: 0.8rem;
-}
-
 .site-observation-empty {
   padding: 1.25rem 0;
   color: var(--gf-text-muted);
-}
-
-.site-observation-timing-track {
-  height: 0.65rem;
-  border-radius: var(--gf-radius-sm);
-  background: var(--site-detail-panel);
-}
-
-.site-observation-timing-bar {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--site-detail-positive);
-}
-
-.site-observation-timing-bar[data-total="true"] {
-  background: var(--gf-text-muted);
 }
 
 .site-observation-chart {
@@ -402,17 +361,6 @@ html.dark .site-detail-page {
 
 .site-security-crypto dd {
   font-family: ui-monospace, monospace;
-}
-
-.site-detail-technical dd {
-  font-family: ui-monospace, monospace;
-  font-size: 0.8rem;
-}
-
-.site-security-link {
-  color: var(--gf-text-main);
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
 }
 
 .site-overview {
@@ -503,27 +451,10 @@ html.dark .site-detail-page {
   line-height: 1.5;
 }
 
-.site-overview-health__status {
-  font-size: 1.1rem;
-  font-weight: 650;
-  line-height: 1.4;
-}
-
-.site-overview-summary {
-  font-size: 0.85rem;
-  line-height: 1.6;
-}
-
 .site-overview-attention {
   border-radius: var(--site-detail-radius);
   padding: 0.85rem 1rem;
   background: var(--site-detail-panel);
-}
-
-.site-overview-attention__item,
-.site-recent-change {
-  font-size: 0.825rem;
-  line-height: 1.6;
 }
 
 .site-overview-state {
@@ -541,21 +472,11 @@ html.dark .site-detail-page {
   line-height: 1.6;
 }
 
-.site-capability-row {
-  padding: 0.65rem 0;
-  font-size: 0.825rem;
-  line-height: 1.5;
-}
-
 .site-overview-dot {
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 50%;
   background: currentColor;
-}
-
-.site-recent-change {
-  padding: 0.65rem 0;
 }
 
 @media (min-width: 640px) {
@@ -816,11 +737,8 @@ html.dark .site-detail-page {
 .site-security-row,
 .site-security-domain-row,
 .site-intelligence-row,
-.site-intelligence-change,
 .site-overview-capability-row,
-.site-detail-protocol-row,
-.site-capability-row,
-.site-recent-change {
+.site-detail-protocol-row {
   border: 0;
   border-radius: 7px;
   padding: 0.5rem 0.6rem;
@@ -833,11 +751,8 @@ html.dark .site-detail-page {
 .site-security-row:hover,
 .site-security-domain-row:hover,
 .site-intelligence-row:hover,
-.site-intelligence-change:hover,
 .site-overview-capability-row:hover,
-.site-detail-protocol-row:hover,
-.site-capability-row:hover,
-.site-recent-change:hover {
+.site-detail-protocol-row:hover {
   background-color: var(--site-detail-hover);
 }
 

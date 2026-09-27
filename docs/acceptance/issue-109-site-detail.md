@@ -1202,3 +1202,138 @@ This result is recorded by a documentation-only follow-up; the tested applicatio
 tests, contracts and Visual inventory remain identical to the passing run.
 Preflight exit criteria are satisfied and formal P8 can be assigned separately.
 No final Visual golden is created or updated, and #109 closure is not claimed.
+
+## P8 — final Visual contract and closure review (2026-09-28)
+
+P8 closes the engineering contract without another product-design round. P1–P7,
+Task A–E and preflight form the implemented baseline; their historical acceptance
+entries above are not rewritten or promoted into final visual approval. Task C's
+Observation/Performance default and single shared acrylic panel supersede earlier
+Overview/Plane A–B–C designs. Task D's composites/help/flows, Task E's discovery,
+preflight's Name + Info + Views rows without domain, and the certificate fallback
+fix are the final product represented here. Collector Task A remains unchanged.
+
+### Final runtime and accessibility audit
+
+- Four URL-owned workspaces remain Overview / Observation / Security / Insights.
+  Blank/domain-only URLs select Observation/Performance. Mobile Similar is a local
+  fifth panel, with no URL/history/SEO mutation; Desktop restores the route view.
+- Site ID owns Insights and exactly-once View; Site/language owns Recommendations
+  and the initial Site summary. Target owns Detail protocol/security evidence and
+  Ping history. SSR reads Detail + Insights + Recommendations; hydration counts
+  View once and loads the active lazy slice only.
+- Target switching preserves workspace state and never reloads Site Insights,
+  recommendations or ecosystem trend, nor repeats View. Active Performance may
+  fetch an uncached new Target's Ping history. The P4/P6 cache, race, activation
+  and slice-local retry owners are unchanged.
+- Finite explicit certificate days take precedence; otherwise the shared P5
+  projection derives whole days from cert_not_after minus HTTP observed_at.
+  No browser clock participates. Invalid/missing evidence stays not observed;
+  expired/warning/attention/normal thresholds and verification/validity separation
+  are unchanged across Health, Security summary and validity details.
+- Similar preserves full membership, each group's Home Top-8, union/dedupe/self
+  exclusion and deterministic UTC-day selection capped at eight, without global
+  backfill. SSR markup is SFW; mode/tab/Target changes filter or navigate locally
+  without refetch. Destination navigation alone counts one View.
+- Authoritative Detail failure remains separate from optional Insights/trend/
+  recommendations failure. Canonical/hreflang/sitemap retain Entity URLs only.
+- Existing Functional owners cover primary/secondary tab keys and roving focus,
+  local Similar ARIA, Target listbox and focus return, help focus/ARIA/Escape,
+  native disclosure keyboard use, textual status and preserved focus-visible.
+  P8 adds no accessibility dependency or replacement interaction.
+
+### Dedicated Visual owner and inventory
+
+`tests/browser/fixtures/site-detail-visual.ts` reuses the deterministic local
+Nitro/upstream runtime. `tests/browser/visual/site-detail.spec.ts` uses the existing
+Visual config and pinned Linux Playwright image. No runner/config is added.
+
+Exactly eight PNGs live in
+`apps/cn/nav-web/tests/browser/visual/__snapshots__/site-detail.spec.ts/`:
+
+| Viewport | Golden |
+| --- | --- |
+| 1440×900 | `site-detail-performance-light-desktop.png` |
+| 1440×900 | `site-detail-performance-dark-desktop.png` |
+| 1440×900 | `site-detail-overview-light-desktop.png` |
+| 1440×900 | `site-detail-security-tls-light-desktop.png` |
+| 1440×900 | `site-detail-insights-light-desktop.png` |
+| 1440×900 | `site-detail-http-light-desktop.png` |
+| 390×900 | `site-detail-performance-light-mobile.png` |
+| 390×900 | `site-detail-similar-light-mobile.png` |
+
+These capture the Site Detail root, including content below the viewport; PNG
+height may exceed 900px. No arbitrary crop coordinates or masks hide Site content.
+Desktop includes the right aside; Mobile Similar is a single column of names,
+info and view counts with unchanged URL and no domain line. HTTP has seven redirect
+nodes, Overview has health Attention and populated changes, Insights has seven
+facts plus a null-gap ecosystem trend, and TLS/Health visibly derive 45 days with
+cert_days_left absent.
+
+Evidence and browser time are fixed to 2026-09-27T12:00:00Z. Site/Target payloads,
+100 Ping samples, 27 trend points, six changes, eight recommendations and managed
+local SVG assets are fixed. The runtime fixture's optional diagnostic timestamp
+uses this instant, avoiding unrelated CDN cache expiry when the clock is installed;
+other fixtures keep their live timestamps. Strict network/error capture is intact.
+An initial preparation attempt caught outbound CDN probes before any PNG was
+written; correcting that fixture seed enabled the sole successful generation.
+No product bug was hidden or production clock logic changed.
+
+Readiness awaits hydration, View completion, active chart-ready markers, loaded
+images, fonts, finite animations and two animation frames; focus is blurred and
+the pointer moved away. Overflow and runtime diagnostics are checked before/after
+capture. No fixed sleep/networkidle. Only unrelated floating navigation tools are
+hidden, following existing Visual fixture ownership.
+
+Visual protects composition/material/spacing/density/type/responsive charts.
+Functional retains semantics, requests/cache/race, a11y and errors; exact pixel
+gaps are not reintroduced there. The existing 118 PNGs are byte-identical; these
+eight make the new inventory 126, without unrelated baseline updates.
+
+### Narrow dead-owner and style closure
+
+Consumer audit covered explicit imports, Nuxt component tags, dynamic names and
+tests. No active helper/component or runtime hook was removed. Fifteen unused
+selectors were retired: site-capability-row, site-detail-technical,
+site-intelligence-change/link, site-observation-chain/protocols/record/sample/
+timing-bar/timing-track, site-overview-attention__item/health__status/summary,
+site-security-link and site-recent-change. The obsolete intelligence-change
+selector also leaves the existing Functional selector list; its effective checks
+are unchanged. Active style declarations and product composition are untouched.
+
+Both locales drop only three consumer-free keys: siteIntelligence.coverageHint,
+siteObservation.waterfall and siteObservation.timingHint. Current tooltip/help
+keys and all active labels remain. No broad i18n/type refactor or legacy clone.
+
+Site Tailwind appearance / arbitrary appearance / raw visual / important / deep /
+legacy dark are all **0**. The debt manifest is byte-unchanged, with ambient raw
+**75** and #108 important **5** preserved. No budget update/transfer/exception,
+suppression change, Backend/Collector/API/schema change or feature is introduced.
+
+### P8 verification and remaining gates
+
+Final local static checks passed: typecheck, stylelint, style-policy tooling
+**75/75**, style-policy scan **280 sources**, focused ESLint and whitespace checks.
+The three existing certificate/security/Target unit files passed **93/93**, covering
+explicit precedence, fallback, invalid evidence, thresholds and no Date.now use.
+Frozen install and the production build passed inside the repository's pinned
+Linux Playwright/Node 24 image; local Browser/Visual consume that same output,
+not the optional dev server or a stale workstation build.
+
+The environment sentinel passed **1/1**. Guarded scoped generation passed **8/8**;
+the separate compare run, updates disabled, passed **8/8**. All eight images were
+inspected for obvious cropping/overflow; agent inspection is not maintainer approval.
+
+The explicit eight-owner Functional run passed **218/218**, workers=1, retries=0:
+site-detail-contract, site-detail-shell, site-overview, site-observation,
+site-security, site-insights, site-recommendations and site-detail-refinement.
+The existing SEO owner additionally passed **3/3** focused cases covering both
+locales' canonical/hreflang/query handling and the Entity-only sitemap. No full
+repository Browser suite is run locally for P8. Remote CI is pending the P8 push;
+the preflight run above is not P8 acceptance.
+
+Maintainer approval of these eight review candidates is **pending**. Review final
+quality, Light/Dark material, Hero density, default Performance/chart, Overview,
+HTTP snake flow, certificate clarity, Insights density, Desktop aside and Mobile
+tabs/Similar. #109 is not yet closure-ready until current-code remote gates and
+explicit visual approval pass. No P9 or further design round is started.
