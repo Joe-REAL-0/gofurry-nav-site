@@ -1329,8 +1329,20 @@ site-detail-contract, site-detail-shell, site-overview, site-observation,
 site-security, site-insights, site-recommendations and site-detail-refinement.
 The existing SEO owner additionally passed **3/3** focused cases covering both
 locales' canonical/hreflang/query handling and the Entity-only sitemap. No full
-repository Browser suite is run locally for P8. Remote CI is pending the P8 push;
-the preflight run above is not P8 acceptance.
+repository Browser suite is run locally for P8.
+
+The [P8 implementation CI run](https://github.com/gofurry/gofurry-nav-site/actions/runs/36335038860)
+completed successfully: repository-policy, nav-web-build, all three nav-web-browser
+shards, nav-web-visual, nav-web-image and the nav-web aggregate are **PASS**. Go and
+database jobs are unaffected/skipped under existing change detection. This is the
+new P8 run, not the earlier preflight acceptance. No retry, golden repair or product
+change was needed to pass remote CI.
+
+This result is recorded in a documentation-only follow-up, which also routes
+`apps/cn/nav-web/AGENTS.md` to the final P8 contract and Visual owners. Application,
+tests, fixture and PNGs remain identical to the passing run. The follow-up is still
+subject to its own current-head remote gates before delivery; documentation does
+not grant an exemption from build/Browser/Visual acceptance.
 
 Maintainer approval of these eight review candidates is **pending**. Review final
 quality, Light/Dark material, Hero density, default Performance/chart, Overview,

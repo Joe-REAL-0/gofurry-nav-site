@@ -158,6 +158,16 @@ a fifth route tab. SSR-rendered recommendations are SFW; mode changes only filte
 raw items. Similar links never count views themselves. The focused Task E budget
 also forbids full suites/build; reuse the opt-in source fixture. No P8/goldens.
 
+P8 freezes the final Site Detail product. `fixtures/site-detail-visual.ts` and
+`visual/site-detail.spec.ts` under `tests/browser/` own eight root captures in the
+existing pinned Visual runner. Scope updates to this spec and require a separate
+compare; never repair a product defect by updating a golden. Functional retains
+the eight Site Detail regression owners, including recommendations/refinement,
+with no exact pixel-gap assertions. The contract's final P8 section supersedes
+intermediate phase designs; the #109 acceptance ledger separates local evidence,
+current-code remote gates and pending explicit maintainer visual approval.
+No new feature/design round or P9 follows from closure.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing
