@@ -10,11 +10,15 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
+- Add Site-level Similar Sites discovery with a localized recommendation API, up to eight candidates from shared groups' Home Top-8 lists, deterministic daily ordering and local SFW/NSFW filtering. Show managed icons, names, descriptions and view counts in the Desktop aside or a Mobile-only panel without changing the URL (#109).
+- Add eight deterministic Site Detail Visual baselines covering representative Desktop Light/Dark and Mobile compositions, backed by the existing pinned runner and separate comparison checks. Maintainer visual approval remains pending; see the [Site Detail acceptance record](docs/acceptance/issue-109-site-detail.md) (#109).
 - Add Admin Collaboration Center with GFA-only content ideas, up to 500-row imports with visible pipe separators, soft duplicate checks against GFA/GFG/GFN, optimistic locking, transactional Audit and a single shared canvas (#117).
 - Add capability-shaped neutral Workbench inventory and Game/Site idea handoff, preserving formal creation success and providing Workspace recovery when GFA linking fails (#117).
 
 ### Changed
 
+- Rebuild Site Detail around Overview, Observation, Security and Ecosystem workspaces, with a combined identity/health surface, accessible Target selector, responsive context and shared translucent styling. Default blank/domain-only routes to Observation/Performance; keep workspace state in the URL and canonical/hreflang/sitemap URLs Entity-only (#109).
+- Present Current Target protocol/security evidence separately from Site-wide health, seven capability facts and recent changes. Keep Security evidence-based without scores or safety verdicts; load Ping history and ecosystem adoption trends only when their workspaces activate, with cache, retry and stale-response protection (#109).
 - Rebuild the Admin shared canvas with React Flow: notes, reference cards, text/shapes/arrows, labeled connections, pan/zoom/minimap/fullscreen, and per-node/edge optimistic locking. Save grouped movement atomically at gesture end; keep canvas writes and audited content changes in GFA. Remove the batch help panels and sample-fill button (#117).
 - Run the full Nav Web Browser suite in three isolated CI shards alongside Visual and Docker after one shared build in the pinned Linux environment. Preserve all checks behind the `nav-web` gate, cache Docker layers, narrow documentation/tooling change selection, and avoid duplicate branch-push checks when an open PR owns validation.
 - Replace `build.bat` with root `Taskfile.yml` (Task >=3.45.3) as the engineering entrypoint for toolchain checks, dependencies, development, formatting, lint/type checks, tests, sqlc/policy verification, release builds, Nav Web image builds and cleanup. Preserve the six Linux/amd64 Go artifact paths and build flags, plus Admin's embedded frontend and companion `dist` (#129).
@@ -23,6 +27,9 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Keep Site Insights visible on Target-specific URLs and independent of Target switching. Preserve Site Insights, recommendations, ecosystem trend and exactly-once View ownership; only Target Detail and an active, uncached Ping history may reload. Isolate optional slice failures from authoritative Detail errors (#109).
+- Derive certificate remaining days from certificate expiry and the HTTP observation timestamp when legacy `cert_days_left` is absent or invalid. Preserve explicit days, existing expiry thresholds and not-observed states across Health and Security without consulting the client clock (#109).
+- Make Nav Collector health aggregation respect reason severity and health impact. Ping failure with working HTTP, empty PTR, low TTL and unclassified DNS signals remain diagnostic evidence instead of health warnings; retain true DNS/HTTP/TLS warnings and raw DNS/Ping/trend evidence (#109).
 - Fix Admin Steam prefill and Game Collector AppDetails after Steam response keys drift from the requested AppID. Upgrade both consumers to steam-go v1.3.12 and verify internal application identity; reject missing/conflicting/ambiguous identities while preserving Collector raw snapshots, region semantics and historical provenance. Show explicit Admin partial-prefill warnings instead of treating cover-only results as complete, and reject overflowing prefill AppIDs.
 - Restore Collaboration idea transition routes (research/release/shelve/restore/link/land/reopen) lost during the canvas rewrite, with HTTP regression coverage through production route registration. Highlight canvas selection on the element border without an offset outline or rectangular resize frame (#117).
 
@@ -31,8 +38,13 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 - Inspect Task release structure without evaluating missing Admin embed preconditions on clean CI checkouts. Wait for the lightbox test's images to decode before testing dismissal, and for the rendered Hero after reload instead of whole-page network idle; retain strict failure assertions and zero retries.
 - Run frontend Task builds and `task doctor` pnpm checks from each package's actual directory so Corepack selects its pinned version; allow a different global pnpm default while retaining pnpm 12.6.0 for both frontends, CI and Docker (#129, #130).
 
+### Removed
+
+- Retire consumer-audited legacy Site Detail panels, types, helpers, translations and styles. Site Detail has zero measured Tailwind appearance, arbitrary appearance, raw visual, important, deep-selector and legacy-dark debt; unrelated Insights #108 and experimental ambient debt remain unchanged (#109).
+
 ### Upgrade notes
 
+- For the complete #109 update, deploy Nav Backend before Nav Web to provide Similar Sites, and redeploy Nav Collector for the health-reason correction. No database/Redis migration, runtime configuration change or manual data cleanup is required; normal collection recalculates existing derived health summaries. The certificate display fix alone requires only a Nav Web rebuild.
 - For the Steam AppDetails fix, rebuild and redeploy Admin (including its embedded React frontend) and Game Collector. No new database migration, runtime configuration, manual backfill or public frontend deployment is required; existing collection schedules refresh affected observations normally.
 - For #117, back up GFA, coordinate Admin writes and manually run Goose migrations through `20260926010000` before deploying the new Admin binary with embedded React. No GFG/GFN migration or public runtime change is required. See [Collaboration Center](docs/collaboration-center.md).
 
