@@ -1191,6 +1191,14 @@ remain zero; ambient raw 75 and #108 important 5 are unchanged. No budget update
 full local frontend/Browser suite or local production build was run. Accepted
 Visual files and the baseline manifest are unchanged.
 
-The preflight commit will be pushed to dev for a fresh production CI gate;
-remote acceptance is pending until that run completes.
-No final Visual golden is created or updated; formal P8 remains a separate task.
+The new [preflight CI run](https://github.com/gofurry/gofurry-nav-site/actions/runs/36332279244)
+completed successfully: repository-policy, nav-web-build, all three Browser
+shards, nav-web-visual, nav-web-image and the nav-web aggregate are PASS. The known
+Site Detail failures in shards 2/3 are cleared. Go/database jobs were skipped by
+the unchanged path rules because this push changes no Backend/Collector code;
+the earlier Backend result is not presented as a new execution.
+
+This result is recorded by a documentation-only follow-up; the tested application,
+tests, contracts and Visual inventory remain identical to the passing run.
+Preflight exit criteria are satisfied and formal P8 can be assigned separately.
+No final Visual golden is created or updated, and #109 closure is not claimed.
