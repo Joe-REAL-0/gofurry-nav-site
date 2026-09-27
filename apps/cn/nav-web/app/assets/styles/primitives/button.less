@@ -25,12 +25,15 @@
   transform: translateY(-1px);
 }
 
-// Opt-in stationary controls keep color/focus feedback without hover motion.
-.gf-button--no-motion {
-  transition: none;
+// Stationary controls ease color feedback without hover displacement.
+.gf-button--stationary {
+  transition:
+    background-color 0.5s ease,
+    border-color 0.5s ease,
+    color 0.5s ease;
 }
 
-.gf-button--no-motion:hover {
+.gf-button--stationary:hover {
   transform: none;
 }
 

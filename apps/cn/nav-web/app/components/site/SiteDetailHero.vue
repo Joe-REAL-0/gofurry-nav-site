@@ -3,7 +3,7 @@
     <ManagedAssetImage :object-key="site?.icon || undefined" :alt="name" class="site-detail-hero__icon row-span-4 object-contain" />
     <div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
       <h1 class="site-detail-hero__name min-w-0 break-words">{{ name }}</h1>
-      <a v-if="visitUrl" :href="visitUrl" target="_blank" rel="noopener noreferrer" class="gf-button gf-button--primary gf-button--no-motion shrink-0">
+      <a v-if="visitUrl" :href="visitUrl" target="_blank" rel="noopener noreferrer" class="gf-button gf-button--primary gf-button--stationary shrink-0">
         {{ t('siteDetail.visit') }} <PhArrowSquareOut class="site-detail-icon" aria-hidden="true" />
       </a>
     </div>
