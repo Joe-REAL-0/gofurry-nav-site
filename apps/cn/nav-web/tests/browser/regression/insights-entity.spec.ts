@@ -7,28 +7,30 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const)
     await context.addInitScript(theme => localStorage.setItem('theme', theme), theme)
     const view = page.waitForResponse(res => new URL(res.url()).pathname === '/api/v2/nav/sites/41/view'
       && res.request().method() === 'POST' && res.status() === 200)
-    const html = await openRuntime(page, '/site/41')
+    const html = await openRuntime(page, '/site/41?tab=insights')
     expect(html).toContain('data-site-insights')
     await expect(page.locator('[data-site-insights]')).toBeVisible()
-    await expect(page.locator('[data-entity-timeline]')).toBeVisible()
-    await expect(page.locator('[data-capability-key="ipv6"]')).toHaveAttribute('data-capability-state', 'unknown')
+    await expect(page.locator('[data-site-insight-changes]')).toBeVisible()
+    await expect(page.locator('[data-site-capability="ipv6"]')).toHaveAttribute('data-site-capability-state', 'unknown')
+    await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
     await revealImages(page)
     await assertRuntimeSurface(page, '.site-detail-page', theme)
     await (await view).finished()
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([
-      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view',
+      '/api/v2/nav/insights/metrics/ipv6/trend',
+      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations', '/api/v2/nav/sites/41/view',
     ])
     runtime.assertQuiet()
   })
 }
 
 for (const prefix of ['', '/en']) test('Entity SSR keeps Site-level Insights separate from target observations ' + (prefix || 'zh'), async ({ request, runtime }) => {
-  const entity = await request.get(prefix + '/site/41')
+  const entity = await request.get(prefix + '/site/41?tab=insights')
   expect(entity.status()).toBe(200); expect(await entity.text()).toContain('data-site-insights')
   const before = runtime.count('/sites/41/insights')
-  const target = await request.get(prefix + '/site/41?domain=target.example')
-  expect(target.status()).toBe(200); expect(await target.text()).not.toContain('data-site-insights')
-  expect(runtime.count('/sites/41/insights')).toBe(before)
+  const target = await request.get(prefix + '/site/41?domain=target.example&tab=insights')
+  expect(target.status()).toBe(200); expect(await target.text()).toContain('data-site-insights')
+  expect(runtime.count('/sites/41/insights')).toBe(before + 1)
   const game = await request.get(prefix + '/games/82'), html = await game.text()
   expect(game.status()).toBe(200)
   expect(html).toContain('game-insights:82'); expect(html).toContain('peak_30d')
@@ -46,14 +48,18 @@ for (const id of [41, 42, 82, 83]) test('Overview real change link preserves ind
   await expect(page.locator(site ? '.site-detail-page' : '.game-detail-page')).toBeVisible()
   await (await view).finished()
   if (site) {
+    await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'empty')
+    expect(runtime.count('/observations')).toBe(1)
+    expect(Object.fromEntries(runtime.calls.find(call => call.url.pathname.endsWith('/observations'))!.url.searchParams)).toEqual({ protocol: 'ping', limit: '100', payload_mode: 'preview' })
+    await page.locator('[data-site-primary-tab="insights"]').click()
     if (id === 42) await expect(page.locator('[data-site-insights-unavailable]')).toBeVisible()
     else {
       await expect(page.locator('[data-site-insights]')).toBeVisible()
       for (const [key, state] of [['ipv6', 'unknown'], ['tls13', 'unavailable'], ['security_txt', 'unsupported']]) {
-        await expect(page.locator('[data-capability-key="' + key + '"]')).toHaveAttribute('data-capability-state', state!)
+        await expect(page.locator('[data-site-capability="' + key + '"]')).toHaveAttribute('data-site-capability-state', state!)
       }
-      await expect(page.getByText('同日统计 · 2026-08-30', { exact: true })).toHaveCount(3)
-      await expect(page.locator('[data-entity-timeline] time').first()).toHaveText('2026-08-30')
+      await expect(page.locator('[data-site-capability-matrix] time').filter({ hasText: '2026-08-30' })).toHaveCount(3)
+      await expect(page.locator('[data-site-insight-change] time').first()).toHaveText('2026-08-30')
     }
   } else {
     await page.locator('[data-game-tab="insights"]').click()

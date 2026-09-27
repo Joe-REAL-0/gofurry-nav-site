@@ -41,14 +41,16 @@ type InsightsAPI interface {
 	GetSiteCompare(fiber.Ctx) error
 	GetSiteInsights(fiber.Ctx) error
 }
+type RecommendationsAPI interface{ GetRecommendations(fiber.Ctx) error }
 type NavDependencies struct {
-	Home      HomeAPI
-	Updates   UpdatesAPI
-	Search    SearchAPI
-	SiteIndex SiteIndexAPI
-	NavPage   NavPageAPI
-	Detail    DetailAPI
-	Insights  InsightsAPI
+	Recommendations RecommendationsAPI
+	Home            HomeAPI
+	Updates         UpdatesAPI
+	Search          SearchAPI
+	SiteIndex       SiteIndexAPI
+	NavPage         NavPageAPI
+	Detail          DetailAPI
+	Insights        InsightsAPI
 }
 
 func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies) {
@@ -66,6 +68,7 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies)
 	g.Get("/site-groups/:groupId/sites", sitegroup.SiteGroupApi.GetSiteGroupPage)
 	g.Post("/stats/page-view", stats.StatsApi.TouchPageView)
 	if cfg.DetailRoutesEnabled() {
+		g.Get("/sites/:siteId/recommendations", dependencies.Recommendations.GetRecommendations)
 		g.Get("/sites/:siteId/detail", dependencies.Detail.GetSiteDetail)
 		g.Post("/sites/:siteId/view", dependencies.Detail.TouchSiteView)
 	}

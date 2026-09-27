@@ -1,0 +1,997 @@
+.site-detail-page {
+  // One fixed material; hierarchy comes from composition, never opacity falloff.
+  --site-detail-panel: color-mix(in srgb, var(--gf-surface) 46%, transparent);
+  --site-detail-hover: color-mix(in srgb, var(--gf-accent-soft) 48%, transparent);
+  --site-detail-selected: color-mix(in srgb, var(--gf-accent-soft) 72%, transparent);
+  --site-detail-motion-soft: 500ms;
+  --site-detail-popularity: var(--gf-accent);
+  --site-detail-border: var(--gf-border);
+  --site-detail-radius: 10px;
+  --site-detail-tabs-surface: var(--gf-page-background);
+  --site-detail-tabs-height: 3.5rem;
+  --site-detail-positive: #216b4b;
+  --site-detail-warning: #875510;
+  --site-detail-danger: #a24f47;
+  --site-detail-info: #4d7278;
+
+  color: var(--gf-text-main);
+}
+
+.site-detail-surface {
+  border-radius: var(--site-detail-radius);
+  padding: 1rem;
+  background: var(--site-detail-panel);
+}
+
+.site-detail-surface--secondary {
+  background: var(--site-detail-panel);
+}
+
+.site-detail-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.site-detail-pill {
+  border-radius: var(--gf-radius-sm);
+  padding: 0.15rem 0.45rem;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.site-detail-help {
+  color: var(--gf-text-muted);
+  cursor: help;
+}
+
+.site-detail-help:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-intelligence {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.site-intelligence-matrix-heading {
+  padding: 0.65rem 0.75rem;
+  color: var(--gf-text-muted);
+  font-size: 0.7rem;
+}
+
+.site-intelligence-row {
+  border-radius: var(--gf-radius-sm);
+  padding: 0.65rem 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-intelligence-row:hover,
+.site-intelligence-range:hover {
+  background: var(--site-detail-hover);
+}
+
+.site-intelligence-capability {
+  font-weight: 600;
+}
+
+.site-intelligence-context {
+  color: var(--gf-text-main);
+  font-size: 0.75rem;
+}
+
+.site-intelligence-facts {
+  font-variant-numeric: tabular-nums;
+}
+
+.site-intelligence-row:focus-visible,
+.site-intelligence-range:focus-visible {
+  outline: 2px solid var(--gf-focus-ring);
+  outline-offset: 2px;
+}
+
+.site-intelligence-chart {
+  color: var(--site-detail-info);
+  height: 14.5rem;
+}
+
+html.dark .site-detail-page {
+  // Evidence colors retain the same meaning with readable dark-theme contrast.
+  --site-detail-positive: #93dabb;
+  --site-detail-warning: #f2c47a;
+  --site-detail-danger: #e4a39d;
+  --site-detail-info: #9bc9ce;
+  // Popularity is a warm brand emphasis, independent of evidence/status tones.
+  --site-detail-popularity: #e5b69a;
+}
+
+.site-detail-hero {
+  padding: 1rem;
+}
+
+.site-detail-hero__icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--gf-radius-sm);
+  background: var(--site-detail-panel);
+}
+
+.site-detail-hero__name {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 750;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+.site-detail-hero__domain {
+  color: var(--gf-text-muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.site-detail-hero__meta,
+.site-detail-note {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.site-detail-hero__description {
+  color: var(--gf-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.site-detail-health {
+  padding: 0.6rem 0.25rem;
+}
+
+.site-detail-health__item {
+  padding: 0.7rem 0.85rem;
+}
+
+.site-detail-label {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.site-detail-health__value {
+  margin-top: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-detail-health__item[data-site-health="observed"] .site-detail-health__value {
+  font-size: 0.75rem;
+}
+
+.site-detail-page [data-tone="good"] {
+  color: var(--site-detail-positive);
+}
+
+.site-detail-page [data-tone="warning"] {
+  color: var(--site-detail-warning);
+}
+
+.site-detail-page [data-tone="bad"] {
+  color: var(--site-detail-danger);
+}
+
+.site-detail-page [data-tone="info"] {
+  color: var(--site-detail-info);
+}
+
+.site-detail-page [data-tone="muted"] {
+  color: var(--gf-text-muted);
+}
+
+// Public NavBar is in normal flow, so it scrolls away. Only this tab row sticks
+// at the viewport top; the Context offset tracks its fixed internal height.
+.site-detail-tabs {
+  height: var(--site-detail-tabs-height);
+  scrollbar-width: none;
+
+  background: var(--site-detail-tabs-surface);
+}
+
+.site-detail-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.site-detail-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: color var(--site-detail-motion-soft), background-color var(--site-detail-motion-soft);
+}
+
+.site-detail-tab:hover {
+  background: var(--site-detail-hover);
+  color: var(--gf-text-main);
+}
+
+.site-detail-tab[aria-selected="true"] {
+  border-bottom-color: var(--gf-accent);
+  color: var(--gf-accent);
+}
+
+.site-detail-tab:focus-visible,
+.site-detail-target-option:focus-visible,
+.site-detail-workspace:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-context {
+  top: calc(var(--site-detail-tabs-height) + 1.25rem);
+
+  border-radius: var(--site-detail-radius);
+  padding: 1rem;
+  background: var(--site-detail-panel);
+}
+
+.site-detail-protocol-row {
+  padding: 0.4rem 0;
+}
+
+.site-detail-protocol-value {
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.site-detail-target-list {
+  max-height: 18rem;
+  border: 1px solid var(--gf-border-strong);
+  border-radius: var(--gf-radius-sm);
+  padding: 0.35rem;
+  background: var(--gf-modal-bg);
+  box-shadow: var(--gf-modal-shadow);
+}
+
+.site-detail-target-option:hover,
+.site-detail-target-option[aria-selected="true"] {
+  background: var(--site-detail-hover);
+  color: var(--gf-accent);
+}
+
+.site-detail-workspace-title {
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.site-observation,
+.site-security {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.site-observation-nav,
+.site-security-nav,
+.site-detail-segmented {
+  border-radius: var(--gf-radius-sm);
+  padding: 0.2rem;
+  background: var(--site-detail-panel);
+}
+
+.site-observation-tab,
+.site-security-tab,
+.site-intelligence-range {
+  border-radius: calc(var(--gf-radius-sm) - 2px);
+  padding: 0.45rem 0.7rem;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.site-observation-tab[aria-selected="true"],
+.site-security-tab[aria-selected="true"],
+.site-intelligence-range[aria-pressed="true"] {
+  background: var(--site-detail-selected);
+  color: var(--gf-text-main);
+  font-weight: 650;
+  transition: none;
+}
+
+.site-observation-tab:hover,
+.site-security-tab:hover {
+  background: var(--site-detail-hover);
+}
+
+.site-observation-tab:focus-visible,
+.site-security-tab:focus-visible,
+.site-security-disclosure > summary:focus-visible,
+.site-security-panel:focus-visible,
+.site-observation-disclosure > summary:focus-visible,
+.site-observation-panel:focus-visible {
+  outline: 2px solid var(--gf-text-main);
+  outline-offset: -2px;
+}
+
+.site-observation-facts > div {
+  padding: 0.55rem 0;
+}
+
+.site-observation-disclosure > summary,
+.site-security-disclosure > summary {
+  padding: 0.35rem 0;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.site-observation-empty {
+  padding: 1.25rem 0;
+  color: var(--gf-text-muted);
+}
+
+.site-observation-chart {
+  height: 14.5rem;
+}
+
+.site-observation-history-table {
+  border-collapse: separate;
+  border-spacing: 0 6px;
+  font-size: 0.75rem;
+}
+
+.site-observation-history-table th,
+.site-observation-history-table td {
+  padding: 0.5rem 0.3rem;
+}
+
+.site-observation-history-table th {
+  color: var(--gf-text-muted);
+  font-weight: 550;
+}
+
+.site-security-row {
+  padding: 0.9rem 0;
+}
+
+.site-security-crypto dd {
+  font-family: ui-monospace, monospace;
+}
+
+.site-overview {
+  color: var(--gf-text-main);
+}
+
+.site-overview-heading {
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-overview-meta-label,
+.site-overview-capability-group-title {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.site-overview-status-value {
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-overview-updated {
+  font-size: 0.8rem;
+  line-height: 1.65;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-overview-attention-row {
+  padding-top: 0.85rem;
+  background: transparent;
+}
+
+.site-overview-attention-message {
+  font-size: 0.825rem;
+  line-height: 1.6;
+}
+
+.site-overview-attention-message + .site-overview-attention-message {
+  padding-top: 0.5rem;
+}
+
+.site-overview-ecosystem-link {
+  color: var(--gf-text-main);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.site-overview-ecosystem-link:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-overview-capability-group + .site-overview-capability-group {
+  padding-top: 1rem;
+}
+
+.site-overview-capability-row {
+  border-radius: calc(var(--gf-radius-sm) - 2px);
+  padding: 0.5rem 0.4rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.site-overview-capability-row:hover {
+  background: var(--site-detail-hover);
+}
+
+.site-overview-change-event {
+  font-size: 0.85rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+@media (min-width: 768px) {
+  .site-overview-capability-group + .site-overview-capability-group {
+    padding-top: 0;
+  }
+}
+
+.site-overview-title {
+  font-size: 0.95rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-overview-attention {
+  border-radius: var(--site-detail-radius);
+  padding: 0.85rem 1rem;
+  background: var(--site-detail-panel);
+}
+
+.site-overview-state {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.site-overview [data-tone="muted"],
+.site-overview-empty {
+  color: var(--gf-text-muted);
+}
+
+.site-overview-empty {
+  font-size: 0.825rem;
+  line-height: 1.6;
+}
+
+.site-overview-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (min-width: 640px) {
+  .site-detail-hero__icon {
+    width: 5rem;
+    height: 5rem;
+  }
+}
+
+@media (max-width: 639px) {
+  .site-detail-tab {
+    padding: 0.85rem 0.35rem;
+    font-size: 0.8rem;
+  }
+}
+
+// Observation retains its composition and consumes the shared acrylic planes.
+.site-observation {
+  --site-observation-line: color-mix(in srgb, var(--gf-border) 45%, transparent);
+}
+
+.site-observation-composite,
+.site-observation-evidence {
+  border-radius: 10px;
+  padding: 1rem;
+  background: var(--site-detail-panel);
+}
+
+.site-observation-composite {
+  background: var(--site-detail-panel);
+}
+
+.site-observation-heading {
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.site-observation-caption,
+.site-observation-profile-meta,
+.site-observation-probe-footer {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.site-observation-measure {
+  font-size: 1.35rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.site-observation-technical,
+.site-observation-evidence-value {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.site-observation-protocol-strip > div + div {
+  padding-top: 1rem;
+}
+
+.site-observation-rail {
+  border-radius: 8px;
+  padding: 0.2rem;
+  background: transparent;
+}
+
+.site-observation-segment {
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-observation-segment:hover {
+  background-color: var(--site-detail-hover);
+  color: var(--gf-text-main);
+}
+
+.site-observation-segment[aria-selected="true"],
+.site-observation-segment[aria-pressed="true"] {
+  background-color: var(--site-detail-selected);
+  color: var(--gf-text-main);
+  font-weight: 650;
+  transition: none;
+}
+
+.site-observation-segment:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-observation-evidence-list > div,
+.site-observation-ledger-row {
+  border-radius: 4px;
+  padding: 0.45rem 0;
+  transition: background-color 500ms;
+}
+
+.site-observation-evidence-list > div:hover,
+.site-observation-ledger-row:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-observation-attention-rail,
+.site-observation-signal-rail,
+.site-observation-flow {
+  padding: 0.35rem 1rem;
+}
+
+.site-observation-waterfall,
+.site-observation-response-evidence,
+.site-observation-raw-headers,
+.site-observation-profile-meta,
+.site-observation-probe-footer {
+  padding-top: 1rem;
+}
+
+.site-observation-measure-track {
+  height: 0.4rem;
+  border-radius: 4px;
+  background: var(--site-observation-line);
+}
+
+.site-observation-measure-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--site-detail-info) 65%, transparent);
+}
+
+.site-observation-measure-bar[data-total="true"] {
+  background: color-mix(in srgb, var(--gf-text-muted) 55%, transparent);
+}
+
+.site-observation-response-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-observation-response-strip > [data-site-evidence="status"] > dd {
+  font-size: 2rem;
+  line-height: 1.2;
+}
+
+.site-observation-header-disclosure > summary {
+  font-size: 0.75rem;
+}
+
+.site-observation-ledger-heading {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.site-observation-profile-content {
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.site-observation-probe-state {
+  font-size: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .site-observation-protocol-strip > div + div {
+    padding-top: 0;
+  }
+}
+
+// The single intentional separator belongs to the Identity Note, never to facts rows.
+.site-detail-identity-note {
+  border-radius: var(--site-detail-radius);
+  background: var(--site-detail-panel);
+}
+
+.site-detail-perforation {
+  height: 8px;
+}
+
+.site-detail-perforation::before {
+  position: absolute;
+  inset: 50% 0 auto;
+  border-top: 1px dashed color-mix(in srgb, var(--gf-text-muted) 23%, transparent);
+  content: '';
+}
+
+.site-detail-perforation > span {
+  z-index: 1;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--gf-page-background) 80%, transparent);
+}
+
+.site-detail-subnav {
+  max-width: 100%;
+  scrollbar-width: none;
+}
+
+.site-detail-subnav::-webkit-scrollbar {
+  display: none;
+}
+
+.site-detail-segment,
+.site-security-tab,
+.site-intelligence-range {
+  border: 0;
+  border-radius: 7px;
+  padding: 0.45rem 0.7rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-segment:hover,
+.site-security-tab:hover,
+.site-intelligence-range:hover {
+  background-color: var(--site-detail-hover);
+  color: var(--gf-text-main);
+}
+
+.site-detail-segment[aria-selected="true"],
+.site-detail-segment[aria-pressed="true"],
+.site-security-tab[aria-selected="true"],
+.site-intelligence-range[aria-pressed="true"] {
+  background-color: var(--site-detail-selected);
+  color: var(--gf-text-main);
+  font-weight: 650;
+  transition: none;
+}
+
+.site-detail-segment:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-tab[aria-selected="true"],
+.site-intelligence-row[aria-pressed="true"],
+.site-detail-target-option[aria-selected="true"] {
+  transition: none;
+}
+
+.site-observation-rail,
+.site-detail-segmented {
+  background: transparent;
+}
+
+.site-observation-facts > div,
+.site-observation-evidence-list > div,
+.site-observation-ledger-row,
+.site-security-row,
+.site-security-domain-row,
+.site-intelligence-row,
+.site-overview-capability-row,
+.site-detail-protocol-row {
+  border: 0;
+  border-radius: 7px;
+  padding: 0.5rem 0.6rem;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-observation-facts > div:hover,
+.site-observation-evidence-list > div:hover,
+.site-observation-ledger-row:hover,
+.site-security-row:hover,
+.site-security-domain-row:hover,
+.site-intelligence-row:hover,
+.site-overview-capability-row:hover,
+.site-detail-protocol-row:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-intelligence-row[aria-pressed="true"] {
+  background: var(--site-detail-selected);
+  transition: none;
+}
+
+.site-observation-history-table tbody tr {
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-observation-history-table tbody tr:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-security-attention {
+  border-radius: var(--site-detail-radius);
+  padding: 0.85rem 1rem;
+  background: transparent;
+}
+
+.site-detail-text-link {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.15rem 0;
+  background: transparent;
+  color: var(--gf-text-main);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: color var(--site-detail-motion-soft), opacity var(--site-detail-motion-soft);
+}
+
+.site-detail-text-link:hover {
+  color: var(--gf-accent);
+}
+
+.site-detail-text-link:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.site-detail-text-link:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-security-primary-value,
+.site-intelligence-analysis-value {
+  font-size: 1.45rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.site-intelligence-analysis-value {
+  font-size: 1.8rem;
+}
+
+.site-security-port-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.site-observation-facts dd {
+  overflow-wrap: anywhere;
+}
+
+.site-detail-target-option {
+  border-radius: var(--gf-radius-sm);
+  padding: 0.65rem;
+  background: transparent;
+  color: var(--gf-text-main);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-target-option[aria-selected="true"] {
+  transition: none;
+}
+
+.site-observation-attention-rail,
+.site-observation-signal-rail,
+.site-security-crypto {
+  border-radius: 7px;
+  background: transparent;
+}
+
+.site-detail-target-trigger {
+  min-height: 38px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0.5rem 0.65rem;
+  background: transparent;
+  color: var(--gf-text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-target-trigger:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-detail-target-trigger[aria-expanded="true"],
+.site-detail-target-option[aria-selected="true"] {
+  background-color: var(--site-detail-selected);
+  transition: none;
+}
+
+.site-detail-target-trigger:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-hero__views {
+  color: var(--site-detail-popularity);
+  font-size: 0.95rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-detail-hero__views .site-detail-icon {
+  opacity: 0.7;
+}
+
+.site-detail-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+// Task D groups related evidence without introducing a second material.
+.site-detail-inset-separator {
+  border-top: 1px dashed color-mix(in srgb, var(--site-detail-border) 55%, transparent);
+}
+
+.site-detail-help-trigger {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.2rem;
+  background: transparent;
+  color: var(--gf-text-muted);
+  cursor: help;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-help-trigger:hover {
+  background: var(--site-detail-hover);
+  color: var(--gf-text-main);
+}
+
+.site-detail-help-trigger:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-help-tooltip {
+  width: max-content;
+  max-width: min(20rem, calc(100vw - 1.5rem));
+  border-radius: 8px;
+  padding: 0.65rem 0.8rem;
+  backdrop-filter: blur(18px);
+  background: var(--site-detail-panel);
+  color: var(--gf-text-main);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.site-detail-change-item,
+.site-detail-redirect-node {
+  border-radius: 7px;
+  padding: 0.65rem 0.75rem;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-change-item:hover,
+.site-detail-redirect-node:hover {
+  background: var(--site-detail-hover);
+}
+
+.site-detail-redirect-node {
+  background: var(--site-detail-panel);
+}
+
+.site-detail-flow-arrow {
+  color: var(--gf-text-muted);
+}
+
+
+// Site discovery shares the existing panel material and soft row interaction.
+.site-detail-aside {
+  top: calc(var(--site-detail-tabs-height) + 1.25rem);
+}
+
+.site-detail-similar {
+  border-radius: var(--site-detail-radius);
+  padding: 1rem;
+  background: var(--site-detail-panel);
+}
+
+.site-detail-similar-item {
+  border-radius: 7px;
+  padding: 0.6rem;
+  color: var(--gf-text-main);
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-similar-item:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-detail-similar-item:focus-visible,
+.site-detail-similar:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-similar-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 7px;
+}
+
+.site-detail-similar-name {
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.site-detail-similar-info {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.site-detail-similar-views {
+  color: var(--gf-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}

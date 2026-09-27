@@ -2,8 +2,10 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { CollectorEnvelope, DnsRecord, HttpRecord, PingRecord, SiteHealthSummary, SiteInfo, SiteV2DetailResponse, SiteV2Info, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
 import { authoritativePageStatus } from '~/utils/authoritativePageError'
+import { parseSiteDetailRouteState } from '~/utils/siteDetailRouteState'
 
 export interface SiteDetailPageData {
+  siteIdentity: string
   siteInfo: SiteInfo | null
   domain: string
   sitePingRecord: PingRecord | null
@@ -15,50 +17,38 @@ export interface SiteDetailPageData {
   lightProbeState: TargetLatestResponse | null
 }
 
-function extractRouteParam(value: unknown): string {
-  const rawValue = Array.isArray(value) ? value[0] : value
-  if (typeof rawValue !== 'string') {
-    return ''
-  }
-
-  try {
-    return decodeURIComponent(rawValue).trim()
-  } catch {
-    return rawValue.trim()
-  }
-}
-
 export async function useSiteDetailPage() {
   const route = useRoute()
   const { locale } = useI18n()
   const navV2Api = useApi('navV2')
 
   const siteId = computed(() => String(route.params.id ?? ''))
-  const pathDomain = computed(() => extractRouteParam(route.params.domain))
-  const queryDomain = computed(() => {
-    const value = route.query.domain
-    return typeof value === 'string' ? value : ''
-  })
-  const selectedDomain = computed(() => pathDomain.value || queryDomain.value)
+  const routeState = computed(() => parseSiteDetailRouteState(route.query))
+  const selectedDomain = computed(() => routeState.value.domain)
   const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
 
   const asyncData = await useAsyncData<SiteDetailPageData>(
-    () => `site-detail:${route.path}:${siteId.value}:${selectedDomain.value}:${lang.value}:v2`,
+    () => `site-detail:${siteId.value}:${selectedDomain.value}:${lang.value}:v2`,
     async () => {
       if (!siteId.value) {
         throw new Error('invalid site id')
       }
 
-      const detail = await navV2Api<SiteV2DetailResponse>(`/nav/sites/${siteId.value}/detail`, {
+      // Capture this request's identity; a later route must not relabel its result.
+      const requestedTarget = selectedDomain.value
+      const requestedSiteId = siteId.value
+      const requestedLang = lang.value
+      const detail = await navV2Api<SiteV2DetailResponse>(`/nav/sites/${requestedSiteId}/detail`, {
         query: {
-          lang: lang.value,
-          target: selectedDomain.value || undefined,
+          lang: requestedLang,
+          target: requestedTarget || undefined,
           payload_mode: 'preview',
         },
       })
-      const resolvedDomain = detail.selected_target || selectedDomain.value
+      const resolvedDomain = detail.selected_target || requestedTarget
 
       return {
+        siteIdentity: `${requestedSiteId}:${requestedLang}`,
         siteInfo: toSiteInfo(detail.site),
         domain: resolvedDomain,
         sitePingRecord: null,
@@ -71,8 +61,8 @@ export async function useSiteDetailPage() {
       }
     },
     {
-      watch: [siteId, selectedDomain, lang],
       default: () => ({
+        siteIdentity: '',
         siteInfo: null,
         domain: '',
         sitePingRecord: null,
@@ -98,8 +88,7 @@ export async function useSiteDetailPage() {
   return {
     ...asyncData,
     siteId,
-    queryDomain,
-    pathDomain,
+    routeState,
     lang,
   }
 }

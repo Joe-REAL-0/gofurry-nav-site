@@ -14,6 +14,8 @@ import (
 	navpageservice "github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/service"
 	observationdao "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/dao"
 	readmodelservice "github.com/gofurry/gofurry-nav-backend/apps/nav/readmodel/service"
+	recommendationscontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/recommendations/controller"
+	recommendationsservice "github.com/gofurry/gofurry-nav-backend/apps/nav/recommendations/service"
 	searchcontroller "github.com/gofurry/gofurry-nav-backend/apps/nav/search/controller"
 	searchservice "github.com/gofurry/gofurry-nav-backend/apps/nav/search/service"
 	sitepagedao "github.com/gofurry/gofurry-nav-backend/apps/nav/sitePage/dao"
@@ -51,13 +53,14 @@ func newApplicationDependencies(pool *pgxpool.Pool) applicationDependencies {
 
 	return applicationDependencies{
 		routes: routers.NavDependencies{
-			Home:      homecontroller.New(homeService),
-			Updates:   updatescontroller.New(updatesservice.New(queries)),
-			Search:    searchcontroller.New(searchService, searchservice.NewRedisSuggestionRateLimiter()),
-			SiteIndex: siteindexcontroller.New(siteindexservice.New(navStore)),
-			NavPage:   navpagecontroller.New(navService),
-			Detail:    detailcontroller.New(detailService, sitePageService),
-			Insights:  insightscontroller.New(insightsservice.New(insightsdao.New(queries))),
+			Recommendations: recommendationscontroller.New(recommendationsservice.New(navService)),
+			Home:            homecontroller.New(homeService),
+			Updates:         updatescontroller.New(updatesservice.New(queries)),
+			Search:          searchcontroller.New(searchService, searchservice.NewRedisSuggestionRateLimiter()),
+			SiteIndex:       siteindexcontroller.New(siteindexservice.New(navStore)),
+			NavPage:         navpagecontroller.New(navService),
+			Detail:          detailcontroller.New(detailService, sitePageService),
+			Insights:        insightscontroller.New(insightsservice.New(insightsdao.New(queries))),
 		},
 		navStore:  navStore,
 		navReader: navService,

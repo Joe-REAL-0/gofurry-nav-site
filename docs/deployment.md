@@ -4,7 +4,9 @@ For alpha.8 → alpha.9, follow the [release-specific upgrade guide](releases/v3
 
 ## Build ownership
 
-From a Windows release workspace, `build.bat all` builds only the six active Linux/amd64 Go binaries:
+From a Windows, Linux or macOS release workspace, `task build` builds only the six
+active Linux/amd64 Go binaries with `CGO_ENABLED=0`, `-trimpath` and
+`-ldflags="-s -w"`. Individual targets use `task build:<target>`:
 
 | Target | Artifact |
 |---|---|
@@ -15,7 +17,14 @@ From a Windows release workspace, `build.bat all` builds only the six active Lin
 | `admin` | `build/gofurry-admin/gofurry-admin` |
 | `uptime` | `build/gf-uptime/gf-uptime` |
 
-Admin's embedded web UI is built before its binary. `apps/cn/nav-web` has a separate npm/Docker deployment flow described in its local `DEPLOYMENT.md`.
+Admin's embedded web UI is built before its binary. `apps/cn/nav-web` has a separate pnpm/Docker deployment flow described in its local `DEPLOYMENT.md`.
+
+`task build:admin` always installs the frozen React lock, clears/rebuilds the
+canonical embed output through Vite, then builds Go and copies the same files to
+`build/gofurry-admin/dist/`. `task build:nav-web-image` builds an image only, using
+`apps/cn/nav-web` as its context. Production still uses `cd apps/cn/nav-web` and
+`./update.sh`; the host needs Docker/Compose, not Node, pnpm or Task. No Task wraps
+deployment, migration, systemd or cloud operations.
 
 `legacy`, `experimental`, `third-party`, and `apps/intl` are not production build targets.
 
@@ -75,3 +84,7 @@ Routine deployments must preserve:
 ## Rollback
 
 Keep the previous binary and unit backup until post-deployment checks pass. For a binary-only rollback, stop the service, restore the previous binary/unit, reload systemd, and start it. Database rollback must follow the migration-specific runbook; never improvise destructive down migrations against production.
+
+## Admin Collaboration Center (#117)
+
+Back up GFA, coordinate/stop Admin writes, manually apply Goose migrations from `db/admin/migrations` with `gofurry_migrator`, then deploy the new Admin binary with embedded React. Apply through `20260926010000` for the GFA collaboration canvas. This renames the old note table into canvas nodes and adds edges, so deploy a matching Admin binary; rollback requires coordinated GFA restore and binary rollback. No GFG/GFN migration or Game/Nav Backend/Collector/Nav Web deployment is required for #117. Verify ideas, Board, capabilities, Audit and create-success/link-failure recovery using the [acceptance guide](collaboration-center.md).

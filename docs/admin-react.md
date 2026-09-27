@@ -13,8 +13,8 @@ Then start Vite in another terminal:
 
 ~~~text
 cd apps/cn/admin/react
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ~~~
 
 Open `http://127.0.0.1:5178`. Vite proxies `/api` and `/csrf` to `http://127.0.0.1:10099`.
@@ -22,12 +22,12 @@ Open `http://127.0.0.1:5178`. Vite proxies `/api` and `/csrf` to `http://127.0.0
 Validation:
 
 ~~~text
-npm run typecheck
-npm test
-npm run build
+pnpm run typecheck
+pnpm test
+pnpm run build
 ~~~
 
-`npm run build` clears and writes `apps/cn/admin/internal/transport/http/webui/dist`. The root `build.bat admin` target performs this React build before compiling the Go binary and copying the deployment `dist/` companion artifact. No manual asset copy or runtime Node process is used.
+`pnpm run build` clears and writes `apps/cn/admin/internal/transport/http/webui/dist`. The root `task build:admin` target performs this React build before compiling the Go binary and copying the deployment `dist/` companion artifact. No manual asset copy or runtime Node process is used.
 
 The App Shell consumes the current principal from `/api/v1/auth/state`. Missing navigation or actions should first be checked against returned capabilities and backend authorization; never patch around the contract with role comparisons.
 
@@ -40,3 +40,7 @@ Collection, Metrics, and Changes are under `src/features/operations`; Cloud Reso
 Authenticated self-service username/password actions use `/api/v1/auth/self/*` with current-password verification and no `account.manage` requirement. Username changes refresh identity without ending the session; password changes clear authentication and require login again.
 
 See [the cutover parity matrix](admin-frontend-parity.md) and [the role operator guide](operations/admin-roles.md) for production acceptance boundaries.
+
+`src/features/collaboration` owns `/collaboration` (ideas/board), visible pipe-delimited line parsing, version conflicts and shared idea context. Creation pages prefill only Steam AppID or Site name; never auto-fetch Steam or create targets. Link failure preserves successful creation and the `?idea=` recovery banner. Use Vitest/Testing Library for these flows; see [Collaboration Center](collaboration-center.md).
+
+The Board tab lazy-loads React Flow for the shared canvas. Node/edge records and Audit remain in GFA; reference cards reuse existing idea/options reads. Drag/resize saves once at gesture end, multiple selected nodes save atomically, and conflicts require explicit reload. The frontend keeps a local movement draft across polling, including remote deletion; it never retries with a newer version automatically.

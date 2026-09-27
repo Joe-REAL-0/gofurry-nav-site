@@ -2,6 +2,12 @@
 
 ## Scope and authority
 
+Tooling uses Node 24 and `packageManager: pnpm@12.6.0`, with this frontend's own
+`pnpm-lock.yaml` and single-project `pnpm-workspace.yaml`. No repository-root
+workspace or shared lock is used. Frozen installs and narrowly reviewed dependency
+script permissions apply in local work, CI and Docker. Root Task is the repository
+engineering entrypoint; its default tests/verify do not replace Browser/Visual.
+
 This contract governs `apps/cn/nav-web` under
 [#124](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423).
 MUST/MUST NOT are requirements; SHOULD permits a reasoned, documented departure;
@@ -35,6 +41,622 @@ debt, not precedent that overrides the new-code contract. Repository-wide and
 [managed asset](assets.md) contracts still apply; this contract does not change
 API, SSR, hydration, routing, cookies, local backgrounds or resource fallback.
 React Admin follows its separate [frontend contract](admin-frontend.md).
+
+## Site Detail runtime and route ownership (#109 P1)
+
+Site identity, view count and Site Insights belong to `siteId`. Current Target
+observations belong to `siteId + selectedDomain + lang`. `useSiteDetailPage`
+loads `/nav/sites/:id/detail` under that identity; `SiteDetailPage` loads
+`/nav/sites/:id/insights` under Site ID alone. Domain and workspace query MUST NOT
+hide Insights or enter its fetch key. A normal hydrated visit has exactly one
+Detail GET, one Insights GET, one Recommendations GET (Task E), and one View POST, plus the active lazy slice below.
+Task C makes Observation/Performance the default entry, so default hydration adds
+exactly one Ping history request; SSR requests Detail, Insights and Recommendations in parallel.
+Outside P4 Performance, switching
+Target within the same hydrated Site session MUST fetch only Detail; no Target
+switch may recount View. UI-only
+state MUST NOT introduce trend/history, comparison or other data requests except
+the explicit P4 Performance history and P6 ecosystem trend slices below. P1 initially made the legacy Ping
+chart sample-triggered. P4 replaces that behavior with hydration-only lazy history
+on entering Performance; P6 adds one selected ecosystem trend on hydrated Insights
+activation. Overview and Security retain the original budget.
+
+Detail 404 (missing Site or foreign Target) and Detail 503 are authoritative page
+failures, including a failed client Target switch. Insights failure is optional:
+the Site page remains 200 and the slice is unavailable. Successful empty
+capabilities/changes are distinct from unavailable. View failure is a side effect
+and MUST NOT replace Site/Target data or fail the page.
+
+`app/utils/siteDetailRouteState.ts` is the sole query parser/normalizer/builder.
+`siteRoutes.ts` delegates Target links to it and separately owns the query-free
+Entity path. Vue components MUST NOT create competing query preservation rules.
+
+| State | Vocabulary | Default |
+| --- | --- | --- |
+| `tab` | `overview`, `observation`, `security`, `insights` | `observation` (Task C) |
+| Observation `view` | `overview`, `performance`, `http`, `dns`, `web` | `performance` (Task C) |
+| Security `view` | `overview`, `tls`, `web`, `exposure` | `overview` |
+| Insights `metric` | `ipv6`, `tls13`, `http2`, `hsts`, `csp`, `security_txt`, `certificate_verified` | `ipv6` |
+| Insights `range` | `30d`, `90d`, `all` | `30d` |
+
+Invalid UI values fall back; they never cause 404. Query values use the first
+array entry, trim whitespace and are not decoded again after Vue Router. Target
+membership remains an authoritative backend decision; unknown nonempty domains
+MUST NOT silently become the primary Target. Normalization need not rewrite an
+incoming URL. Task C builders omit tab/view for Observation/Performance; Site
+Overview explicitly keeps `tab=overview`, and Observation Overview explicitly
+keeps `tab=observation&view=overview`. Other Observation/Security views keep
+Domain/tab/view (Security still omits its default Overview); Insights keeps
+Domain/tab/metric/range. Target switches retain the active valid workspace;
+primary-tab changes reset the previous workspace's secondary state, even shared
+view names. Canonical, hreflang and sitemap always use localized `/site/:id`
+Entity URLs without Domain or UI query. Existing SEO copy remains unchanged.
+
+`siteCapabilityRegistry.ts` owns the seven-capability presentation catalog,
+stable order, categories and translation keys, never API facts or coverage.
+P1 retained an explicit three-item preview for the old panel. P6 retires that
+subset metadata together with the old panel; all active consumers use the catalog.
+
+P1 is runtime-only. Its Browser owner is `site-detail-contract.spec.ts`, using
+the existing deterministic Nitro/upstream fixture and strict request/error
+ledgers; `insights-entity` retains the Ecosystem-to-Entity bridge. P1 MUST NOT
+change style-debt budgets, ESLint suppressions or Visual specs/PNGs. No new
+workspace UI is implied by route vocabulary. P2 owns Shell/Target Context, P3
+Overview, P4 Observation, P5 Security, P6 Insights workspace, P7 appearance/debt
+migration and P8 Visual/closure. #108 remains separate.
+
+## Site Detail shell and Target context (#109 P2)
+
+`SiteDetailPage` owns the responsive shell. Its identity-only Hero contains icon,
+name, display domain, description, country, SFW/NSFW, welfare, views and Visit.
+Task C additionally exposes one reliable, explicitly typed Current Target CDN
+hint in Hero; detailed edge evidence and Target selection do not belong there.
+The former domain hover popover and large signal-card path are retired.
+
+`siteTargetPresentation.ts` is the shared Current Target adapter for the six-item
+Health Strip and the responsive Target Context. It reads only matching Target
+summary/latest evidence for health, preserves unknown/absent versus zero/false,
+and carries infrastructure hint confidence. Site summary supplies Target catalog
+and relation hints only; Site aggregate status MUST NOT stand in for Target health.
+Visit uses observed HTTP final URL, falling back to the selected Target over HTTPS.
+
+Four primary tabs use the P1 route-state helpers and router history, with roving
+focus and ArrowLeft/ArrowRight/Home/End support. P2 introduced no secondary
+navigation; P4 owns Observation's secondary views. Only primary tabs stick at the viewport top: the public
+NavBar remains in normal flow. At `xl` the workspace/context tracks are 3:1 with
+a bounded minimum sidebar; smaller viewports place compact context before the
+workspace, retaining Target/protocol/time while infrastructure detail stays in
+the desktop sidebar. Mobile Health Strip is two columns by three rows. One Context/selector
+instance serves all widths; it supports pointer/touch, keyboard selection,
+Escape/outside dismissal and focus return.
+
+Pending Target requests preserve Hero, tabs and shell, retaining the explicitly
+labelled last resolved Target evidence until the next result is ready. A late
+response MUST NOT overwrite a newer Target. Site Insights fetching stays Site-owned
+across tab/Target changes. P2 initially showed the preview in Overview and Insights;
+P3 replaces Overview and confines that legacy panel to Insights. P4 and P5 replace
+the Observation and Security transitions respectively.
+
+`app/assets/styles/pages/site-detail.less` owns new appearance under the exact
+`.site-detail-page` / `html.dark .site-detail-page` / `--site-detail-*` token roots.
+P2 removes only the old Hero/popover/root appearance debt. Other legacy panels,
+#108, accepted Visual configuration/specs/PNGs and P8 golden creation are outside
+scope. `site-detail-shell.spec.ts` owns interaction/layout/pending/race coverage;
+P1 request, failure and SEO contracts remain required. Maintainer visual review
+at 1440/390 Light/Dark (and preferably 768 Light) is required before P3; local
+Functional passes are not that approval or remote CI acceptance.
+
+The internal `insights` tab value is unchanged; public copy follows the accepted
+“生态观测 / Ecosystem” naming contract rather than reviving retired product names.
+
+## Site Overview workspace (#109 P3)
+
+`SiteOverviewWorkspace` replaces the Overview protocol checks and legacy preview
+with Site Health, conditional Attention, a full seven-capability snapshot and at
+most four recent changes. Current Target evidence remains in the Health Strip,
+Target Context and Observation/Security. The outer P2 shell is unchanged; the
+Overview's capability/change columns use 3:2 at desktop and stack below `xl`.
+
+`siteOverviewPresentation.ts` is the pure Site-only presentation owner. Health
+uses `site_summary`, never Target summary or latest protocols. The first resolved
+Site/language summary is retained for the hydrated page session; Target detail
+refreshes cannot replace it. Reload or a different Site/language adopts a new
+snapshot. Summary `state` (ready/stale/missing) and health `status` are independent;
+stale healthy remains visibly stale and missing is not backend unknown. Show
+nonzero distribution counts and `generated_at`, never Target observed time.
+
+Attention is absent for a healthy, fresh, reason-free Site. Task B replaces P3's
+original message-first presentation: known reason codes use frontend localized
+copy, repeated Target reasons group by code, and unknown codes retain a visible
+fallback. Without codes, localized status explains affected Targets; backend
+Chinese messages must not leak into English UI. Collector remains the health
+classification owner. Healthy or unknown Targets without meaningful evidence
+remain excluded; Attention does not repeat Current Target cards.
+
+Capability rows come from the P1 registry, including grouping: Network owns IPv6
+and HTTP/2, Transport owns TLS 1.3 and certificate verification, Web policy owns
+HSTS, CSP and security.txt. P3 corrected HTTP/2's earlier Transport assignment.
+All seven rows remain present for success-empty. Backend states are preserved;
+frontend `missing` means a successful response lacks that fact. Unsupported is
+neutral, not a health failure. No ecosystem percentage or coverage appears here.
+
+Changes use the shared detector labels/order/precision helpers, a four-item cap
+and an explicit UTC zone for exact times so SSR and hydration agree. Day-only
+events remain dates. The full Ecosystem link uses the P1 route builder and keeps
+Target context. Public copy retains the accepted Ecosystem naming.
+
+Site Insights remains fetched once by Site ID, regardless of which tab mounts.
+Overview introduces no fetch, retry UI, metric/range control or history/trend
+request. Detail failures remain authoritative; Insights failure makes only
+capabilities/changes unavailable, distinct from successful empty facts/changes.
+View failure remains harmless. `site-overview.spec.ts` owns the additional runtime
+contract and `site-overview-presentation.test.ts` owns the pure projection.
+
+Appearance extends `site-detail.less` with existing tokens and no new debt. P4–P6,
+#108 and final P8 Visual goldens remain out of scope. P3 needs maintainer review
+of 1440/390 Light/Dark and preferably 768 Light before P4; local Functional passes
+and review screenshots do not constitute that approval or remote CI acceptance.
+
+## Site Observation workspace (#109 P4)
+
+Observation owns Current Target evidence and five non-sticky secondary tabs:
+Overview, Performance, HTTP, DNS and Web. `selectSiteObservationView` extends the
+existing route-state owner; it retains Target and clears foreign tab state. Task C
+replaces P4's default Overview with Performance, omitting both tab/view for that
+state and keeping Overview explicit. Tabs use router history/reload, roving tabindex and
+ArrowLeft/ArrowRight/Home/End; mobile navigation scrolls within its own row.
+
+`siteObservationPresentation.ts` is the only raw-payload projection for these
+views. Match Target identity before reading summary, core or light-probe evidence.
+Overview protocol rows retain status, duration, observed time and freshness as
+separate fields. Task B and the Observation refinement supersede P4's original
+message-first copy: Attention uses Current Target health reason codes with
+frontend localization; raw diagnostic flags stay in DNS evidence. Only observed
+endpoint facts appear. HTTP shows summary, conditional redirect chain and common
+headers plus native disclosure for all headers, without Security interpretation.
+DNS groups actual A/AAAA/CNAME/MX/NS/TXT/CAA/SOA records, follows collected children
+for resolution chains, and discloses infrastructure/DNSSEC/PTR and reported risk
+evidence. Web is an allowlist: metadata, robots, llms.txt, page assets and RDAP.
+Security probes never enter that projection.
+
+Performance's default 20 samples MUST auto-load on first hydrated activation,
+including a direct Performance URL. SSR still requests only Detail + Insights.
+`useSiteObservationHistory` lives on the page and owns the Site/Target/Ping cache,
+loading/ready/empty/unavailable states, explicit slice-local retry and local
+20/60/100 slicing of one `limit=100&protocol=ping&payload_mode=preview` request.
+All outcomes, including empty/unavailable, stay cached until explicit retry or a
+new page session. Captured keys isolate late responses; they may populate their
+own cache but MUST NOT replace the selected Target. Browser history requests use
+zero automatic client retries; the existing Nitro GET retry on 503 remains counted.
+
+Entering/leaving other views adds no request. Performance Target changes add
+Detail plus one history request only for an uncached Target; all other Target
+changes add only Detail. No action repeats Site Insights or View. Detail failure
+remains authoritative and suppresses history activation; history failure is local.
+The P3 Site snapshot stays unchanged across these Target/view transitions.
+
+The timing waterfall displays independent measured stage lengths on a common
+scale and explicitly warns that they may overlap; Total is the collected value,
+not a stage sum. Ping loss_rate is already a collector percentage (0–100), never
+an inferred ratio. Missing RTT/loss is not zero. ECharts mounts only with visible,
+ready numeric evidence, shows preparation/no-RTT copy when needed, reads resolved
+theme tokens, resizes and disposes its shallow instance, and has no double-update
+workaround. History rows expose time/status/RTT/loss without raw payload.
+
+P4 removes consumer-free Observation components and their measured debt only.
+Security's remaining renderer, the old light-probe renderer, Site Changes/Insights,
+#108 and later-phase cleanup retain their own owners. Appearance stays in
+`site-detail.less`; no parent deep overrides, transferred budgets or final P8
+goldens are allowed. `site-observation.spec.ts`, the pure presentation unit tests
+and real Nuxt history tests own verification. Maintainer visual acceptance of
+navigation, timing/chart density, HTTP/DNS/Web and mobile/themes is required before
+P5; local tests and screenshots do not grant that approval or remote acceptance.
+
+## Site Security workspace (#109 P5)
+
+Security presents Current Target technical evidence in Overview, TLS & Certificate,
+Web Security and Exposure. It cannot assess content safety, overall trustworthiness
+or vulnerability. No score, grade, safe/unsafe verdict, risk percentage or inferred
+WAF deployment is permitted. The presentation has no `score`, `grade`, `rating`,
+`riskPercent`, `overallLevel` or `wafEnabled` fields.
+
+`siteSecurityPresentation.ts` owns Target/envelope matching, raw parsing, nullable
+booleans, evidence states and all Security interpretation. Components render that
+projection only. HTTP provides TLS, certificate and Header evidence; existing light
+probes provide security.txt, Port Check and WAF Canary. P5 adds no endpoint or fetch:
+view changes add zero requests; Target changes add only Detail, never Insights/View.
+The P1 authoritative Detail and optional-source failure boundaries remain unchanged.
+
+`selectSiteSecurityView` extends the sole route-state owner. Secondary tabs support
+router history/reload, roving focus and ArrowLeft/ArrowRight/Home/End, scroll within
+their row on mobile and never stick. The raw Header link uses
+`selectSiteObservationView(..., 'http')`, preserving explicit Target query or the
+implicit primary Target. Materializing the implicit Target into a new query merely
+to change view would incorrectly cause a Detail fetch.
+
+Verification is separate from validity. `cert_collected=false` and `not_tls`
+prevent Go false/zero defaults from becoming failed certificate evidence. Explicit
+verification facts remain meaningful when the older payload lacks the collection
+flag. `readSiteCertificateEvidence` is shared with the Target presentation owner,
+so the Health Strip cannot contradict Security with uncollected default values.
+Remaining days prefer finite `cert_days_left`; when absent or invalid, derive
+whole days (floor) from `cert_not_after` minus the HTTP envelope's `observed_at`.
+Both timestamps must be valid and timezone-qualified; missing/invalid or Go-zero
+times remain not observed. Never use the client clock or a Site/Target summary
+timestamp. Health Strip, Security summary and validity facts share the same
+expiry projection. Verification remains independent. >30 is normal,
+8–30 attention, 1–7 warning and <=0 expired. These tones belong to expiry alone.
+SAN, chain and crypto facts use native disclosure; fingerprints wrap in monospace.
+False OCSP and zero/missing SCT do not produce a security conclusion.
+
+Header state prefers `security_header_summary.present`, then the collected boolean
+map, then raw Header presence. The frontend does not reimplement a Header analyzer.
+Observed absence is Missing; failed HTTP is Unavailable; missing evidence is Not
+observed. security.txt distinguishes found, found-with-validation-issues, not-found,
+unavailable and not-observed. Only collector `validation_errors` drive validation
+issues, without a second RFC validator or client-clock expiry check.
+
+Ports retain neutral open/closed/timeout/filtered/skipped evidence; an open port is
+not a vulnerability. Collection metadata is disclosed. WAF shows reported counts
+and cases; a matching statement requires a complete successful sample and known,
+matching counts, never proof of WAF deployment. Truncation is visible outside the
+case disclosure. Attention is limited to verification failure, reported expiry,
+security.txt validation issues and positive reported Canary mismatch/error counts.
+
+P5 retires the consumer-free SiteObservationMetricGrid and SiteLightProbePanel only.
+Appearance extends the existing Site Detail owner, keeps deep selectors at zero
+and lowers only actual removed debt. Other cleanup remains P7; Insights remains P6
+and #108. `site-security.spec.ts` and pure projection tests own the contract. No
+accepted Visual file changes or final P8 goldens; maintainer visual review is still
+required before P6, independently of local gates and remote CI status.
+
+## Site Insights workspace (#109 P6)
+
+`SiteInsightsWorkspace` replaces the three-item legacy panel with a lightweight
+Site-wide header, seven selectable registry rows, selected Site fact and ecosystem
+context, lazy ecosystem adoption trend and the complete returned recent-change set.
+There are no secondary tabs, embedded Dimension Explorer or Compare components.
+Links lead to localized `/insights/sites` and `/insights/sites/compare?ids=<siteId>`.
+The existing public Ecosystem / 生态观测 naming remains authoritative; the P6
+brief's Insights / 洞察 examples do not reintroduce the retired product name.
+
+`siteInsightsPresentation.ts` is pure and has no Target input. Registry categories
+and order drive the matrix. Slice `ready/empty/unavailable` is separate from the
+seven backend fact states and frontend `missing`. A failed slice exposes null fact
+state and a dash, never seven invented backend unavailable facts. Successful empty
+capabilities yield seven missing rows. P3 follows the same failure distinction.
+Adoption value and known/eligible coverage have separate labels; null is not zero.
+
+`useSiteInsights`, instantiated only by the page, owns SSR data/state/retry shared
+by P3 and P6. It is keyed by Site ID, validates returned identity, and guards the
+published snapshot against a changed Site ID. Retry refreshes only this slice;
+the old Site's retry cannot replace a new Site's result. It never refreshes Detail,
+View, or trend. Existing transport behavior is unchanged; owners do not schedule
+automatic retries. A failed optional slice never becomes an authoritative error.
+
+`selectSiteInsightMetric` and `selectSiteInsightRange` own URL transitions and
+retain Target and the other selection. `useSiteInsightTrend` belongs to the page,
+activates only after hydration in Insights, and caches by metric + range without
+Target or Site identity. It uses the existing `getNavInsightsTrend` service. Every
+active identity has loading/ready/empty/unavailable state. Empty and failed results
+are cached; only explicit retry reloads them. Late results populate only their own
+entry. Normal activation adds exactly one uncached trend; SSR still loads only
+Detail and Site Insights. Target changes add only Detail, including while trend or
+Site data is pending, and never reset the Site workspace.
+
+Site and trend failures are independent. ECharts is lazy canvas with a shallow
+instance, ResizeObserver, disposal and import revision protection. It plots only
+ecosystem adoption, uses `connectNulls: false`, and reads Site Detail/global tokens.
+Loading includes chart initialization; import failure is classified unavailable.
+One-point and all-null samples retain explicit usable/unknown presentation. No
+state may leave an unclassified blank chart. #108 chart appearance is not imported.
+
+Recent Site Changes uses all returned items, shared order/date/label/category
+helpers, unknown fallback and exact UTC versus day-only precision. It is never
+described as complete history. The old SiteInsightsPanel and its sole-consumer
+InsightsEntityTimeline are retired after consumer audit. Their isolated styles
+are removed; shared Game rules and #108 important/domain debt remain untouched.
+New appearance belongs to `site-detail.less`, with deep zero and no added debt.
+
+`site-insights.spec.ts`, pure presentation tests and real Nuxt owner tests verify
+this contract. P1–P5 and Entity tests retain their existing invariants while
+accounting explicitly for P6's first activated trend. SEO remains Entity-only.
+No backend/schema changes, accepted Visual updates or P8 golden are authorized.
+Maintainer visual acceptance is required before P7; remote CI is a separate status.
+
+## Site Detail legacy and appearance closure (#109 P7)
+
+P7 deletes the consumer-audited SiteHealthSummaryPanel, SiteOverview,
+SiteSignalCards and SiteChangeEvents, their private helpers/styles and all fourteen
+retired detailTypes definitions. No explicit import, Nuxt template tag, dynamic
+registration or test consumes these components. The unused SiteObservationHistory
+type alias is also retired; active history behavior is unchanged.
+
+Site Detail Tailwind appearance, arbitrary appearance and raw visual debt are
+zero. Deep selectors and legacy dark entries remain zero. `site-detail.less`
+retains the P2–P6 appearance; no healthy selector/token or active UI is redesigned.
+Historical Site dark/deep exceptions MUST NOT be treated as current permissions.
+The remaining baseline is ambient raw 75 and #108 important 5; no budget transfer,
+increase, new exception or unrelated cleanup is authorized.
+
+Retired `site.*` messages are removed from both locales after consumer audit;
+`site.siteDnsPanel.none` remains required by Home. The five active Site namespaces
+and shared messages retain their values. Existing active ESLint suppressions stay.
+All P1–P6 route/request/cache/retry/SSR/SEO/evidence contracts and tests remain
+authoritative. P7 adds no feature or final golden. Maintainer Desktop/Mobile smoke
+of Overview, Observation, Security and Insights precedes separately authorized P8.
+
+## Site Detail final presentation refinement (#109 Task B)
+
+Task B supersedes the P2–P6 appearance assignments without changing their runtime,
+route, API, request, SSR/SEO or Site/Target ownership contracts. The Site Detail
+Less owner provides compact translucent Primary/Secondary surfaces and native
+disclosures, quiet evidence colors and a shared segmented pattern for Observation,
+Security, Ping samples and ecosystem ranges. New/replaced system icons use
+Phosphor. Existing public theme tokens remain authoritative; #108 and ambient
+appearance are outside this task.
+
+Hero uses a multi-row logo and the full identity content column. The Health Strip
+has exactly six primary values, no helper rows, and shares P5's certificate
+normalization/expiry presentation with Security. Target Context presents the
+selector, Ping/HTTP/DNS and observed time. P2's relation/infrastructure debug
+display is retired, while underlying evidence and selector behavior stay intact.
+
+`siteDetailPresentation.ts` owns localized health reason labels and display tones,
+never health aggregation. DNS flags remain diagnostic evidence: PTR-empty,
+low-TTL and unclassified signals are informational; private-IP and NXDOMAIN with
+answers are warning-colored. Security continues to separate verification from
+validity; header absence, open ports and canary matches never become safety or
+WAF deployment claims. Known security.txt validation codes map to localized copy;
+the frontend does not revalidate the file.
+
+Overview keeps its four-change cap and moves its ecosystem/retry actions into the
+Capability surface. Insights keeps all returned changes, groups its seven matrix
+rows by the shared registry and contains selected fact plus trend in one analysis
+surface. Adoption, coverage and dates remain neutral; only fact state uses status
+color. No secondary Insights tabs, extra requests or new route vocabulary appear.
+
+`site-detail-refinement.spec.ts` adds focused presentation checks using the shared
+deterministic runtime fixture. The six existing P1–P6 Browser owners retain their
+request, failure, cache, race and accessibility assertions. Optional temporary
+review screenshots are emitted by that same Functional owner, never a new runner
+or accepted Visual baseline. Site debt, deep and legacy-dark remain zero. Full
+maintainer visual acceptance is required before separately authorized P8 work.
+
+## Site Detail first-round composition completion (pre-P8)
+
+This appearance contract supersedes earlier P2–P6/Task B card, divider and Context
+surface descriptions; their Site/Target, route, request, failure and cache
+contracts remain unchanged. `site-detail.less` owns shared acrylic Plane A/B/C,
+hover, selected and 500ms motion tokens. Content surfaces have no perimeter
+border. Facts/list rows use 4–6px gaps, small corners and soft color-only hover;
+selected states respond immediately. Keep only meaningful relationship/chart
+lines, the primary active indicator, focus rings and the Identity Note separator.
+The Target selector may retain necessary control affordances.
+
+Hero and the six Health values share one Identity Note with an inset CSS dashed
+separator and three decorative, aria-hidden perforations. Health has no grid
+rules. Overview and Observation retain their accepted composition; only materials,
+unnecessary borders/dividers and row spacing change. Observation and Security
+own their H2 and finite, scrollbar-hidden secondary navigation in one header row,
+including on mobile. Preserve roving tabindex, keyboard navigation and route state.
+
+Security keeps four evidence-only views. TLS transport, verification and validity
+share one composite while remaining distinct facts; certificate identity is a
+secondary plane and crypto a native disclosure. Headers show name/state above
+value. security.txt metadata/errors and request cases stay in disclosures. Port
+Observation and Request Behavior Check never imply vulnerability or WAF deployment.
+Existing certificate normalization, expiry thresholds and explicit Attention
+evidence remain authoritative.
+
+Insights has an unboxed header and seven-row Capability Explorer, one primary
+Analysis plane and an unboxed Recent Change Stream. Adoption/coverage remain
+neutral; the adoption-only trend uses the info accent, not success green. No
+secondary tabs, score, filter, pagination or request is introduced. Unavailable
+Site Insights retains seven structural rows and the shared inline retry.
+
+The existing Functional Browser owners verify this composition and may export
+temporary review screenshots. Full local verification does not grant maintainer
+visual acceptance or remote CI acceptance. Stop after first-round completion;
+P8 and any second round require separate user authorization. Accepted Visual PNGs
+and the zero Site/deep/legacy-dark debt budgets stay unchanged.
+
+## Site Detail Task C consistency and default entry (pre-P8)
+
+Task C supersedes the first round's Plane A/B/C opacity hierarchy, retaining its
+composition. `--site-detail-panel` is the sole base material for Identity Note,
+Context and all content panels across workspaces, with the same hue and opacity
+within a theme. Flows/ghost disclosures are transparent. One shared hover and
+same-hue stronger selected token serve rows, segments and the local Target
+trigger. Color-only hover takes 500ms; selection is immediate. Do not modify the
+global button primitive to style this trigger. Preserve selector behavior/a11y.
+
+Hero view count keeps `Intl.NumberFormat` and an accessible Eye label with stronger
+warm brand emphasis. CDN comes only from Current Target `edgeProviderHints`, with
+`type=cdn` and medium/high confidence, preferring high and preserving input order
+for ties. Provider names cannot imply CDN type. `siteTargetSignals.ts` owns this
+selection/localized provider mapping and the protocol status projection used by
+Context and Observation Overview. Success has a shared dot and screen-reader
+text; stale/failure/unknown stay visibly labelled. Latency tone is independent of
+success, and Collector health classification is unchanged.
+
+The route table above records Task C's intentional UX change. Clean and domain-only
+URLs render Observation/Performance; entering primary Observation selects
+Performance, while selecting the already active primary tab preserves its view.
+Invalid UI values fall back without changing authoritative Target validation.
+Default history remains hydration-only, one `protocol=ping&limit=100&payload_mode=preview`
+request and a local 20-sample slice. Returning uses P4's existing cache. While
+Performance is active, a new Target may load its own uncached history; non-Performance
+switches still fetch Detail only. Neither recounts View or refetches Site Insights.
+P4/P6 cache/race internals, API shape, Site/Target ownership and Entity-only SEO
+remain unchanged. No final Visual golden or P8 work is authorized by Task C.
+
+## Site Detail Task D composites, help and focused defects (pre-P8)
+
+Task D retains Task C material/default-entry and all data identities. It groups
+Overview Summary/Attention/Capabilities, Observation Current/Endpoint/Attention,
+HTTP Response/Redirects/Headers, Security Summary/Attention and Certificate
+Identity/Crypto under their respective single panel owners. Inset dashed lines
+may separate these related sections; they do not introduce perimeter borders or
+Hero perforations. Summary fields have only a label and primary value; TLS
+auxiliary evidence remains in a native disclosure. Security and Site Insights
+scope copy is removed without changing either ownership contract.
+
+`SiteDetailHelpTooltip` owns active Site Info hover/focus/click, Escape/blur and
+ARIA association; native `title` is not its visible help. Waterfall has no extra
+heading/help. `SiteChangeStream` adds local Compact/List controls with the same
+three-column serpentine geometry as Game Timeline (`serpentineSequence.ts`).
+Mobile remains a list; chronology, date precision, Overview's four-event bound
+and Insights' complete recent set are unchanged. Redirects use this geometry
+without inventing hop status. Hero name/domain share a heading row, while views
+share the badge row; Current Target CDN selection is unchanged.
+
+The four touched charts normalize non-finite/non-numeric/missing values to a gap
+and `—`, never zero. Game `average_30d` has an independent one-decimal maximum;
+current/peak counts stay integer. No new chart/tooltip dependency is introduced.
+The Gallery test's expected abort is single-use, exact-request/exact-resource,
+`net::ERR_ABORTED` only, and must follow intentional Gallery unmount and actually
+occur. Other failed requests and browser errors remain fatal.
+
+Task D explicitly limits local validation to focused cases, typecheck and relevant
+lint/style checks, without full build/suites. The opt-in local source fixture
+mode is documented in the testing guide and is not production/remote acceptance.
+Keep Site/deep/legacy-dark debt zero, #108/ambient budgets and accepted Visual
+inventory unchanged. Stop before P8.
+
+## Site Detail Task E — Similar Sites discovery (pre-P8)
+
+`GET /api/v2/nav/sites/:siteId/recommendations?lang=zh|en&limit=8` owns optional
+Site Entity discovery. Limit defaults/caps at eight. It returns schema_version 1,
+UTC generated_at, state (`ready`/`unavailable`), site_id and SiteVo items, including
+view_count. It neither reads display mode nor accepts Target/workspace selectors.
+Invalid ID/language/non-integer limit returns 400; unavailable read models return
+an unavailable slice with an empty array. Existing Detail remains authoritative.
+
+Backend resolves full Group membership through the existing localized Site/Group
+reader, then feeds matched groups into `BuildHomeGroupsForCache`. Each group's
+Home Top-8 cutoff precedes union, ID dedupe and self exclusion. SHA-256 of
+`siteId|candidateId|UTC YYYY-MM-DD`, sorted lexicographically (ID tie-break), selects
+up to eight. Never refill from rank nine, unrelated groups or random global Sites.
+No ranking/reason/score, new table, Redis key or refresh job is introduced; existing
+read-model cache/DB fallback and Home ordering remain their current owners.
+
+`useSiteRecommendations` loads concurrently with Detail/Insights, keyed only by
+Site ID + normalized language. It captures identity and ignores stale Site/locale
+responses. Hydration reuses SSR data; Target/query/mode/local-tab changes do not
+reload it. Errors/unavailable/empty hide discovery without an error card or retry.
+Default Performance still loads Ping after hydration. Task E's shorthand
+"Target switch = Detail only" applies outside Performance: existing P4 permits a
+new Target's uncached Ping history while Performance is active. Task E does not
+change that exception or P4/P6 cache/race/retry behavior.
+
+`SiteSimilarSites` renders a single shared list below Current Target on Desktop,
+or as Mobile's local Similar panel. Raw nonempty items control the auxiliary tab;
+SSR rendering filters to SFW, then mounted display-mode subscription filters raw
+items without fetching. Mobile can show a neutral empty message when all raw
+items are hidden; Desktop hides an empty visible list. No hidden-item reason is
+shown. Raw optional-slice data remains in Nuxt payload for local mode switching;
+NSFW names/icons/links never appear in SSR-rendered recommendation markup.
+
+The four route-owned tabs stay unchanged. Similar is a mobile-only local state,
+with tab semantics/keyboard order, no URL/history entry and no independent SEO.
+Desktop resize clears the local selection and restores the underlying route
+workspace without navigation. Primary tabs scroll horizontally only when needed.
+One Site Detail appearance owner supplies borderless rows and 500ms tint; list
+content is limited to managed icon, name, one-line info and formatted view
+snapshot. P8 preflight removes the display domain only; the recommendation API's
+SiteVo domain stays unchanged. Links use localized query-free Entity paths; the Similar
+component never increments views. The destination page retains exactly-once View.
+
+Task E keeps verification focused on recommendation/group Go tests, recommendation
+SSR/request/discovery Browser cases, typecheck and relevant lint/style checks.
+Do not run full frontend tests/build or create final Visual goldens. Stop before
+P8 and await maintainer visual acceptance.
+
+P8 preflight aligns Functional assertions with the accepted Task D/E product:
+Waterfall has no native-title or Info help; redirects assert ordered nodes and
+the semantic connector wrapper, never Phosphor SVG internals. Capability/header/
+port/change tests own counts, states, category/date and Compact/List interaction.
+Exact gaps, typography sizes and serpentine pixel placement belong to the future
+Visual contract. Existing overflow, keyboard, accessible tooltip and request
+checks remain. Trend tests must wait for URL, pressed controls and metric/range
+identity before ready: tls13|90d → csp|90d → csp|all still requires three requests,
+cached Back/Forward adds none, and reload adds a fourth. Preflight grants no
+runtime/cache change or final-golden authorization.
+
+## Site Detail final Visual contract and closure (#109 P8)
+
+P8 freezes the current product. The phase-labelled P1–P7 and Task A–E records
+remain historical evidence; their intermediate layouts are not the final Visual
+contract. Task C supersedes the early default Overview and acrylic-level hierarchy,
+Task D supplies the final composites/help/flows, Task E adds Site-level discovery,
+and preflight removes Similar's display domain. Task A's Collector health reasons
+and the later evidence-derived certificate fix remain in force. P8 adds no route,
+feature, API, recommendation rule or runtime change.
+
+The final route owner still has four workspaces: Overview, Observation, Security
+and Insights. Blank/domain-only entry means Observation/Performance. Mobile Similar
+is local state with no URL/history/SEO mutation. Site ID owns Insights and View;
+Site ID/language owns Recommendations and the initial Site summary. Current Target
+owns Detail evidence and Ping history. SSR loads Detail + Insights + Recommendations;
+hydration counts View once and activates only the current lazy slice. Target changes
+never reload Insights/Recommendations or recount View. Active Performance may fetch
+the new Target's uncached Ping history; elsewhere the switch reads Detail only.
+Insights trend is ecosystem-wide, cached by metric/range without Target. Keep both
+lazy/cache/race owners, optional-slice failure isolation and Entity-only SEO intact.
+
+Certificate expiry has one projection shared by Health, Security summary and
+validity detail: finite explicit `cert_days_left` wins, otherwise derive whole days
+from `cert_not_after - HTTP observed_at`. Never consult the client clock. Missing or
+invalid evidence remains not observed; <=0/<=7/<=30/>30 retain expired/warning/
+attention/normal meanings. Verification remains distinct from validity.
+
+Recommendations retain full-group membership, per-group Home Top-8 eligibility,
+union/dedupe/self exclusion and deterministic UTC-day selection capped at eight;
+there is no global backfill or score. Target/mode/tab changes add no recommendation
+request. SSR markup is SFW; mode filtering is local. Similar shows managed icon,
+Name + Info + Views, no domain line, and only the destination page counts View.
+
+`tests/browser/fixtures/site-detail-visual.ts` and `visual/site-detail.spec.ts` own
+exactly eight initial Site Detail PNGs under the latter spec's snapshot directory:
+
+| Viewport | Theme / scene | Golden |
+| --- | --- | --- |
+| 1440×900 | Light Performance | `site-detail-performance-light-desktop.png` |
+| 1440×900 | Dark Performance | `site-detail-performance-dark-desktop.png` |
+| 1440×900 | Light Overview | `site-detail-overview-light-desktop.png` |
+| 1440×900 | Light TLS | `site-detail-security-tls-light-desktop.png` |
+| 1440×900 | Light Insights | `site-detail-insights-light-desktop.png` |
+| 1440×900 | Light HTTP | `site-detail-http-light-desktop.png` |
+| 390×900 | Light Performance | `site-detail-performance-light-mobile.png` |
+| 390×900 | Light Similar | `site-detail-similar-light-mobile.png` |
+
+These are Site Detail root captures at the listed viewports, so image height may
+exceed 900px to include the representative workspace/aside. Reuse the existing
+digest-pinned Linux Visual runner, not a separate config. Fixed UTC evidence/browser
+time, local managed assets, fixed history/trend/changes/recommendations and strict
+network diagnostics make the fixture deterministic. Its opt-in diagnostic timestamp
+uses that same instant; existing runtime fixtures retain live timestamps. Wait for
+hydration, active chart readiness, loaded images/fonts and finite animations;
+blur focus, move the pointer away and check overflow. No sleep/networkidle or
+diagnostic suppression. HTTP has seven redirect nodes; TLS derives 45 days without
+legacy days; Mobile Similar retains the URL and omits domain text.
+
+Visual owns composition, spacing, material, density, typography and responsive
+arrangement. Functional owns route/history, requests/cache/race, semantics, a11y,
+errors, exactly-once View, mode filtering, certificate derivation and SEO; do not
+restore exact pixel-gap assertions there. The eight existing Site Detail regression
+owners remain mandatory, including recommendation/refinement owners. Scoped golden
+generation MUST be followed by an independent compare with updates disabled.
+
+Site Detail measured appearance/arbitrary/raw/important/deep/legacy-dark debt stays
+zero. Unrelated ambient raw 75 and #108 important 5 remain unchanged. Narrow cleanup
+may remove proven consumer-free owners only. A real product defect blocks closure;
+never update a golden to conceal it. Current-code remote build, all Browser shards,
+Visual and repository-policy must pass. The acceptance ledger records actual local
+and remote results separately from explicit maintainer approval of the eight PNGs.
+Until that approval, the new baselines are review candidates, not accepted design.
+After approval #109 is closure-ready; subsequent product work uses a new task, not P9.
 
 ## Styling ownership
 
@@ -293,9 +915,10 @@ the removal condition MUST be actionable. Unexplained ignore lists and permanent
 directory wildcards are prohibited. Existing visual-guard allowlists MUST NOT
 be silently promoted to exceptions. P0 grants no exceptions automatically.
 
-#108 Insights and #109 Site Detail are **migration exclusions**, not style
-exceptions. P4–P6 MUST NOT proactively migrate those surfaces. Their historical
-debt MUST still be measured, and new code there MUST follow this contract.
+#108 Insights and #109 Site Detail were **migration exclusions** from #124
+P4–P6, not style exceptions. #109 P7 now closes Site-specific debt under its own
+scope; #108 remains separately owned. Any remaining historical debt MUST still
+be measured, and new code there MUST follow this contract.
 Any precise exception tied to those redesigns MUST be removed when its stated
 replacement lands; issue membership is not a blanket exemption.
 
@@ -464,8 +1087,9 @@ current token hierarchy, aliasing or annotation, nor establish another token
 level; further consolidation belongs to later phases. `foundation.less` has structural
 values/aliases and excludes no raw colors. Ordinary selectors in every listed
 file remain measured. Game-detail-specific text overrides, datepicker `--dp-*`
-overrides and `SiteDetailPage.vue`'s local theme are not approved declaration
-layers and remain raw-color debt. P4.5.3 moves Error and Dock declarations into
+overrides and `SiteDetailPage.vue`'s local theme were not approved declaration
+layers in this P0 snapshot and were counted as raw-color debt. The Site theme is
+retired under #109; these are historical evidence anchors. P4.5.3 moves Error and Dock declarations into
 the exact component owners above; ordinary properties there still count as debt.
 
 P1 MUST compare its initial detector results against this same source snapshot,
@@ -491,9 +1115,9 @@ for newly added files or script-generated styles.
 | Real external services | Explicit development acceptance, not a default PR gate |
 
 P0 introduced no runners, dependencies or CI gates. P1's local/CI sequence is
-`npm ci`, `npm run lint`, `npm run stylelint`, `npm run style:policy:test`,
-`npm run style:policy`, `npm run typecheck`, `npm run insights:semantics`,
-`npm run seo:recovery:test`, `npm run build`, from `apps/cn/nav-web`.
+`pnpm install --frozen-lockfile`, `pnpm run lint`, `pnpm run stylelint`, `pnpm run style:policy:test`,
+`pnpm run style:policy`, `pnpm run typecheck`, `pnpm run insights:semantics`,
+`pnpm run seo:recovery:test`, `pnpm run build`, from `apps/cn/nav-web`.
 For runtime changes, run relevant existing focused scripts from `package.json`
 as well. A skipped external acceptance test is not a pass.
 
@@ -513,7 +1137,7 @@ records the coverage mapping. This phase changes no production code, style debt
 or Visual baseline. P7.2 completes the separate legacy visual-guard retirement.
 
 P3.1 uses Vitest `projects` with separate `test:unit` and `test:nuxt` commands;
-`npm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps
+`pnpm test` runs both. CI MUST execute separate Unit tests and Nuxt tests steps
 before typecheck, retained Insights/SEO guards and build. Choose the lowest-cost
 environment that faithfully represents the tested behavior. Browser-like globals
 alone do not require Nuxt; pure tests SHOULD use Vitest-controlled stubs/cleanup.
@@ -529,8 +1153,10 @@ records their assertion ownership. Style-policy's Node runner, Contract Guards,
 Browser tests and external acceptance retain independent scope.
 
 P3.2.1 establishes a Chromium-only Playwright Test gate against the production
-Nitro build, never `nuxt dev`. CI MUST build successfully before installing
-Chromium and running `test:browser`; retries are zero and CI has one worker.
+Nitro build, never `nuxt dev`. CI MUST build successfully before running
+Browser tests; retries are zero and each CI job has one worker. #134 separates
+daily Smoke from Full Regression; Full MUST run all three explicitly inventoried
+groups without reducing coverage or enabling retries/fullyParallel.
 Domain fixtures own worker-scoped production servers, close them at teardown,
 and reset mutable state for every case. Playwright owns per-test browser contexts
 and pages; do not introduce a global `webServer` or order-dependent serial suites.
@@ -556,7 +1182,7 @@ for the owned follow-up and removal condition; no generic capture exemption exis
 Generic error capture MUST NOT ignore hydration. Same-run clipped paint Buffer
 and computed-style equality MAY remain runtime invariants; success screenshots,
 computed audit JSON and golden baselines MUST NOT be introduced in P3.2.3.
-P7.1 migrated the remaining Insights/background/SEO runtime runners. `npm test`
+P7.1 migrated the remaining Insights/background/SEO runtime runners. `pnpm test`
 remains Vitest-only; Visual keeps its separate pinned runner.
 
 P0 MUST NOT change production Vue, CSS/Less, runtime behavior, package/lockfiles,
@@ -576,10 +1202,30 @@ Authoritative Visual CI MUST use the official Playwright image matching the
 package version, pinned by a verified immutable digest, with `--ipc=host` and
 Node 24. The exact identity and local commands live in
 [testing guidance](../docs/frontend/testing.md#visual-runner-and-pinned-environment-p331).
-The separate `nav-web-visual` job MUST depend on successful `nav-web` and a Nav Web
-change, install packages and rebuild inside that container, then run `test:visual`.
-It MUST NOT install browsers, reuse the functional job's `.output`, or update
-snapshots. Failure artifacts retain the distinct Visual report/results for seven days.
+The #134 CI tiers supersede the earlier every-push Browser/Visual/Image topology:
+
+- Fast (`checks.yml`) runs for selected dev pushes and PRs: frozen install, lint,
+  stylelint, policy tests/scan, Unit/Nuxt, typecheck, semantic/SEO guards, production
+  build and all seven Smoke owners in one pinned job. The stable `nav-web` gate
+  depends only on change detection and `nav-web-fast`; it MUST report their failure.
+- Full (`nav-web-full.yml`) runs on main push, manual selected ref and nightly dev.
+  Build once, archive `.output` preserving symlinks/permissions, then restore it
+  inside the identical pinned image in three fixed groups. The explicit lists in
+  `.github/scripts/nav-web-regression-groups.mjs` MUST cover every regression spec
+  exactly once and fail on stale/missing/duplicate membership. Resolve scheduled
+  dev HEAD once and pin all consumer checkouts/artifacts to that SHA. No numerical
+  sharding or dynamic bin-packing. Its final gate requires every group and build;
+  deployment image verification is required on main/manual and skipped on nightly.
+- Visual (`nav-web-visual.yml`) is manual-only, building and comparing all existing
+  specs in one pinned job with `GOFURRY_VISUAL_ENV=pinned`. It MUST NOT run on daily
+  pushes/PRs/main/nightly, install browsers or update snapshots.
+
+All hosted runners use `ubuntu-24.04`; Playwright image/package identity is unchanged.
+Docs-only selection remains cheap; workflow/script edits remain conservative.
+Failure reports/results retain seven days; only Full's one-day production build
+artifact is shared between jobs. Fast's 3–5 minute feedback is a measured target,
+not permission to skip checks. Full/Visual remote acceptance remains separate
+from Fast and from maintainer visual approval. See [CI tiers](../docs/frontend/testing.md#ci-tiers-134).
 
 Baseline update is an explicit visual-change review action, not a test-fix
 command. Agents MUST NOT update baselines just to make CI green. Updates require
@@ -964,7 +1610,7 @@ ESLint uses the official Nuxt static flat-config factory without a runtime modul
 or formatting policy. `eslint-suppressions.json` is the one-time historical
 bootstrap, not a license to suppress new code. Contributors MUST fix new lint
 findings, MUST NOT rerun bulk suppress-all to grant debt, and MUST NOT use
-`--pass-on-unpruned-suppressions`. Use `npm run lint:prune` when removing debt;
+`--pass-on-unpruned-suppressions`. Use `pnpm run lint:prune` when removing debt;
 unused suppressions fail the normal lint command.
 
 Stylelint owns correctness only. Its config documents narrow Less/Tailwind/Vue
@@ -980,7 +1626,7 @@ detectors and exact exceptions, then compares every rule/file budget:
 - `actual < baseline`: stale budget, fail.
 - `actual == baseline`: pass.
 
-`npm run style:policy:update` can only lower budgets or remove zero entries. If
+`pnpm run style:policy:update` can only lower budgets or remove zero entries. If
 any pair increased, it refuses every write. It preserves exceptions and refuses
 to overwrite a manifest changed during the scan. New files default to zero;
 moving debt never transfers its budget automatically.

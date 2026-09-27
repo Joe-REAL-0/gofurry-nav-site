@@ -359,23 +359,16 @@ func evaluateTargetHealth(protocols map[string]protocolHealth, now time.Time) (s
 
 	status := StatusHealthy
 	if dnsFailure {
-		status = worseStatus(status, StatusWarning)
-		reasons.addCode("dns_failed_but_http_ok")
+		status = applyHealthReason(status, &reasons, "dns_failed_but_http_ok")
 	} else if dnsStale {
-		status = worseStatus(status, StatusWarning)
-		reasons.addCode("dns_missing_or_stale")
+		status = applyHealthReason(status, &reasons, "dns_missing_or_stale")
 	}
 	if pingFailure {
-		status = worseStatus(status, StatusWarning)
-		reasons.addCode("ping_failed_but_http_ok")
+		status = applyHealthReason(status, &reasons, "ping_failed_but_http_ok")
 	}
 
-	dnsRisks := riskFlagsFromPayload(protocols[ProtocolDNS].doc.Payload)
-	if len(dnsRisks) > 0 {
-		status = worseStatus(status, StatusWarning)
-		for _, risk := range dnsRisks {
-			reasons.addCode(dnsRiskReasonCode(risk))
-		}
+	for _, risk := range riskFlagsFromPayload(protocols[ProtocolDNS].doc.Payload) {
+		status = applyHealthReason(status, &reasons, dnsRiskReasonCode(risk))
 	}
 
 	tlsStatus, tlsCodes, tlsMessages := evaluateTLSSignal(httpDoc.doc.Payload, now)
@@ -389,6 +382,30 @@ func evaluateTargetHealth(protocols map[string]protocolHealth, now time.Time) (s
 	}
 
 	return status, reasons.codes, reasons.messages
+}
+
+// Auxiliary signals explain health only when their reason definition affects it.
+// Broader diagnostic evidence remains in the protocol payload and trend.
+func applyHealthReason(status string, reasons *reasonCollector, code string) string {
+	definition, ok := ReasonDefinitionByCode(code)
+	if !ok || !definition.AffectsHealth {
+		return status
+	}
+	var candidate string
+	switch definition.Severity {
+	case ReasonSeverityWarning:
+		candidate = StatusWarning
+	case ReasonSeverityDegraded:
+		candidate = StatusDegraded
+	case ReasonSeverityDown:
+		candidate = StatusDown
+	case ReasonSeverityUnknown:
+		candidate = StatusUnknown
+	default:
+		return status
+	}
+	reasons.add(definition.Code, definition.MessageZH)
+	return worseStatus(status, candidate)
 }
 
 func evaluateSiteHealth(counts map[string]int, targetCount int) (string, []string, []string) {

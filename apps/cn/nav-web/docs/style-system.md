@@ -134,14 +134,16 @@ Token 分三层：
 
 ## 保留例外
 
-迁移后仍允许少量 `:global(...)` 和 `:deep(...)`，但必须有明确边界：
+以下表格记录历史迁移阶段曾保留的例外，不是当前规则。Site 相关例外已随
+#109 P2–P7 迁移与清理退休；active Site Detail 已不再依赖这些例外，deep selector
+与 legacy dark entry 均为 0。当前允许范围以工程合同和 style policy 为准。
 
 | 文件 | 保留项 | 原因 | 后续处理 |
 | --- | --- | --- | --- |
 | `components/experimental/ambient/GoFurryGridBackground.vue` | `:global(html.dark ...)` | 旧网格效果仅作为实验性环境效果保留；默认布局由 `PublicPageBackground.vue` 和主题 token 统一负责。 | 保留但不进入默认页面路径。 |
-| `components/site/*` | `:global(html.dark ...)` | 站点详情观测面板仍处于独立页面迁移之外，本阶段先统一暗色入口，不再保留 `.dark` 简写。 | 后续若迁移站点详情页，再沉淀到页面 Less。 |
-| `components/site/SiteDetailPage.vue` | `:deep(...)` | 站点详情页需要包裹子面板生成的 Tailwind 表面，当前只能通过父级边界局部覆盖。 | 保留登记，禁止扩散到其他页面。 |
-| `components/site/SitePerformancePanel.vue` | `:deep(...)` | 性能面板包装共享 `SitePerformance` 子组件，局部覆盖用于约束子组件布局和材质。 | 保留登记，禁止扩散到其他页面。 |
+| `components/site/*` | 历史 `:global(html.dark ...)` | 当时独立于页面迁移，先统一暗色入口。 | 已退休；active appearance 由 `site-detail.less` 管理。 |
+| `components/site/SiteDetailPage.vue` | 历史 `:deep(...)` | 当时覆盖子面板生成的 Tailwind 表面。 | 已退休，不得恢复为当前例外。 |
+| `components/site/SitePerformancePanel.vue` | 历史 `:deep(...)` | 当时包装共享 `SitePerformance`，局部覆盖布局和材质。 | 组件及例外已退休。 |
 
 `visual:guard` 会在截图前扫描源码：新增废弃暗色 class、`:global(.dark ...)`、未登记 `:deep(...)` 或已迁移游戏详情/抽奖页复杂颜色类都会使守卫失败。
 

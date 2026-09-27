@@ -21,13 +21,19 @@ Owner-only. See [Managed assets](../../../docs/managed-assets.md) and the
 
 ## Development
 
-Requirements: Go 1.26.7, Node.js/npm, PostgreSQL, and Redis.
+Steam prefill resolves AppDetails by the verified internal `steam_appid` through
+steam-go's `GetResolvedAppDetails`, since Steam's outer response key can differ.
+Usable partial data remains available with optional `warnings` for incomplete
+Chinese/English details or a missing cover. React shows those warnings and only
+applies nonempty content fields; an entirely unavailable lookup remains an error.
+
+Requirements: Go 1.26.7, Node.js 24 / pnpm 12.6.0, PostgreSQL, and Redis.
 
 ~~~bash
 # React Admin (development server on 5178, API proxy to 10099)
 cd react
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 cd ..
 
 cp config/server.example.yaml config/server.yaml
@@ -47,7 +53,7 @@ The root command only displays help. `serve` runs in the foreground and shuts do
 
 ## Production build and systemd
 
-The root `build.bat admin` target builds React into the embed directory, then builds the self-contained Linux binary and deployment `dist/` companion. Install only from the final deployed binary and intended working directory:
+The root `task build:admin` target builds React into the embed directory, then builds the self-contained Linux binary and deployment `dist/` companion. Install only from the final deployed binary and intended working directory:
 
 ~~~bash
 cd /srv/gofurry/gofurry-admin
@@ -72,10 +78,12 @@ go test ./...
 go build ./...
 
 cd react
-npm ci
-npm run typecheck
-npm test
-npm run build
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm test
+pnpm run build
 ~~~
 
 See [React Admin development](../../../docs/admin-react.md), [frontend parity](../../../docs/admin-frontend-parity.md), [role operations](../../../docs/operations/admin-roles.md), [Data and System Operations](../../../docs/admin-data-system-operations.md), and the [frontend contract](../../../contracts/admin-frontend.md).
+
+The [Collaboration Center](../../../docs/collaboration-center.md) adds GFA-only content ideas and one shared canvas. Game/Site handoff keeps formal creation in the existing APIs and offers recovery when linking fails. Upgrade GFA with the new Goose migration before deploying this Admin binary.

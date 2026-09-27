@@ -4,27 +4,86 @@ Use the lowest-cost environment that faithfully represents the behavior under
 test. The [frontend contract](../../contracts/nav-web-frontend.md) owns this rule;
 the commands below run from `apps/cn/nav-web`.
 
-Current P7.2 inventory: **406 Functional Browser /119 Visual /118 PNG**. The
+P7.2 established **406 Functional Browser /119 Visual /118 PNG**; #109 P1 adds
+17 independent Site Detail cases for 423 Functional Browser; #109 P2 adds 12
+shell/context cases for 435 Functional Browser. #109 P3 adds 16 Overview cases
+for 451 Functional Browser. #109 P4 adds 30 Observation cases for
+481 Functional Browser. #109 P5 adds 50 Security cases for
+531 Functional Browser. #109 P6 adds 26 Site intelligence cases for
+557 Functional Browser. The Home-to-Site client entry regression adds one for
+**558 Functional Browser /119 Visual /118 PNG**; #109 P7 preserves that inventory
+and all six P1–P6 Site Browser owners without adding a runner or golden. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## CI tiers (#134)
+
+| Tier | Trigger | Required work |
+| --- | --- | --- |
+| Fast | Selected `dev` pushes / PRs | Frozen install, lint/stylelint, policy tests/scan, Unit/Nuxt, typecheck, Insights/SEO guards, production build, Browser Smoke |
+| Full | `main` push / manual selected ref / nightly `dev` | One build, three fixed regression groups; deployment image on main/manual only |
+| Visual | Manual selected ref only | One pinned build and the complete Visual comparison suite; no baseline updates |
+
+Fast uses one `nav-web-fast` job, so Smoke repeats no setup/install/artifact restore.
+The stable `nav-web` aggregate requires only change selection and Fast. Repository
+policy remains its own gate and can run concurrently. Normal dev/PR changes do not
+run Full, Visual or deployment image verification. The target is 3–5 minutes of
+developer feedback; record actual timing rather than weakening checks to hit it.
+Docs-only changes retain their existing inexpensive selection.
+
+Smoke keeps game-detail, hero, nav-home-locales, resource-routing and static-locales,
+plus site-detail and games-search: seven owners. The two new cases only prove SSR/
+hydration/core content and one basic search path, reusing strict deterministic
+fixtures. Detailed interactions, accounting, failures and Visual checks stay in
+their existing owners. `pnpm run test:browser:smoke --workers=1` runs this tier locally
+after a production build; do not use the dev fixture for CI acceptance.
+
+Full uses `.github/scripts/nav-web-regression-groups.mjs` as the authoritative
+explicit inventory: Games 12 specs (~298s supplied test-time estimate), Sites + Other
+15 (~277s), Insights + Nav 18 (~252s). These are planning estimates, not measured
+new job durations. The inventory guard rejects unassigned/new, missing and duplicate
+specs. Workflows run the CLI-produced file list with one worker; no `--shard`,
+automatic filename grouping, `fullyParallel` or retries. Reclassify new specs in
+that owner and run `node --test .github/scripts/nav-web-regression-groups.test.mjs`.
+
+Nightly is scheduled at 20:17 UTC, resolves `dev` once and exports the checkout SHA.
+All groups restore that run's one-day `.output` archive and check out that exact
+SHA; a newer dev push cannot mix fixtures and output. Manual uses the selected
+workflow ref, with no separate custom ref input. Main/manual Full also builds the
+real deployment image with the existing Buildx/GHA cache; nightly skips it. The
+final Full gate verifies the expected image success/skip and all three groups.
+
+Per [GitHub's trigger rules](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows), new manual/scheduled workflows must first exist on the repository's default branch
+(`main`) to receive those GitHub events. This is an enablement prerequisite, not
+authorization to merge a release or change the default branch. Once enabled:
+
+```text
+gh workflow run nav-web-full.yml --ref dev
+gh workflow run nav-web-visual.yml --ref dev
+```
+
+All relevant hosted runners are pinned to Ubuntu 24.04; the Playwright container
+digest stays unchanged. Fast Smoke, each Full group and Visual retain separate
+failure-only artifacts for seven days. No accepted PNG changes accompany #134.
+Results and before/after duration live in the [#134 acceptance record](../acceptance/issue-134-frontend-ci.md).
+
 ## Choose the test owner
 
 | Category | Owner / command | Boundary |
 | --- | --- | --- |
-| Pure TS/domain/utility logic | `tests/unit/*.test.ts`, `npm run test:unit` | Vitest `unit` project, Node environment; no Nuxt boot in test cases |
-| Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `npm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
-| Repository Contract Guards | `npm run insights:semantics`, `npm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
-| Style Policy Tooling Tests | `npm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
-| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `npm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
-| Playwright Visual | `tests/browser/visual/*.spec.ts`, `npm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
+| Pure TS/domain/utility logic | `tests/unit/*.test.ts`, `pnpm run test:unit` | Vitest `unit` project, Node environment; no Nuxt boot in test cases |
+| Nuxt composables and runtime | `tests/nuxt/*.nuxt.test.ts`, `pnpm run test:nuxt` | Vitest `nuxt` project, real Nuxt app/context through `@nuxt/test-utils`, happy-dom |
+| Repository Contract Guards | `pnpm run insights:semantics`, `pnpm run seo:recovery:test` | Existing Node scripts inspect source/config/docs and semantic contracts |
+| Style Policy Tooling Tests | `pnpm run style:policy:test` | `node --test scripts/style-policy/*.test.mjs`, independent of Vitest |
+| Playwright Browser Tests | `tests/browser/{smoke,regression}/*.spec.ts`, `pnpm run test:browser` | Production SSR/hydration/interactions; Shared/Nav/Games surfaces, Routing/Hero/Preferences, Insights, SEO and background storage |
+| Playwright Visual | `tests/browser/visual/*.spec.ts`, `pnpm run test:visual` | Pinned sentinel; Foundation, Preferences and Error locator baselines; Static/Legal and Updates viewport baselines; Dock expanded clips |
 | Broad route/theme/overflow checks | Domain Browser/Visual contracts, including P7.2 locale/theme gaps | The legacy visual report runner is retired; no second browser lifecycle or success screenshot inventory |
 | External Acceptance | Explicitly authorized development/provider checks | Real services, separate from deterministic fixtures and normal CI |
 
-`npm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
+`pnpm test` runs both Vitest projects once. `vitest.config.ts` uses `projects`, not
 the deprecated workspace model. Nuxt configuration is loaded by the test-utils
 project; the test module is **not** added to production `nuxt.config.ts`.
 Dependencies are pinned in package/lockfiles. No coverage provider or Testing
@@ -33,6 +92,184 @@ matching 1.60.x versions; external acceptance/performance still import `playwrig
 Nuxt cases have a 30-second budget for the first mount's cold app/router transform;
 unit cases retain Vitest's default timeout. Nuxt's generated `.nuxtrc` module setup
 marker is local and ignored, like `.nuxt/`.
+
+## Task D/E local focused source checks
+
+When the task explicitly forbids a production build, set
+`GOFURRY_FIXTURE_DEV=1` and use `pnpm exec playwright test <exact specs> -g <cases>
+--workers=1 --timeout=120000`. This is the same Playwright/Nitro/upstream owner,
+with Nuxt dev compiling current source into `.nuxt/fixture` and an isolated Vite
+cache. It does not read a local dotenv file. The larger local case timeout covers
+cold development transforms; it adds no retries or sleeps. Error capture and
+request accounting are unchanged. CI rejects the flag and retains the existing
+production `.output` fixture. These checks are explicitly development-runtime
+results, not a substitute for a later authorized production/remote acceptance.
+Do not run full suites or `pnpm run build` under Task D/E's focused-only budget.
+
+## Site Detail #109 P1
+
+`tests/browser/regression/site-detail-contract.spec.ts` owns Site/Target SSR,
+hydrated Target switching and error isolation. Its thin `site-detail.ts` fixture
+reuses `insights-runtime.ts` / `startInsightsFixtureApp`, including request
+instances, gates and strict browser-error accounting. No new runner or Visual
+baseline is introduced. The existing `insights-entity` 1440/390 × Light/Dark
+matrix and Ecosystem-to-Entity semantics remain; its old Target-hides-Insights
+assertion is replaced by Site-level Insights on both SSR entries.
+
+The new contract checks zh/en Entity and Target SSR, all four normalized workspace
+states through real existing Target links, exact Detail/Insights/View request
+counts and unchanged capability semantics. The fixture includes real HTTP payload
+data so the existing performance chart mounts; the former empty HTTP fixture
+could not detect eager Ping history loading. Existing sample controls still load
+history on demand, with no history re-fetch after Target selection.
+Target selection adds one Detail GET,
+zero Insights GETs and zero View POSTs. It verifies no extra data APIs, no
+hydration/console/request errors and no horizontal overflow. Invalid UI query
+falls back without 404; foreign Target/missing Site 404 and Detail 503 fail the
+page. Optional Insights 503 leaves a 200 page; success-empty and unavailable
+remain distinct. View POST 503 does not fail or replace the page. Existing GET
+transport retry on injected 503 is counted explicitly, not hidden as hydration.
+
+`tests/unit/site-detail-route-state.test.ts` owns defaults, exact vocabularies,
+normalization, repeated/null query values, encoding, Target preservation, tab
+cleanup and default omission. `site-capability-registry.test.ts` checks all seven
+keys, stable order, valid categories and existing zh/en translation metadata;
+the current three-item preview remains a presentation subset only. The
+`seo-recovery` Browser contract covers Domain and all UI query keys in both
+locales and requires query-free Site sitemap inventory.
+
+Use [Full verification](#full-verification), including the entire Functional
+Browser suite. P1 must leave style debt, suppressions and all Visual files/PNGs
+unchanged; do not run `style:policy:update` or snapshot generation. Remote CI is
+unverified until this change's own selected gates run. Maintainer confirmation is
+limited to normal/Target Insights visibility, actual Target data switching,
+absence of routing failure and Entity canonical. P2–P8 retain their separate
+UI/appearance/Visual owners; this does not close #109 or modify #124's history.
+Current audit and verification evidence lives in the
+[#109 phase ledger](../acceptance/issue-109-site-detail.md).
+
+## Site Detail #109 P2
+
+`site-detail-shell.spec.ts` extends the same deterministic fixture with 390/768/1440
+Light/Dark runtime geometry, long hostnames, four router tabs, reload/history,
+roving keyboard focus, selector pointer/touch/keyboard/dismissal/focus return,
+keyboard visibility within a long scrollable Target list,
+unknown Target evidence and sticky geometry. An explicit upstream gate holds
+Target A while B completes; it asserts retained Hero/tabs, local pending state,
+the latest Target's evidence after A releases, and exact Detail/Insights/View
+counts. No sleeps, network-idle waits, retries, diagnostic exceptions or new
+runner are used. P1's 17 cases now click the selector and open Observation for
+the existing sample-history controls; all request/failure assertions remain.
+
+`site-target-presentation.test.ts` owns nullable evidence, matching Target identity,
+Site aggregate exclusion, staleness, deterministic timestamps, relations and hint
+confidence. Style-policy tests enforce the exact P2 token declaration locations.
+P2's style-budget decrease is restricted to removed Hero/popover/root appearance;
+the ledger records actual verification and required manual visual review. Existing
+Visual specs/PNGs remain unchanged, and no P8 golden is created.
+
+## Site Detail #109 P3
+
+`site-overview.spec.ts` owns Site Health/Attention, seven capability states,
+success-empty versus unavailable, four-change ordering and precise/day-only
+timestamps. Six 390/768/1440 Light/Dark cases assert overflow and inner 3:2/stacked
+geometry. A held Target request verifies the retained Site snapshot even when the
+next Detail response changes its Site aggregate, then checks tab remount/history,
+full Ecosystem navigation, reload adoption and exact request accounting. A browser
+in a different time zone verifies deterministic hydration of precise timestamps.
+
+P1 and `insights-entity` retain their prior capability/error assertions on the
+Insights tab; SSR Overview now asserts the new snapshot. No hidden legacy preview
+is retained to satisfy tests. `site-overview-presentation.test.ts` covers the pure
+projection, registry categories, meaningful Target fallback, reason deduplication,
+all backend capability states versus frontend missing, locale and time precision.
+Shared Nitro/upstream infrastructure and strict diagnostics remain unchanged.
+The phase ledger distinguishes actual local passes from CI and manual acceptance.
+
+## Site Detail #109 P4
+
+`site-observation.spec.ts` covers five SSR views without history, router/reload/
+keyboard navigation, default sample auto-loading, explicit history states and
+retry, local sample slicing, view/Target cache reuse and deterministic late-A/
+ready-B isolation. Exact ledgers require only Detail on non-Performance switches,
+Detail + uncached Target history in Performance, and no repeated Insights/View.
+HTTP header disclosure, conditional redirect/CNAME, DNS groups and record details,
+Web's probe allowlist and security exclusion run at 390/768/1440 Light/Dark.
+Canvas readiness and height, table wrapping, zero values, independent Total and
+percentage units are asserted. Generic browser diagnostics and zero retries stay.
+
+P1's history case now enters Performance to auto-load, then proves non-Performance
+Target switching does not refetch it. This intentionally supersedes P1's earlier
+sample-click trigger while retaining all other request/failure/SEO assertions.
+`site-observation-presentation.test.ts` owns nullable facts, identity, headers,
+timings, collector percentage units, DNS trees, Web exclusion and history precision.
+`site-observation-history.nuxt.test.ts` mounts the real composable, mocking only
+the API boundary, and covers activation, cache, states, retry and captured identity.
+Style-budget updates may only remove audited Observation entries; the phase ledger
+records the actual delta and current local/remote/manual acceptance separately.
+
+## Site Detail #109 P5
+
+`site-security.spec.ts` owns four SSR views, router/keyboard/history/reload, exact
+zero-request view navigation and Detail-only pending Target changes, plus the raw
+Header cross-workspace link for explicit and implicit Target context. Tests retain
+authoritative Detail failures and optional Insights/View isolation.
+
+TLS cases distinguish verification true/false/missing from failed collection and
+non-TLS defaults, and independently assert four expiry bands. Header tests preserve
+observed absence versus missing evidence. security.txt has found/validation/not-found/
+unavailable/not-observed cases. Ports retain neutral results and metadata; WAF cases
+verify reported mismatch/error counts, bounded matching, truncation and unavailable/
+not-observed. Native disclosures and long fingerprints/CSP/URLs run at
+390/768/1440 × Light/Dark with strict diagnostics and no horizontal overflow.
+
+`site-security-presentation.test.ts` adds 48 pure cases, including boundary days,
+Target identity, collector priority, no frontend RFC validation, unknown/zero/false,
+stale evidence and recursive exclusion of score/verdict fields. Two Target presentation
+regressions also reject uncollected certificate defaults; Browser asserts the Health
+Strip agrees with Security. No new Nuxt fetch
+composable or runner is introduced. The shared Site fixture adds pure Security data
+only. All P1–P4 and Visual contracts remain required; manual review is separate.
+
+## Site Detail #109 P6
+
+`site-insights.spec.ts` owns SSR without trend dependency, seven registry rows,
+route/keyboard/history/reload, external links, exact lazy/cache request accounting,
+classified chart states, independent Site/trend retries and Target independence
+including pending. One-point, all-null and empty samples cannot leave a blank
+unclassified surface. Full recent changes retain categories and exact/day precision.
+390/768/1440 × Light/Dark checks stacked rows, canvas and no horizontal overflow.
+
+`site-insights-presentation.test.ts` adds 20 Unit cases for registry grouping,
+slice versus fact state, missing, nullable adoption/coverage, selected fact,
+change order/category/precision, gaps and route transitions. Nine real Nuxt cases
+exercise the trend and shared Site owners, including old Site retry isolation.
+P1–P3/Entity tests are adjusted only for P6's authorized trend and new semantic
+hooks; original Site request, failure and SEO assertions remain strict. No new
+runner or accepted Visual baseline is introduced. Human review remains separate.
+
+## Site Detail #109 Task B
+
+`site-detail-refinement.spec.ts` adds focused UI assertions at 390/768/1440 in
+Light/Dark. It verifies full-column Hero description, six primary health values,
+compact Target context, localized/grouped Attention, segmented controls, DNS
+signal classification, evidence-only Security summaries and grouped Insights
+with one selected-capability/trend surface. Existing P1–P6 owners retain exact
+request accounting, failures, history/cache/race/retry, SSR/SEO and keyboard checks.
+
+`site-detail-refinement.test.ts` verifies shared latency/HTTP/expiry display tones,
+P5/Health Strip certificate consistency, Task A-aligned raw DNS presentation and
+bilingual reason/validation mappings. Existing presentation tests retain missing,
+false, zero, precision, full-change and no-security-verdict boundaries. Real Nuxt
+runtime owner tests are unchanged.
+
+For temporary maintainer screenshots, set `GOFURRY_SITE_DETAIL_REVIEW_DIR` to an
+untracked review directory and run the refinement spec with the existing
+`pnpm run test:browser tests/browser/regression/site-detail-refinement.spec.ts --workers=1`
+command after building. It uses the same deterministic Nitro/upstream fixture,
+readiness, Chromium and error capture; it is not a second screenshot runner.
+These artifacts are review material only, never accepted P8 goldens. Full
+maintainer visual acceptance is separate from automated acceptance.
 
 ## Migrated regression knowledge
 
@@ -49,7 +286,7 @@ The single `tests/fixtures/cdn-probe.bin` serves Unit and the existing Hero/rout
 browser fixtures; its size/digest are checked by the managed-assets suite.
 
 The four legacy test implementations and unused `assets:test` / `game:tags:test`
-aliases are removed. Use the two project commands or `npm test`; do not recreate
+aliases are removed. Use the two project commands or `pnpm test`; do not recreate
 parallel test implementations. Node Contract Guards and style-policy tests are
 intentionally not discovered by Vitest.
 
@@ -88,15 +325,15 @@ test migrations introduce no new Visual baselines or external acceptance runs.
 ## Game Detail browser gate (P3.2.1)
 
 ```sh
-npm run build
-npx playwright install chromium
-npm run test:browser:smoke
-npm run test:browser:regression
-npm run test:browser
+pnpm run build
+pnpm exec playwright install chromium
+pnpm run test:browser:smoke
+pnpm run test:browser:regression
+pnpm run test:browser
 ```
 
-`npm test` remains Vitest-only. Browser commands use `playwright.config.ts`:
-Chromium only, zero retries, one worker in CI, normal isolated contexts/pages.
+`pnpm test` remains Vitest-only. Browser commands use `playwright.config.ts`:
+Chromium only, zero retries, one worker per CI shard, normal isolated contexts/pages.
 There is no global `webServer`: `tests/browser/fixtures/game-detail.ts` starts
 one production Nitro app and loopback API per worker via the unchanged
 `scripts/fixtures/insights-app.mjs`. `app.close()` runs in worker teardown.
@@ -257,11 +494,12 @@ The image contains Node 24 and browser/system dependencies; CI still explicitly
 selects Node 24 with `actions/setup-node@v6`. The [Playwright Docker guidance](https://playwright.dev/docs/docker)
 describes the matching-package/image requirement and `--ipc=host`.
 
-`nav-web-visual` runs only for Nav Web changes after `nav-web` succeeds. It uses
-that tag **and** immutable digest with `--ipc=host` and `GOFURRY_VISUAL_ENV=pinned`,
-then independently runs `npm ci`, `npm run build`, `npm run test:visual`. It neither
-installs browsers nor transfers `.output` from the functional job. On failure,
-`nav-web-visual-failure` contains the distinct Visual report/results for seven days.
+All three CI tiers use that tag **and** immutable digest with Node 24 and
+`--ipc=host`. Fast builds and runs Smoke in one job. Full's same-run, source-named
+tar preserves `.output` symlinks/permissions for its three regression groups.
+Manual Visual builds and compares in its own job with `GOFURRY_VISUAL_ENV=pinned`.
+No tier installs browsers or restores another run's output. See [CI tiers](#ci-tiers-134)
+for triggers, group inventory and failure artifacts.
 
 The environment sentinel uses a real Chromium page to check browser type,
 viewport, DPR, language, timezone, reduced motion and light theme; CI/pinned runs
@@ -275,7 +513,7 @@ Static architecture/debt remains `style:policy`'s responsibility.
 
 ### Comparison and approved updates
 
-Local `npm run test:visual` is diagnostic only outside the pinned environment.
+Local `pnpm run test:visual` is diagnostic only outside the pinned environment.
 Comparisons use `updateSnapshots: 'none'`, so missing baselines also fail instead
 of being created. Snapshots belong in tracked
 `tests/browser/visual/__snapshots__/{testFilePath}/{explicit-name}.png`; do not
@@ -306,14 +544,14 @@ docker run --rm --init --ipc=host --platform linux/amd64 \
   --workdir /work/apps/cn/nav-web \
   --env GOFURRY_VISUAL_ENV=pinned \
   mcr.microsoft.com/playwright:v1.60.0-noble@sha256:9bd26ad900bb5e0f4dee75839e957a89ae89c2b7ab1e76050e559790e946b948 \
-  sh -lc 'npm ci && npm run build && npm run test:visual'
+  sh -lc 'npm install --global pnpm@12.6.0 && pnpm install --frozen-lockfile && pnpm run build && pnpm run test:visual'
 ```
 
 Only for an explicitly approved baseline change, use the same command
 with its last line replaced by:
 
 ```sh
-  sh -lc 'npm ci && npm run build && npm run test:visual:update'
+  sh -lc 'npm install --global pnpm@12.6.0 && pnpm install --frozen-lockfile && pnpm run build && pnpm run test:visual:update'
 ```
 
 Review the resulting snapshot diff before committing. P3.3.1 does not run this
@@ -352,7 +590,7 @@ Real Preferences/backdrop composition belongs to P3.3.3; business surfaces to
 P4+. Do not turn Foundation into a page gallery.
 
 Initial baseline creation is an approved visual-contract action. Use the pinned
-container/update guard above, then run `npm run test:visual` **twice consecutively**
+container/update guard above, then run `pnpm run test:visual` **twice consecutively**
 without updating. Both comparisons must pass. Investigate any difference rather
 than regenerating it away. Maintainers must review all four PNGs for correct
 primitive states, independent Generic Modal/Toggle scope and mobile fit before
@@ -442,12 +680,12 @@ rule advertised a payload that the build did not emit. Keep the zero-error check
 for real NuxtLink prefetch rather than hiding missing-payload errors in fixtures.
 
 Initial creation is explicitly authorized only for these six images. In the
-pinned Linux/Node 24 container above, after `npm ci` and `npm run build`, run:
+pinned Linux/Node 24 container above, after `pnpm install --frozen-lockfile` and `pnpm run build`, run:
 
 ```sh
-npm run test:visual:update -- -- static-pages.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- static-pages.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 The extra separator keeps the file filter out of Playwright's optional update
@@ -487,9 +725,9 @@ Initial creation is authorized only for the four Updates images. After install
 and build in the pinned environment, run:
 
 ```sh
-npm run test:visual:update -- -- updates-page.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- updates-page.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **23 passed**; Functional Browser is **65**.
@@ -530,9 +768,9 @@ Initial creation is authorized only for these four Error images in the pinned
 Linux/Node 24 environment, after install/build:
 
 ```sh
-npm run test:visual:update -- -- error-experience.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- error-experience.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **27 passed**; Functional Browser is **67**.
@@ -570,9 +808,9 @@ Initial creation is authorized only for these two images in the pinned
 Linux/Node 24 environment, after install/build:
 
 ```sh
-npm run test:visual:update -- -- page-scroll-dock.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- page-scroll-dock.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **29 passed**; Functional Browser is **68**.
@@ -601,9 +839,9 @@ Create only `footer-light-desktop.png` and `footer-dark-desktop.png` in the pinn
 Linux/Node 24 environment after install/build:
 
 ```sh
-npm run test:visual:update -- -- footer-shell.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- footer-shell.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **31 passed**; Functional Browser stays **68**.
@@ -654,9 +892,9 @@ geometry/quiet checks. No global Home animation wait, mask or tolerance is added
 Only these eight initial images are authorized, in the existing pinned environment:
 
 ```sh
-npm run test:visual:update -- -- nav-shell.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- nav-shell.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Both comparisons must report **39 passed**, Functional Browser **70**. The original
@@ -705,9 +943,9 @@ candidate; its five raw debts are not live Header coverage.
 Only these four initial snapshots may be created in the pinned environment:
 
 ```sh
-npm run test:visual:update -- -- nav-home-header.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- nav-home-header.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Acceptance is **72 Functional / 43 Visual / 42 PNG**, with the existing 38 PNGs,
@@ -754,9 +992,9 @@ sleep, network-idle, mask, tolerance or full-page snapshot is used.
 Only the eight new baselines may be created in the existing pinned environment:
 
 ```sh
-npm run test:visual:update -- -- nav-revealed-content.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update -- nav-revealed-content.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Acceptance is **76 Functional / 51 Visual / 50 PNG**, with two consecutive full
@@ -907,9 +1145,9 @@ Only these fourteen initial snapshots may be created in the existing pinned
 Linux/Node24 environment, after its own clean install/build:
 
 ```sh
-npm run test:visual:update -- missing games-search.spec.ts
-npm run test:visual
-npm run test:visual
+pnpm run test:visual:update missing games-search.spec.ts
+pnpm run test:visual
+pnpm run test:visual
 ```
 
 Playwright's `missing` mode writes absent images but reports their first creation
@@ -990,46 +1228,50 @@ this phase does not migrate appearance or reduce style debt.
 
 ### Full verification
 
-Fresh `npm ci` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
+Use Node 24 and pnpm 12.6.0. Root `task verify` includes the local Unit/Nuxt,
+contract, static and build gates; Browser and pinned Linux Visual remain explicit.
+The two frontends keep independent locks and project-local script permissions.
+For an old npm checkout, remove or move aside its `node_modules` once before the
+first pnpm install so stale hoisted packages cannot mask the new dependency graph.
+The container examples bootstrap pnpm itself with npm; project execution uses pnpm.
+
+Fresh `pnpm install --frozen-lockfile` runs `nuxt prepare` through `postinstall`, generating `.nuxt`
 types/config before either test project runs. Verification must not rely on a
 previous dev server or build having generated `.nuxt/tsconfig.json`.
 
 ```sh
-npm ci
-npm run lint
-npm run stylelint
-npm run style:policy:test
-npm run style:policy
-npm run test:unit
-npm run test:nuxt
-npm test
-npm run typecheck
-npm run insights:semantics
-npm run seo:recovery:test
-npm run build
-npx playwright install chromium
-npm run test:browser -- --workers=1
+pnpm install --frozen-lockfile
+pnpm run lint
+pnpm run stylelint
+pnpm run style:policy:test
+pnpm run style:policy
+pnpm run test:unit
+pnpm run test:nuxt
+pnpm test
+pnpm run typecheck
+pnpm run insights:semantics
+pnpm run seo:recovery:test
+pnpm run build
+pnpm exec playwright install chromium
+pnpm run test:browser --workers=1
 ```
 
 This uses the existing CI worker count locally; no retries. Focused smoke and
 regression commands remain useful during development, but need not duplicate a
 completed full run without a new concern. Runner/fixture retirement acceptance
 uses two complete runs to expose state/teardown leaks. Do not compete with a
-simultaneous resource-heavy Visual build. On Linux CI install Chromium with
-`npx playwright install --with-deps chromium`.
+simultaneous resource-heavy Visual build. For an uncontainerized Linux workstation,
+install Chromium with `pnpm exec playwright install --with-deps chromium`.
 
-The existing Nav Web CI job has separate **Unit tests** and **Nuxt tests** steps
-before typecheck/contract guards/build. It also builds the actual Docker deployment
-image, covering dependency-only `npm ci` followed by source copy and fresh Nuxt
-preparation; a full-checkout npm build alone does not cover that ordering.
-After both builds succeed it installs Chromium
-and runs **Browser tests** (`npm run test:browser`). A successful local run of the
-same commands is local evidence, not proof of a remote Actions run. The separate
-`nav-web-visual` job adds its own container install/build/Visual gate after this.
-Run those three commands in the pinned container as well. After an authorized
-push verify that both `nav-web` and `nav-web-visual` actually ran and passed; a
-skipped Visual job is not acceptance. When instructed not to push, report remote
-gate acceptance as unverified.
+The commands above are an explicit full local acceptance run, not the daily CI
+default. #134's [three tiers](#ci-tiers-134) keep daily Fast, Full regression and
+manual Visual independently visible. The main/manual Full image check still covers
+dependency-only frozen install followed by source copy and fresh Nuxt preparation;
+a full-checkout build alone does not cover that ordering. Image context remains
+`apps/cn/nav-web`. Gates fail on required dependencies that fail or unexpectedly skip.
+After an authorized push/dispatch verify the selected tier actually passed; Fast
+success, local results or skipped jobs are not Full/Visual acceptance. When remote
+execution is unavailable or not authorized, report that tier as unverified.
 
 Ordinary test-only migrations with unchanged production/runtime and smoke
 behavior need no manual UI review once guards pass. Creating or changing golden
@@ -1042,7 +1284,7 @@ and [Vitest projects](https://vitest.dev/guide/projects).
 
 The remaining deterministic background/SEO/Insights runtime checks now use the
 existing single Browser Gate: 179 retained cases plus 181 migrated cases (360).
-Run `npm run build` then `npm run test:browser`; a focused run accepts a spec
+Run `pnpm run build` then `pnpm run test:browser`; a focused run accepts a spec
 path. The three aliases `background:smoke`, `seo:recovery:smoke` and
 `insights:smoke` and the eight runners below are retired. Historical acceptance
 records retain their original command evidence.

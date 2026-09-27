@@ -39,3 +39,61 @@ type GfaAdminAuditLog struct {
 	OperatorName      string           `json:"operator_name"`
 	OperatorRole      string           `json:"operator_role"`
 }
+
+type GfaCollaborationBoardEdge struct {
+	ID                 int64            `json:"id"`
+	SourceID           int64            `json:"source_id"`
+	TargetID           int64            `json:"target_id"`
+	SourceHandle       string           `json:"source_handle"`
+	TargetHandle       string           `json:"target_handle"`
+	Routing            string           `json:"routing"`
+	Label              string           `json:"label"`
+	Color              string           `json:"color"`
+	Arrow              bool             `json:"arrow"`
+	CreatedByAccountID int64            `json:"created_by_account_id"`
+	UpdatedByAccountID int64            `json:"updated_by_account_id"`
+	Version            int64            `json:"version"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+}
+
+type GfaCollaborationBoardNode struct {
+	ID                 int64            `json:"id"`
+	Body               string           `json:"body"`
+	X                  int32            `json:"x"`
+	Y                  int32            `json:"y"`
+	Width              int32            `json:"width"`
+	Height             int32            `json:"height"`
+	ZIndex             int32            `json:"z_index"`
+	CreatedByAccountID int64            `json:"created_by_account_id"`
+	UpdatedByAccountID int64            `json:"updated_by_account_id"`
+	Version            int64            `json:"version"`
+	CreatedAt          pgtype.Timestamp `json:"created_at"`
+	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	Kind               string           `json:"kind"`
+	Title              string           `json:"title"`
+	Color              string           `json:"color"`
+	Rotation           int32            `json:"rotation"`
+	ReferenceKind      *string          `json:"reference_kind"`
+	ReferenceID        *int64           `json:"reference_id"`
+}
+
+type GfaContentIdea struct {
+	ID                     int64            `json:"id"`
+	Kind                   string           `json:"kind"`
+	Title                  *string          `json:"title"`
+	Source                 *string          `json:"source"`
+	SourceKey              *string          `json:"source_key"`
+	Note                   string           `json:"note"`
+	Priority               string           `json:"priority"`
+	Status                 string           `json:"status"`
+	CreatedByAccountID     int64            `json:"created_by_account_id"`
+	ResearchingByAccountID *int64           `json:"researching_by_account_id"`
+	LinkedKind             *string          `json:"linked_kind"`
+	LinkedResourceID       *int64           `json:"linked_resource_id"`
+	Version                int64            `json:"version"`
+	CreatedAt              pgtype.Timestamp `json:"created_at"`
+	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
+	ResearchingAt          pgtype.Timestamp `json:"researching_at"`
+	LandedAt               pgtype.Timestamp `json:"landed_at"`
+}

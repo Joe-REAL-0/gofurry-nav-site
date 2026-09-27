@@ -57,10 +57,116 @@ contracts remain authoritative; completion does not authorize redesign or more c
 
 ## Debt and exceptions
 
+Site Detail #109 P1 runtime follows the contract's Site/Target ownership section.
+Use `siteDetailRouteState.ts` for UI query and `siteRoutes.ts` for links; keep
+Insights keyed only by Site ID and View counted once per hydrated Site session.
+Use the complete `siteCapabilityRegistry.ts`,
+as the catalog. `site-detail-contract.spec.ts` owns Target-switch request counts
+and failure isolation; SEO remains Entity-only. P1 grants no appearance/debt or
+Visual baseline changes; P2–P8 and #108 require their own scope.
+
+P2 Shell/Target Context follows the contract's separate P2 section. New Target
+surfaces consume `siteTargetPresentation.ts`; primary tabs/selector use the P1
+route owner. `site-detail.less` owns appearance, `site-detail-shell.spec.ts` owns
+responsive/keyboard/pending/race behavior. Only P2's replaced Hero/popover/root
+debt may decrease; remaining panels keep their later-phase owners. P2 requires
+maintainer visual review before P3 and does not create a Visual golden.
+
+P3 Overview consumes `siteOverviewPresentation.ts`, a pure Site-only projection.
+Keep the first Site/language summary for the page session, use all seven registry
+capabilities, and preserve empty/unavailable plus day/exact precision. P6 replaced
+the legacy Insights panel; Overview owns no fetch or Target
+protocol checks. `site-overview.spec.ts` owns this contract using the shared
+fixture. P3 adds no appearance debt or Visual golden and requires maintainer
+visual acceptance before P4.
+
+P4 Observation uses `siteObservationPresentation.ts` for Target evidence and the
+P1 route owner for its five secondary views. Page-owned `useSiteObservationHistory`
+auto-loads only hydrated Performance, caches by Site/Target/Ping, slices one 100-row
+response and isolates late results. Other views add no fetch. Keep Security probes
+out of Web, raw timings unsummed and collector loss percentages unscaled. Use
+`site-observation.spec.ts` plus pure/Nuxt contracts; only removed Observation debt
+may decrease. P4 requires manual review before P5 and no accepted Visual updates.
+
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
-example or permission. Remaining style debt belongs to Site Detail #109, Insights
+example or permission. After #109 P7, remaining style debt belongs to Insights
 #108 and intentionally preserved ambient effects. No opportunistic migration of
 these areas; their new code still follows the contract.
+
+P5 Security consumes only Current Target Detail evidence through
+`siteSecurityPresentation.ts`; four secondary views use `selectSiteSecurityView`.
+No view fetch, score/verdict, port risk inference or WAF deployment claim is allowed.
+Preserve collector booleans, missing/failure distinctions and verification versus
+validity. `site-security.spec.ts` owns requests/states/disclosures/responsive checks.
+Only its replaced Metric Grid/Light Probe debt is removed; deep remains zero.
+P6 requires maintainer review and no P8 golden is created here.
+
+P6 Insights uses `siteInsightsPresentation.ts` for Site facts and full recent
+changes. Page-owned `useSiteInsights` shares SSR data/state/retry with Overview;
+`useSiteInsightTrend` activates only hydrated Insights and caches metric + range.
+Target never enters either identity. Use route helpers for metric/range, preserve
+slice/fact failure distinctions and classify every active chart state. Public
+copy keeps Ecosystem naming. `site-insights.spec.ts` and real Nuxt tests own this
+contract; Site Detail owns appearance, #108 remains separate. Manual review precedes
+P7, and accepted Visual files are unchanged.
+
+P7 retires the consumer-audited SiteHealthSummaryPanel, SiteOverview, SiteSignalCards,
+SiteChangeEvents and detailTypes. Site Detail has zero style debt; do not restore
+legacy clones or historical dark/deep exceptions. Active P2–P6 components and
+`site-detail.less` keep their existing appearance/runtime ownership. Home still
+uses `site.siteDnsPanel.none`; other retired `site.*` labels are removed. Preserve
+active ESLint suppressions, ambient raw debt and #108 important debt. P8 requires
+maintainer Desktop/Mobile smoke and separate authorization for final Visual work.
+
+Task B refines only Site Detail presentation through its existing Less owner.
+Keep the three Surface levels, Phosphor system icons and shared segmented pattern.
+`siteDetailPresentation.ts` owns localized reason copy and display tones, never
+Collector health decisions. Health Strip/Security share P5 certificate expiry
+normalization; known reason/validation codes use both locales. Target Context no
+longer renders relation/infrastructure dumps. `site-detail-refinement.spec.ts`
+adds focused UI assertions and optional temporary review screenshots through the
+same Functional fixture. Debt stays zero; full manual review precedes P8 goldens.
+
+First-round Site Detail completion uses shared acrylic Plane A/B/C and borderless
+content surfaces, spaced 500ms hover rows, an Identity Note and title-row
+Observation/Security subnav. Overview/Observation composition remains intact;
+Security and Insights preserve all runtime and evidence contracts. This supersedes
+earlier card/divider appearance only. See the frontend contract. Stop before P8
+or a second round; final Visual work still needs separate authorization.
+
+Task C explicitly authorizes the second-round consistency/entry refinement and
+supersedes that material hierarchy: all content panels use `--site-detail-panel`,
+with one shared hover/selected family. `siteTargetSignals.ts` owns reliable typed
+CDN hints and shared protocol status display. Blank/domain-only URLs now mean
+Observation/Performance; both Overviews are explicit. Default hydration adds one
+Ping history call, never SSR. Preserve P4/P6 cache/race internals and all other
+runtime/SEO/debt boundaries. Task C still does not authorize P8 or final goldens.
+
+Task D authorizes focused composite/help/changes refinement plus Game average and
+one-shot Gallery media-abort fixes. Preserve Task C entry and P4/P6 runtime.
+`SiteDetailHelpTooltip` replaces native Info titles; `SiteChangeStream` shares only
+serpentine geometry with Game. All appearance stays with its existing owner.
+For Task D only, run focused Playwright, typecheck and focused lint/style checks;
+do not run full tests or production build. `GOFURRY_FIXTURE_DEV=1` opts the existing
+fixture into isolated local Nuxt source checks, never CI/production acceptance.
+No P8 or final golden is authorized.
+
+Task E adds one optional Site ID + language recommendation SSR slice. Backend
+membership uses full groups; candidates use the existing Home Top-8 builder before
+union/dedupe/daily SHA-256 shuffle. Mobile Similar is auxiliary local state, never
+a fifth route tab. SSR-rendered recommendations are SFW; mode changes only filter
+raw items. Similar links never count views themselves. The focused Task E budget
+also forbids full suites/build; reuse the opt-in source fixture. No P8/goldens.
+
+P8 freezes the final Site Detail product. `fixtures/site-detail-visual.ts` and
+`visual/site-detail.spec.ts` under `tests/browser/` own eight root captures in the
+existing pinned Visual runner. Scope updates to this spec and require a separate
+compare; never repair a product defect by updating a golden. Functional retains
+the eight Site Detail regression owners, including recommendations/refinement,
+with no exact pixel-gap assertions. The contract's final P8 section supersedes
+intermediate phase designs; the #109 acceptance ledger separates local evidence,
+current-code remote gates and pending explicit maintainer visual approval.
+No new feature/design round or P9 follows from closure.
 
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
@@ -71,6 +177,13 @@ be regenerated to hide new findings; prune them only after fixing their debt.
 
 ## Verification and test ownership
 
+Use Node 24 and pnpm 12.6.0, pinned in `packageManager`. Install this project's
+independent lock with `pnpm install --frozen-lockfile`; use `pnpm run` / `pnpm exec`.
+Its `pnpm-workspace.yaml` contains only local settings and script permissions;
+there is no root workspace. Root Task offers `deps:nav-web`, `lint:nav-web`,
+`typecheck:nav-web`, `test:nav-web`, `test:nav-web:browser`, `build:nav-web` and
+`build:nav-web-image`. Browser/Visual remain outside default `task test`/`verify`.
+
 Use the [current verification sequence](../../../docs/frontend/testing.md#full-verification).
 Pure logic uses Vitest unit; real Nuxt state/composables use the Nuxt project.
 Reset cookies/useState per case and mock only business injection boundaries.
@@ -80,8 +193,12 @@ Browser tests use the real production Nitro build, deterministic local upstream
 and exact network/error accounting. Each worker owns stable servers; each test
 owns fresh mutable scenario/gates. Playwright owns contexts/pages. Release gates
 unconditionally; do not use `unrouteAll(wait)` or fixed sleeps for readiness.
-Chromium only, retries zero, CI workers one. Use `--workers=1` locally for the
-complete acceptance run; focused smoke/regression commands remain available.
+Chromium only, retries zero, CI workers one. Daily dev/PR `nav-web` requires Fast
+static/unit/Nuxt/build plus the seven Smoke owners in one job. Full runs on main,
+manual dispatch and nightly dev through three explicit inventory-checked groups;
+deployment image verification runs on main/manual Full only. Visual is manual-only.
+Use `--workers=1` locally; do not run Full locally merely to validate CI wiring.
+See the testing guide's #134 tier contract and measured acceptance record.
 
 `assertHeroHydration` is the sole narrow mobile Home Footer-debt check. It defaults
 to `/`; only the English Home fixture explicitly opts into `/en`. Require one
@@ -98,7 +215,10 @@ Insights/SEO Contract Guards. External/cloud acceptance requires explicit scope
 and credentials and is not a normal gate.
 
 Visual is separate from Functional Browser. Only the current digest-pinned Linux
-Playwright image with Node 24 is authoritative; CI rebuilds and only compares.
+Playwright image with Node 24 is authoritative. Fast builds and runs Smoke in one
+job. Full archives one build for all three groups, pinning their checkout to its
+resolved source SHA (nightly resolves dev once). Manual Visual builds and compares
+in its own pinned job. Docker separately verifies main/manual Full deployment images.
 Never update snapshots to make a test pass. Approved visual changes require
 explicit authorization, pinned generation and maintainer review. Treat package,
 image digest, browser revision and baselines as one upgrade unit.

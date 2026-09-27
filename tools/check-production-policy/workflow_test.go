@@ -61,7 +61,7 @@ func TestEngineeringFoundationWorkflowParses(t *testing.T) {
 	if !ok {
 		t.Fatal("checks workflow has no jobs mapping")
 	}
-	for _, name := range []string{"detect-changes", "production-go", "nav-web", "repository-policy", "active-vulnerability", "foundation", "postgres-integration"} {
+	for _, name := range []string{"detect-changes", "production-go", "nav-web", "nav-web-fast", "repository-policy", "active-vulnerability", "foundation", "postgres-integration"} {
 		if _, ok := jobs[name]; !ok {
 			t.Fatalf("checks workflow is missing %s", name)
 		}
@@ -84,6 +84,33 @@ func TestSecurityWorkflowParses(t *testing.T) {
 	}
 	if _, ok := jobs["govulncheck"]; !ok {
 		t.Fatal("security workflow is missing govulncheck")
+	}
+}
+
+func TestTaskfileChangesReachQualityGates(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join(repositoryRootForTest(t), ".github/workflows/checks.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow map[string]any
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	triggers := workflow["on"].(map[string]any)
+	for _, event := range []string{"push", "pull_request"} {
+		paths := triggers[event].(map[string]any)["paths"].([]any)
+		found := false
+		for _, path := range paths {
+			found = found || path == "Taskfile.yml"
+		}
+		if !found {
+			t.Fatalf("%s ignores Taskfile changes", event)
+		}
+	}
+	for _, command := range []string{"node .github/scripts/detect-changes.mjs", "node --test .github/scripts/detect-changes.test.mjs"} {
+		if !strings.Contains(string(data), command) {
+			t.Fatalf("change selection and its Taskfile regression tests must run: %s", command)
+		}
 	}
 }
 

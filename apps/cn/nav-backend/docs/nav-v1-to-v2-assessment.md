@@ -31,6 +31,7 @@
 | 路由 | 状态 | 用途 |
 |---|---|---|
 | `GET /api/v2/nav/sites/:siteId/detail` | 已完成 | 站点详情页聚合数据 |
+| `GET /api/v2/nav/sites/:siteId/recommendations` | 已完成（Task E） | Site 级同分组 Home Top-8 发现，按 UTC 日期稳定打散 |
 | `POST /api/v2/nav/sites/:siteId/view` | 已完成 | 站点详情页浏览量触达 |
 | `GET /api/v2/nav/sites/:siteId/summary` | 已完成 | 站点健康摘要 |
 | `GET /api/v2/nav/sites/:siteId/targets/:target/summary` | 已完成 | 目标健康摘要 |
@@ -394,8 +395,8 @@ go test -race ./apps/nav/...
 
 ```bash
 cd apps/cn/nav-web
-npm run typecheck
-npm run build
+pnpm run typecheck
+pnpm run build
 ```
 
 性能验证：
@@ -408,3 +409,17 @@ npm run build
 ## 当前下一步建议
 
 `nav/page/*` 已完成下线。下一步建议转向剩余 v1 `site/*` 能力的评估与迁移，尤其是 `gofurry-rag` 仍在使用的站点详情与 HTTP 记录接口。
+
+
+## Task E 补充：站点发现（2026-09-27）
+
+`/api/v2/nav/sites/:siteId/recommendations?lang=zh|en&limit=8` 与 Detail 路由一同启用。
+响应为 schema_version=1、generated_at（UTC）、state、site_id、items（SiteVo，含 view_count）。
+limit 默认/上限均为 8；只消费 lang/limit，不消费 Target、显示模式或工作区参数。
+无可用读模型时返回 unavailable 空 slice；无候选返回 ready 空列表。
+
+复用 GetSiteList/GetGroupList 的既有缓存与数据库回退。完整 group.Sites 决定所属关系，
+BuildHomeGroupsForCache 决定每组 Top-8，再 union/去重/排除自己；按
+SHA-256(siteId|candidateId|UTC date) 排序后最多取 8，不补第九名或其它分组。
+不新增表、Redis key、定时任务或迁移。前端负责本地 SFW 过滤与展示，列表本身不增加浏览量。
+请求及移动端本地 Tab 合同见根目录 contracts/nav-web-frontend.md 的 Task E 节。

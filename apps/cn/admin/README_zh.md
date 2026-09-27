@@ -19,13 +19,15 @@ Owner。详见[托管资产说明](../../../docs/managed-assets.md)与[资产契
 
 ## 本地开发
 
-需要 Go 1.26.7、Node.js/npm、PostgreSQL 和 Redis。
+Steam 预填使用 steam-go 的 `GetResolvedAppDetails`，按内部 `steam_appid` 验证身份，兼容 Steam 外层响应键错位。中文/英文详情不完整或封面缺失时，响应保留可用数据并附带 `warnings`；React 显示提示，只应用非空内容字段。完全没有可用数据时仍返回失败。
+
+需要 Go 1.26.7、Node.js 24 / pnpm 12.6.0、PostgreSQL 和 Redis。
 
 ~~~bash
 # React Admin（开发端口 5178，API 代理到 10099）
 cd react
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 cd ..
 
 cp config/server.example.yaml config/server.yaml
@@ -45,7 +47,7 @@ go run . reset-password --config config/server.yaml --username owner --password 
 
 ## 生产构建与 systemd
 
-根目录 `build.bat admin` 会先将 React 构建到 embed 目录，再生成自包含 Linux 二进制和配套 `dist/`。必须使用最终部署位置的二进制，并从预期工作目录执行安装：
+根目录 `task build:admin` 会先将 React 构建到 embed 目录，再生成自包含 Linux 二进制和配套 `dist/`。必须使用最终部署位置的二进制，并从预期工作目录执行安装：
 
 ~~~bash
 cd /srv/gofurry/gofurry-admin
@@ -70,10 +72,12 @@ go test ./...
 go build ./...
 
 cd react
-npm ci
-npm run typecheck
-npm test
-npm run build
+pnpm install --frozen-lockfile
+pnpm run typecheck
+pnpm test
+pnpm run build
 ~~~
 
 详见 [React Admin 本地开发](../../../docs/admin-react.md)、[前端 parity](../../../docs/admin-frontend-parity.md)、[角色运维指南](../../../docs/operations/admin-roles.md)、[数据与系统运维](../../../docs/admin-data-system-operations.md)与[前端契约](../../../contracts/admin-frontend.md)。
+
+[协作中心](../../../docs/collaboration-center.md)提供仅存 GFA 的内容想法池与全局文本画板。正式 Game/Site 创建仍走原 API，关联失败可在正式 Workspace 恢复，不回滚正式内容。升级须先备份 GFA、手工运行新 Goose migration，再部署新版 Admin binary。

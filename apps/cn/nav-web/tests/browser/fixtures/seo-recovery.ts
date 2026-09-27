@@ -1,16 +1,18 @@
 import { runtimeTest, type Reply } from './insights-runtime'
 import { mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
+import { isSiteTrend, siteTrendResponse } from './site-insights-data'
 
 export interface SEOState { failure: 'site' | 'game' | 'sitemap' | ''; siteInsightsFailure: boolean; gameInsightsFailure: boolean }
 export const seoState = (): SEOState => ({ failure: '', siteInsightsFailure: false, gameInsightsFailure: false })
 export const allowedSEO = (url: URL) => [
   '/api/v2/nav/home', '/api/v2/nav/sites/index', '/api/v2/nav/site-groups', '/api/v2/game/list',
   '/api/v2/game/info', '/api/v2/game/home', '/api/v2/game/reviews', '/api/v2/game/recommend/similar',
-].includes(url.pathname) || /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
+].includes(url.pathname) || /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|recommendations|view)$/.test(url.pathname)
   || /^\/api\/v2\/game\/games\/(82|83|999999999)\/(insights(?:\/(players|prices))?|view|daily)$/.test(url.pathname)
-  || url.pathname === '/api/v2/nav/site-groups/12/sites'
+  || url.pathname === '/api/v2/nav/site-groups/12/sites' || isSiteTrend(url)
 
 export function seoResponse(url: URL, media: string, state: SEOState): Reply {
+  if (isSiteTrend(url)) return siteTrendResponse(url)
   const path = url.pathname
   if (path === '/api/v2/nav/home') return { data: { schema_version: 4, groups: [],
     spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },
@@ -23,6 +25,7 @@ export function seoResponse(url: URL, media: string, state: SEOState): Reply {
     schema_version: 1, generated_at: '2026-08-30T12:00:00Z', state: 'ready',
     items: [], page: 1, page_size: 24, total: 0, has_more: false } }
   const siteID = path.match(/\/sites\/(\d+)\//)?.[1]
+  if (siteID && path.endsWith('/recommendations')) return { data: { schema_version: 1, generated_at: '2026-09-27T00:00:00Z', site_id: Number(siteID), state: 'ready', items: [] } }
   if (siteID && path.endsWith('/detail')) {
     if (state.failure === 'site') return { status: 503 }
     if (siteID === '999999999' || (url.searchParams.has('target') && !['target.example', 'alt.example'].includes(url.searchParams.get('target')!))) return { status: 404 }

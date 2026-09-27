@@ -458,3 +458,12 @@ export interface NavSearchSuggestionsResponse {
     cache_state: 'hit' | 'miss';
     reason_messages?: string[];
 }
+
+// Entity-level discovery; Target/workspace/display mode never enter its identity.
+export interface SiteRecommendations {
+  schema_version: 1
+  generated_at: string
+  state: 'ready' | 'unavailable'
+  site_id: number
+  items: Site[]
+}

@@ -8,7 +8,7 @@ type Theme = 'light' | 'dark'
 type Call = { path: string, query: Record<string, string> }
 type Gate = { received: boolean, completed: boolean, promise: Promise<void>, release(): void, wait(): Promise<void> }
 type Rule = { path: string, query: Record<string, string>, fail: boolean, gate?: Gate }
-type State = { reads: Call[], unexpected: string[], rules: Rule[], empty: boolean, adult: boolean, historyPoints: number }
+type State = { reads: Call[], unexpected: string[], rules: Rule[], empty: boolean, adult: boolean, historyPoints: number, average: number | null, missingChartEvidence: boolean }
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type Worker = { app: App, current: State | null }
 export const detailNow = '2026-09-18T12:40:00+08:00'
@@ -59,7 +59,7 @@ function payload(url: URL, media: string, state: State) {
   if (/^\/games\/\d+\/view$/.test(path)) return { view_count: 121 }
   if (/^\/games\/\d+\/insights$/.test(path)) return {
     game: { id: Number(id), name: title(id, lang) }, state: { free: false, windows: true, mac: true, linux: null, release: 'available', as_of: '2026-09-18' },
-    players: { current: 0, peak_30d: 120, average_30d: 42.5, as_of: '2026-09-18T04:00:00Z', fact_through: '2026-09-17', eligible_from_30d: '2026-08-19', observed_days_30d: 28, successful_samples_30d: 112, sample_coverage_30d: .93 },
+    players: { current: 0, peak_30d: 120, average_30d: state.average, as_of: '2026-09-18T04:00:00Z', fact_through: '2026-09-17', eligible_from_30d: '2026-08-19', observed_days_30d: 28, successful_samples_30d: 112, sample_coverage_30d: .93 },
     price: null, regional_prices: { as_of: '2026-09-18', regions: [
       { region: 'CN', available: true, state: 'priced', currency: 'CNY', initial_amount: 4200, final_amount: 0, discount_percent: 100, observed_low: { amount: 0, currency: 'CNY', first_seen: '2026-09-01', observed_since: '2026-09-01', initial_amount: 4200, discount_percent: 100 } },
       { region: 'US', available: true, state: 'unknown', currency: null, initial_amount: null, final_amount: null, discount_percent: null, observed_low: null },
@@ -71,7 +71,8 @@ function payload(url: URL, media: string, state: State) {
     return { region, requested_range: url.searchParams.get('range'), available_from: '2026-09-01', available_through: '2026-09-08',
       points: Array.from({ length: state.historyPoints }, (_, i) => ({ date: `2026-09-${String(i + 1).padStart(2, '0')}`, ...(player
         ? { min: i, max: [24, 42, 32, 0, 65, 56, 88, 71][i % 8], avg: i === 3 ? null : 12 + i * 4 }
-        : { state: i === 3 ? 'unknown' : i === 4 ? 'free' : 'priced', currency: i === 3 ? null : region === 'CN' ? 'CNY' : region === 'US' ? 'USD' : 'HKD', initial_amount: i === 3 ? null : 4200, final_amount: i === 3 ? null : i === 4 ? 0 : 3200 - i * 100, discount_percent: i === 3 ? null : 20 }) })) }
+        : { state: i === 3 ? 'unknown' : i === 4 ? 'free' : 'priced', currency: i === 3 ? null : region === 'CN' ? 'CNY' : region === 'US' ? 'USD' : 'HKD', initial_amount: i === 3 ? null : 4200, final_amount: i === 3 ? null : i === 4 ? 0 : 3200 - i * 100, discount_percent: i === 3 ? null : 20 }),
+        ...(state.missingChartEvidence && i === 2 ? player ? { max: undefined, avg: null } : { final_amount: null, initial_amount: undefined, discount_percent: null } : {}) })) }
   }
   state.unexpected.push(`unhandled upstream ${url.href}`); return null
 }
@@ -96,7 +97,8 @@ export type DetailScene = {
   tab(key: string): Promise<void>, fail(path: string, query?: Record<string, string>): () => void,
   hold(path: string, query?: Record<string, string>): Gate, points(count: number): void,
   count(path: string, query?: Record<string, string>): number, assertQuiet(): void, assertInitialReads(): void,
-  popup(action: () => Promise<unknown>, url: string): Promise<void>, movieGate(): Gate, failMovie(): void,
+  popup(action: () => Promise<unknown>, url: string): Promise<void>, movieGate(): Gate, expectMovieAbort(): Promise<void>, failMovie(): void, average(value: number | null): void,
+  missingChartEvidence(): void,
   settle(target?: Locator): Promise<void>, clip(target: Locator, margin?: number): Promise<{ x: number, y: number, width: number, height: number }>,
 }
 export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>({
@@ -118,16 +120,23 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
   }, { scope: 'worker' }],
   detail: async ({ page, context, detailApp }, use, testInfo) => {
     expect(detailApp.current).toBeNull()
-    const state: State = { reads: [], unexpected: [], rules: [], empty: false, adult: false, historyPoints: 8 }
+    const state: State = { reads: [], unexpected: [], rules: [], empty: false, adult: false, historyPoints: 8, average: 42.5, missingChartEvidence: false }
     detailApp.current = state
     const { app } = detailApp, expectedURLs = new Set<string>(), errors = captureBrowserErrors(page, expectedURLs)
     const rawErrors: { text: string, url: string }[] = [], external: string[] = [], failed: Request[] = [], httpFailures: Request[] = []
     const gates: Gate[] = [], browserCalls: DetailScene['browserCalls'] = [], popups: string[] = [], allowedPopups = new Set<string>()
     let movie: Gate | undefined, movieFailed = false, opened = false
+    let activeMovieRequest: Request | undefined, expectedMovieAbort: Request | undefined, intentionalUnmount = false, abortWasIntentional = false
+    const finished = new Set<Request>()
+    context.on('requestfinished', request => finished.add(request))
     page.on('console', message => { if (message.type() === 'error') rawErrors.push({ text: message.text(), url: message.location().url }) })
-    context.on('requestfailed', request => failed.push(request))
+    context.on('requestfailed', request => {
+      failed.push(request)
+      if (request === expectedMovieAbort) abortWasIntentional = intentionalUnmount
+    })
     context.on('request', request => {
       const url = new URL(request.url())
+      if (url.href === app.upstreamUrl + '/media/detail-trailer.webm') activeMovieRequest = request
       if (url.origin === app.base && url.pathname.startsWith('/api/')) browserCalls.push({ method: request.method(), url: url.pathname + url.search })
     })
     context.on('response', response => { if (response.status() >= 400) httpFailures.push(response.request()) })
@@ -137,9 +146,14 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
       if (url.origin === app.upstreamUrl && assetNames.some(name => url.pathname === `/media/detail-${name}.svg`)) return route.fulfill({ contentType: 'image/svg+xml', body: image })
       if (url.origin === app.upstreamUrl && url.pathname === '/media/detail-trailer.webm') {
         if (movieFailed) { expectedURLs.add(url.href); return route.fulfill({ status: 503, body: 'Injected media failure' }) }
-        if (movie) { movie.received = true; await movie.promise }
+        const held = movie
+        if (held) { held.received = true; await held.promise }
+        if (request === expectedMovieAbort && request.failure()?.errorText === 'net::ERR_ABORTED') {
+          if (held) held.completed = true
+          return
+        }
         await route.fulfill({ contentType: 'video/webm', path: fileURLToPath(new URL('../../fixtures/game-detail-trailer.webm', import.meta.url)) })
-        if (movie) movie.completed = true
+        if (held) held.completed = true
         return
       }
       if (url.origin !== app.base) { external.push(url.href); return route.abort('blockedbyclient') }
@@ -168,13 +182,26 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
         await expect.poll(() => page.locator('html').evaluate(el => el.classList.contains('dark'))).toBe(theme === 'dark')
         await expect.poll(() => scene.count('/games/82/view')).toBe(1)
       },
-      async tab(key) { await page.locator(`[data-game-tab="${key}"]`).click(); await expect(page.locator('.game-detail-tab--active')).toHaveAttribute('data-game-tab', key) },
+      async tab(key) {
+        if (expectedMovieAbort && key !== 'gallery') {
+          await expect(page.locator('[data-game-tab="gallery"]')).toHaveAttribute('aria-selected', 'true')
+          intentionalUnmount = true
+        }
+        await page.locator(`[data-game-tab="${key}"]`).click(); await expect(page.locator('.game-detail-tab--active')).toHaveAttribute('data-game-tab', key) },
       fail(path, query = {}) { const rule = { path, query, fail: true }; state.rules.push(rule); return () => { rule.fail = false } },
       hold(path, query = {}) { const held = gate(); gates.push(held); state.rules.push({ path, query, fail: false, gate: held }); return held },
       points(count) { state.historyPoints = count },
       count(path, query = {}) { return state.reads.filter(call => call.path === path && Object.entries(query).every(([k, v]) => call.query[k] === v)).length },
       assertQuiet() {
-        expect(errors).toEqual([]); expect(external).toEqual([]); expect(failed).toEqual([]); expect(state.unexpected).toEqual([])
+        expect(errors).toEqual([]); expect(external).toEqual([])
+        if (expectedMovieAbort) {
+          expect(intentionalUnmount && abortWasIntentional).toBe(true)
+          expect(expectedMovieAbort.url()).toBe(app.upstreamUrl + '/media/detail-trailer.webm')
+          expect(expectedMovieAbort.failure()?.errorText).toBe('net::ERR_ABORTED')
+          expect(failed.filter(request => request === expectedMovieAbort)).toHaveLength(1)
+        }
+        expect(failed.filter(request => request !== expectedMovieAbort).map(request => ({ url: request.url(), error: request.failure()?.errorText }))).toEqual([])
+        expect(state.unexpected).toEqual([])
         for (const request of httpFailures) expect(expectedURLs.has(request.url())).toBe(true)
         for (const entry of rawErrors) {
           expect(expectedURLs.has(entry.url)).toBe(true)
@@ -194,6 +221,15 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
         await popup.waitForURL(url); await popup.waitForLoadState('load'); expect(popups).toContain(url); await popup.close()
       },
       movieGate() { movie = gate(); gates.push(movie); return movie },
+      expectMovieAbort() {
+        expect(expectedMovieAbort).toBeUndefined()
+        expect(activeMovieRequest).toBeDefined()
+        expect(finished.has(activeMovieRequest!)).toBe(false)
+        expectedMovieAbort = activeMovieRequest
+        return context.waitForEvent('requestfailed', request => request === expectedMovieAbort && request.failure()?.errorText === 'net::ERR_ABORTED').then(() => {})
+      },
+      average(value) { state.average = value },
+      missingChartEvidence() { state.missingChartEvidence = true },
       failMovie() { movie = undefined; movieFailed = true },
       async settle(target = scene.root) {
         await target.evaluate(async root => {
@@ -222,6 +258,10 @@ export const test = base.extend<{ detail: DetailScene }, { detailApp: Worker }>(
         await testInfo.attach('detail-nitro.log', { body: app.logs(), contentType: 'text/plain' })
       }
       detailApp.current = null
+      if (expectedMovieAbort) {
+        expect(intentionalUnmount && abortWasIntentional).toBe(true)
+        expect(failed.filter(request => request === expectedMovieAbort && request.failure()?.errorText === 'net::ERR_ABORTED')).toHaveLength(1)
+      }
     }
   },
 })

@@ -20,7 +20,7 @@ func TestEveryBusinessRouteDeclaresCapability(t *testing.T) {
 	defer content.Close()
 
 	protectedFunctions := map[string]bool{
-		"cloudRoutes":  true,
+		"cloudRoutes": true, "collaborationRoutes": true,
 		"changeRoutes": true, "metricRoutes": true, "collectionRoutes": true,
 		"workbenchRoutes": true, "dataOpsRoutes": true, "auditRoutes": true,
 		"accountRoutes": true, "optionsRoutes": true, "navRoutes": true, "gameRoutes": true,
@@ -53,6 +53,17 @@ func TestRepresentativeRouteCapabilityMatrix(t *testing.T) {
 	}
 	source := string(data)
 	expected := []string{
+		`root.Get("/ideas", authmw.Require(authorization.CollaborationRead)`,
+		`root.Post("/ideas/batch-preview", authmw.Require(authorization.CollaborationRead)`,
+		`root.Post("/ideas", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Delete("/ideas/:id", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Put("/board/nodes/:id", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Delete("/board/nodes/:id", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Get("/board", authmw.Require(authorization.CollaborationRead)`,
+		`root.Put("/board/nodes/layout", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Post("/board/edges", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Put("/board/edges/:id", authmw.Require(authorization.CollaborationWrite)`,
+		`root.Delete("/board/edges/:id", authmw.Require(authorization.CollaborationWrite)`,
 		`root.Get("/overview", authmw.Require(authorization.CloudOpsRead)`,
 		`root.Post("/object/repair-mirror", authmw.Require(authorization.CloudOpsManage)`,
 		`root.Post("/edgeone/purge", authmw.Require(authorization.CloudOpsManage)`,
