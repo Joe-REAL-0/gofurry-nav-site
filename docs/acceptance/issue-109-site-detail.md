@@ -539,3 +539,23 @@ changes, mobile stacking and representative Dark views. Confirm Fact/Adoption/
 Coverage separation, Site/Target scope, chart prominence and change-list density.
 Local tests and screenshots do not substitute for P6 exit criterion 37: maintainer
 visual acceptance. Do not enter P7 automatically.
+
+### Home entry development-runtime correction (2026-09-27)
+
+Maintainer reproduction at `/site/106?domain=srk.games` exposed a client setup
+failure: the running Vite transform of SitePrimaryTabs lacked the `useI18n`
+import and threw ReferenceError. Both upstream slices and the SSR document were
+200. An explicit vue-i18n import repairs this dependency. Actual Home domain
+popover navigation in the local development browser now renders all four tabs
+without console errors. The earlier production Browser pass did not cover this
+development transform failure.
+
+The existing Site Detail Browser owner now also exercises the real Home popover
+entry, asserts no document reload and exact Home + Detail/Insights/View accounting.
+Its first run exposed a missing saying in the new Home fixture; supplying the
+normal Home saying removes that unintended fallback without relaxing diagnostics.
+No appearance, style-debt budget or accepted Visual file is changed.
+Lint, stylelint, exact style policy, typecheck and production build passed for
+this correction; the final focused Site runtime/Shell Browser run passed all
+30 cases with zero retries. The full suite and remote CI were not rerun for this
+one-import correction. Functional inventory is now 558; Visual remains 119/118 PNGs.

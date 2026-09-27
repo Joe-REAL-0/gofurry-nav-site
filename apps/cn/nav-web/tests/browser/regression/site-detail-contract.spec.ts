@@ -2,6 +2,40 @@ import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '
 
 const initialPaths = ['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view']
 
+test('Home domain popover enters Site Detail through client navigation', async ({ page, context, runtime }) => {
+  await page.setViewportSize({ width: 960, height: 1040 })
+  // Home's existing weather iframe is an exact isolated third-party boundary.
+  await context.route('https://i.tianqi.com/index.php?c=code&id=73&icon=1&num=3&color=d1d5dc', route => {
+    expect(route.request().method()).toBe('GET')
+    expect(route.request().isNavigationRequest()).toBe(true)
+    expect(route.request().frame().parentFrame()).not.toBeNull()
+    return route.fulfill({ contentType: 'text/html', body: '' })
+  })
+  expect((await page.goto('/', { waitUntil: 'domcontentloaded' }))?.status()).toBe(200)
+  await page.waitForFunction(() => Boolean((document.querySelector('#__nuxt') as Element & { __vue_app__?: unknown })?.__vue_app__))
+  await page.keyboard.press('PageDown')
+  const card = page.locator('.nav-site-card').filter({ hasText: 'Site fixture 41' })
+  await expect(card).toBeVisible()
+  await card.hover()
+  const popover = page.locator('.site-popover--visible')
+  await expect(popover).toBeVisible()
+  const documents: string[] = []
+  page.on('request', request => { if (request.isNavigationRequest() && request.frame() === page.mainFrame()) documents.push(request.url()) })
+  const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
+  await popover.getByText('target.example', { exact: true }).click()
+  await expect(page).toHaveURL('/site/41?domain=target.example')
+  await expect(page.locator('[data-site-hero] h1')).toHaveText('Site fixture 41')
+  await expect(page.locator('[data-site-primary-tab]')).toHaveCount(4)
+  await expect(page.locator('[data-site-primary-tab="overview"]')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('[data-site-overview]')).toBeVisible()
+  await (await view).finished()
+  await settleRuntime(page)
+  expect(documents).toEqual([])
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/home', ...initialPaths].sort())
+  expect(runtime.calls.find(call => call.url.pathname.endsWith('/detail'))!.url.searchParams.get('target')).toBe('target.example')
+  runtime.assertQuiet()
+})
+
 for (const prefix of ['', '/en']) for (const query of ['', '?domain=target.example']) {
   test(`Site/Target SSR ownership ${prefix || 'zh'} ${query || 'entity'}`, async ({ request, runtime }) => {
     const response = await request.get(prefix + '/site/41' + query)

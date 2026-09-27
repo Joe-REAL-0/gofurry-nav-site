@@ -12,8 +12,16 @@ export const test = runtimeTest(
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
     observationRich: false, historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
   url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
+    || url.pathname === '/api/v2/nav/home'
     || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
   (url, media, _body, state) => {
+    if (url.pathname === '/api/v2/nav/home') return { data: {
+      schema_version: 4, groups: [{ id: '12', name: 'Site entry fixture', priority: 1, sites: [{
+        id: '41', name: 'Site fixture 41', info: 'Open the collected Target from Home.',
+        domain: ['target.example', 'alt.example'], icon: '', nsfw: '0', welfare: '0', view_count: 1,
+      }] }], spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },
+      saying: { saying: 'Fixture', author: 'Fixture' }, ping: {}, hero: { desktop: null, mobile: null },
+    } }
     if (isSiteTrend(url)) return siteTrendResponse(url, state.intelligence.trend)
     if (url.pathname.endsWith('/view') && state.viewFailure) return { status: 503 }
     if (url.pathname.endsWith('/insights') && state.insightsEmpty) return {

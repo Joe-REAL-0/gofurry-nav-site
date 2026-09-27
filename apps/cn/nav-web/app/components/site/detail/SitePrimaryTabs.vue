@@ -18,6 +18,7 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import { siteDetailTabs, type SiteDetailTab } from '~/utils/siteDetailRouteState'
 defineProps<{ active: SiteDetailTab }>()
 const emit = defineEmits<{ select: [tab: SiteDetailTab] }>()
