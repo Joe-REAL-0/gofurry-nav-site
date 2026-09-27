@@ -81,7 +81,7 @@ for (const [tls, state] of [['verified', 'verified'], ['failed', 'failed'], ['mi
     if (tls === 'not_collected' || tls === 'not_tls') {
       await expect(page.locator('[data-site-certificate-expiry]')).toHaveAttribute('data-expiry', 'not_observed')
       const strip = page.locator('[data-site-health="certificate"]')
-      await expect(strip).toHaveAttribute('data-tone', 'neutral')
+      await expect(strip.locator('.site-detail-health__value')).toHaveAttribute('data-tone', 'neutral')
       await expect(strip).toContainText('Not observed')
       await expect(strip).not.toContainText('0 days')
     }
@@ -117,7 +117,10 @@ for (const [txt, state] of [['found', 'found'], ['issues', 'found_with_issues'],
     Object.assign(runtime.state.security, { enabled: true, txt })
     await openSecurity(page, 'web')
     await expect(page.locator('[data-site-security-txt]')).toHaveAttribute('data-state', state)
-    if (txt === 'issues') await expect(page.locator('[data-site-security-txt-validation]')).toContainText('contact_missing_or_invalid')
+    if (txt === 'issues') {
+      await expect(page.locator('[data-site-security-txt-validation]')).toContainText('Contact information is missing or invalid')
+      await expect(page.locator('[data-site-security-txt-validation]')).not.toContainText('contact_missing_or_invalid')
+    }
     if (txt === 'unavailable') await expect(page.locator('[data-site-security-txt]')).toContainText('Fixture probe unavailable')
     expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
   })
@@ -181,7 +184,9 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await assertRuntimeSurface(page, '[data-site-security]', theme)
     await tab(page, 'exposure').click()
     await expect(page.locator('[data-site-port-result]')).toHaveCount(5)
-    for (const state of ['open', 'closed', 'timeout', 'filtered_suspected', 'skipped']) await expect(page.locator(`[data-site-port-result][data-state="${state}"]`)).toHaveAttribute('data-tone', 'neutral')
+    for (const [state, tone] of [['open', 'neutral'], ['closed', 'muted'], ['timeout', 'warning'], ['filtered_suspected', 'muted'], ['skipped', 'muted']]) {
+      await expect(page.locator(`[data-site-port-result][data-state="${state}"] dd[data-tone]`)).toHaveAttribute('data-tone', tone!)
+    }
     await page.locator('[data-site-port-metadata] summary').click()
     await expect(page.locator('[data-site-port-metadata]')).toContainText('Invalid ports')
     await page.locator('[data-site-waf-cases] summary').click()

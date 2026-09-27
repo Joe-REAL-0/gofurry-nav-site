@@ -63,7 +63,8 @@ export const test = runtimeTest(
       const mixed = state.summaryScenario === 'mixed' || changed
       const unknown = state.summaryScenario === 'unknown'
       const hosts = state.summaryScenario === 'zero' ? [] : ['target.example', alternative, ...state.extraTargets]
-      const targets = hosts.map(host => ({ target: host, status: unknown ? 'unknown' : mixed && host !== 'target.example' ? 'down' : 'healthy' }))
+      const targets = hosts.map(host => ({ target: host, status: unknown ? 'unknown' : mixed && host !== 'target.example' ? 'down' : 'healthy',
+        reason_codes: mixed && host !== 'target.example' ? ['http_failed'] : [], reason_messages: mixed && host !== 'target.example' ? ['后端旧中文 HTTP 失败'] : [] }))
       const ip = target === 'target.example' ? '203.0.113.41' : '203.0.113.42'
       const envelope = (protocol: string, payload: unknown) => ({ target, protocol, status: 'success', observed_at: observed, duration_ms: 24, payload })
       const dns = { A: [{ type: 'A', value: ip, ttl: 0, asn: 'AS64496', isp: 'Fixture ISP', country: 'CN', reverse_ptr: 'ptr.example', dnssec: false, provider_type: 'origin', hijacked: false }],
@@ -71,16 +72,16 @@ export const test = runtimeTest(
         MX: [{ type: 'MX', value: 'mail.example', ttl: 3600 }], NS: [{ type: 'NS', value: 'ns1.example', ttl: 3600 }],
         TXT: [{ type: 'TXT', value: state.longEvidence ? 'v=DKIM1; p=' + 'M'.repeat(350) : 'v=spf1 -all', ttl: 120 }], CAA: [{ type: 'CAA', value: '0 issue "ca.example"', ttl: 120 }],
         SOA: [{ type: 'SOA', value: 'ns1.example admin.example 1 2 3 4 5', ttl: 3600 }],
-        cname_chain_depth: state.noCname ? 0 : 1, cname_terminal: state.noCname ? '' : 'edge.example', risk_flags: ['collector_reported_signal'] }
+        cname_chain_depth: state.noCname ? 0 : 1, cname_terminal: state.noCname ? '' : 'edge.example', risk_flags: ['ptr_empty', 'low_ttl', 'private_ip', 'nxdomain_with_answer', 'collector_reported_signal'] }
       return { data: { ...reply.data as Record<string, unknown>, selected_target: target,
         site_summary: state.missingSummary ? { state: 'missing', status: 'unknown', targets: null } : {
           state: state.summaryScenario === 'stale' ? 'stale' : 'ready', status: mixed ? 'degraded' : unknown ? 'unknown' : 'healthy',
           target_count: hosts.length, targets, generated_at: changed ? '2026-09-26T13:00:00Z' : '2026-09-26T12:18:00Z',
           status_counts: unknown ? { unknown: hosts.length } : mixed ? { healthy: 1, down: hosts.length - 1 } : { healthy: hosts.length },
-          reason_messages: mixed ? [`${alternative} is not responding.`] : [], reason_codes: mixed ? ['raw_failure_code'] : [],
+          reason_messages: mixed ? ['后端旧中文 HTTP 失败'] : [], reason_codes: mixed ? ['http_failed'] : [],
           target_relation_hints: [{ relation: 'shared_canonical', host: 'target.example', targets: ['target.example', alternative] }] },
         target_summary: state.noTargetEvidence ? { state: 'missing', target, status: 'unknown', observed_at: '0001-01-01T00:00:00Z', protocols: {} } : { state: 'ready', target, status: target === 'target.example' ? 'healthy' : 'warning', observed_at: observed,
-          reason_messages: state.observationRich ? ['Observed DNS evidence needs review.'] : [], reason_codes: state.observationRich ? ['raw_code_hidden'] : [],
+          reason_messages: state.observationRich ? ['后端旧中文 DNS 观测过期'] : [], reason_codes: state.observationRich ? ['dns_missing_or_stale'] : [],
           protocols: Object.fromEntries(['ping', 'http', 'dns'].map(protocol => [protocol, { protocol, status: 'success', observed_at: observed, duration_ms: 24, stale: state.observationRich && protocol === 'dns' }])),
           edge_provider_hints: [{ provider: 'cloudflare', hint_type: 'response_header', confidence: 'medium', evidence: [{ source: 'http', field: 'server', value: 'cloudflare' }] }] },
         latest_core: state.noTargetEvidence ? null : {

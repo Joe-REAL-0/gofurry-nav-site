@@ -4,14 +4,15 @@
       ref="trigger"
       type="button"
       data-site-target-trigger
-      class="gf-button gf-button--surface w-full"
+      class="gf-button gf-button--surface w-full justify-between"
+      :aria-label="t('siteDetail.selectTarget') + ': ' + (displayTarget || selected)"
       aria-haspopup="listbox"
       aria-controls="site-target-listbox"
       :aria-expanded="open"
       @click="toggle"
       @keydown.down.prevent="show"
       @keydown.up.prevent="show"
-    >{{ t('siteDetail.selectTarget') }} <span aria-hidden="true">⌄</span></button>
+    ><span class="min-w-0 truncate">{{ displayTarget || selected }}</span><PhCaretDown class="site-detail-icon shrink-0" aria-hidden="true" /></button>
     <ul
       v-if="open"
       id="site-target-listbox"
@@ -32,7 +33,6 @@
           @keydown="onKey($event, index)"
         >
           <span class="block break-all">{{ item.target }}</span>
-          <span v-if="item.relation" class="site-detail-note mt-1 block break-words">{{ item.relation }}</span>
         </button>
       </li>
     </ul>
@@ -41,8 +41,9 @@
 
 <script setup lang="ts">
 import { nextTick, onMounted, onBeforeUnmount, ref } from 'vue'
+import { PhCaretDown } from '@phosphor-icons/vue'
 import type { SiteTargetPresentation } from '~/utils/siteTargetPresentation'
-const props = defineProps<{ targets: SiteTargetPresentation['targetList']; selected: string }>()
+const props = defineProps<{ targets: SiteTargetPresentation['targetList']; selected: string; displayTarget?: string }>()
 const emit = defineEmits<{ select: [target: string] }>()
 const { t } = useI18n()
 const root = ref<HTMLElement | null>(null)

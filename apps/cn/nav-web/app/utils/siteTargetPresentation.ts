@@ -1,7 +1,7 @@
 import type { SiteHealthSummary, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
-import { readSiteCertificateEvidence } from './siteSecurityPresentation'
+import { readSiteCertificateEvidence, presentSiteCertificateExpiry } from './siteSecurityPresentation'
+import { siteLatencyTone, siteHttpTone, siteProtocolTone } from './siteDetailPresentation'
 
-type Tone = 'neutral' | 'good' | 'warning' | 'bad'
 type Translate = (key: string) => string
 interface TargetSource {
   domain: string
@@ -15,9 +15,7 @@ const record = (value: unknown): Record<string, unknown> => value && typeof valu
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : ''
 const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null
 const duration = (value: number | null) => value === null ? '—' : `${Math.round(value)} ms`
-const tone = (status: string): Tone => status === 'healthy' || status === 'success' ? 'good'
-  : status === 'down' || status === 'failure' ? 'bad'
-    : ['warning', 'degraded', 'stale'].includes(status) ? 'warning' : 'neutral'
+const tone = siteProtocolTone
 const date = (...values: unknown[]) => {
   for (const value of values) {
     const raw = text(value)
@@ -47,6 +45,9 @@ export function presentSiteTarget(source: TargetSource, t: Translate) {
   const httpStatus = number(payload.status_code)
   const httpProtocol = text(payload.http_protocol)
   const tlsVersion = text(payload.tls_version)
+  const handshake = text(payload.tls_handshake)
+  const tlsTone = handshake === 'failed' ? 'bad' : handshake !== 'not_tls' && /TLS\s*1\.[23]/i.test(tlsVersion) ? 'good' : 'neutral'
+  const expiry = presentSiteCertificateExpiry(payload, t)
   const certificate = readSiteCertificateEvidence(payload) ?? {}
   const certificateDays = number(certificate.cert_days_left)
   const certificateVerified = typeof certificate.cert_verified === 'boolean' ? certificate.cert_verified : null
@@ -81,13 +82,12 @@ export function presentSiteTarget(source: TargetSource, t: Translate) {
   const finalUrl = text(payload.final_url)
   const visitUrl = /^https?:\/\//i.test(finalUrl) ? finalUrl : target ? `https://${target}` : ''
   const health = [
-    { key: 'status', label: t('siteDetail.status'), value: statusLabel, detail: '', tone: tone(status) },
-    { key: 'latency', label: t('siteDetail.latency'), value: duration(latency), detail: '', tone: 'neutral' as Tone },
-    { key: 'http', label: 'HTTP', value: httpStatus === null ? '—' : `HTTP ${httpStatus}`, detail: httpProtocol, tone: httpStatus === null ? 'neutral' as Tone : httpStatus >= 400 ? 'warning' as Tone : 'neutral' as Tone },
-    { key: 'tls', label: 'TLS', value: tlsVersion || '—', detail: '', tone: 'neutral' as Tone },
-    { key: 'certificate', label: t('siteDetail.certificate'), value: certificateDays === null ? '—' : `${certificateDays} ${t('siteDetail.days')}`, detail: certificateLabel,
-      tone: certificateVerified === false || (certificateDays !== null && certificateDays <= 30) ? 'warning' as Tone : 'neutral' as Tone },
-    { key: 'observed', label: t('siteDetail.observed'), value: observedAt, detail: '', tone: 'neutral' as Tone },
+    { key: 'status', label: t('siteDetail.status'), value: statusLabel, tone: tone(status) },
+    { key: 'latency', label: t('siteDetail.latency'), value: duration(latency), tone: siteLatencyTone(latency) },
+    { key: 'http', label: 'HTTP', value: httpStatus === null ? '—' : `HTTP ${httpStatus}`, tone: siteHttpTone(httpStatus) },
+    { key: 'tls', label: 'TLS', value: handshake === 'failed' ? t('siteDetail.states.failure') : tlsVersion || '—', tone: tlsTone },
+    { key: 'certificate', label: t('siteDetail.certificate'), value: expiry.value, tone: expiry.tone },
+    { key: 'observed', label: t('siteDetail.observed'), value: observedAt, tone: summary?.state === 'stale' ? 'warning' : 'neutral' },
   ]
   return { target, status, statusLabel, tone: tone(status), latency, httpStatus, httpProtocol, tlsVersion,
     certificateDays, certificateVerified, certificateLabel, observedAt, protocolStates, edgeProviderHints,

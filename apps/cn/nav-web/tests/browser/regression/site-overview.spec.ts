@@ -75,8 +75,8 @@ for (const scenario of ['stale', 'missing', 'unknown', 'zero', 'mixed'] as const
     } else if (scenario === 'zero') await expect(health).toContainText('No collected targets')
     else {
       await expect(page.locator('[data-site-status-distribution]')).toHaveText('1 Healthy · 2 Down')
-      await expect(attention.locator('li')).toHaveText(['alt.example is not responding.', 'fallback.example · Down'])
-      await expect(attention).not.toContainText('raw_failure_code')
+      await expect(attention.locator('li')).toHaveText(['2 targets · HTTP is currently unreachable'])
+      await expect(attention).not.toContainText('后端旧中文')
     }
     await expect(attention).toHaveCount(scenario === 'zero' ? 0 : 1)
     expect(runtime.calls).toHaveLength(3)

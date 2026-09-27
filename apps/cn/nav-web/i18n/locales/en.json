@@ -1,8 +1,8 @@
 {
   "siteIntelligence": {
-    "scope": "Ecosystem observations describe this Site entity and stay the same when you switch Target.",
+    "scope": "Site-wide observations, independent of the current target.",
     "ecosystem": "Site ecosystem",
-    "compare": "Compare with other sites",
+    "compare": "Compare sites",
     "matrix": "Capability matrix",
     "capability": "Capability",
     "siteState": "Site state",
@@ -16,7 +16,7 @@
     "retry": "Reload",
     "loading": "Loading…",
     "trendTitle": "Ecosystem adoption trend",
-    "trendScope": "Adoption across the Site ecosystem; this curve does not describe this Site’s history.",
+    "trendScope": "Ecosystem-wide",
     "range": "Trend range",
     "noObservedValues": "The returned dates contain no observed adoption values. Gaps remain unknown.",
     "trendStates": {
@@ -31,7 +31,10 @@
       "target": "Target",
       "certificate": "Certificate",
       "unknown": "Other change"
-    }
+    },
+    "adoptionShort": "Adoption",
+    "adoptionHelp": "Share of the known sample supporting this capability.",
+    "coverageHelp": "Share of the eligible population with known facts."
   },
   "siteSecurity": {
     "navigation": "Security views",
@@ -55,15 +58,15 @@
     "cryptoHint": "OCSP and SCT are collected facts; their absence alone is not a security verdict.",
     "headers": "Web policy",
     "headerHint": "Missing means the header was not observed in this response.",
-    "collectorSummary": "Collector summary",
-    "rawHeaders": "View raw HTTP headers →",
+    "collectorSummary": "Observation details",
+    "rawHeaders": "Raw HTTP headers",
     "portCheck": "Port check",
     "portHint": "An open port is a reachable service, not evidence of a vulnerability.",
     "wafCanary": "WAF canary",
     "wafHint": "Blocking may come from a proxy, application or middleware. Canary behavior does not prove a WAF is installed.",
     "probeMetadata": "Collection details",
     "cases": "Canary cases and collection details",
-    "attentionTitle": "Evidence needing attention",
+    "attentionTitle": "Attention",
     "views": {
       "overview": "Overview",
       "tls": "TLS & Certificate",
@@ -182,6 +185,18 @@
       "blocked": "Blocked",
       "expected_blocked": "Expected blocking",
       "matched_expected": "Matched expectation"
+    },
+    "identity": "Certificate identity",
+    "observedCount": "observed",
+    "checkedCount": "ports checked",
+    "expectedMatched": "expected blocking behaviors matched",
+    "validation": {
+      "content_type_not_text_plain": "The response is not plain text",
+      "body_empty": "The file is empty",
+      "body_truncated": "The collected content was truncated",
+      "contact_missing_or_invalid": "Contact information is missing or invalid",
+      "expires_missing_or_invalid": "The expiry date is missing or invalid",
+      "security_txt_expired": "security.txt has expired"
     }
   },
   "siteObservation": {
@@ -199,7 +214,7 @@
     "stale": "Stale",
     "freshnessUnknown": "Freshness unknown",
     "endpoint": "Endpoint evidence",
-    "risks": "Reported signals",
+    "risks": "Attention",
     "yes": "Yes",
     "no": "No",
     "noEvidence": "No observed evidence",
@@ -209,7 +224,7 @@
     "resolution": "Resolution chain",
     "recordDetails": "Record details",
     "waterfall": "Request timing waterfall",
-    "timingHint": "Independent measurements may overlap. Total is the collected response time, not a sum of stages.",
+    "timingHint": "Stages may overlap; total is the observed response time.",
     "history": "Ping latency history",
     "chartLoading": "Preparing latency chart…",
     "samples": "samples",
@@ -269,7 +284,7 @@
       "dnssec": "DNSSEC",
       "provider_type": "Provider",
       "hijacked": "Hijacked",
-      "risk_flags": "Reported signals",
+      "risk_flags": "DNS observation signals",
       "title": "Title",
       "description": "Description",
       "charset": "Charset",
@@ -295,10 +310,24 @@
       "statuses": "Statuses",
       "nameservers": "Nameservers",
       "dnssecDelegation": "DNSSEC delegation"
+    },
+    "currentObservation": "Current observation",
+    "responseSummary": "HTTP response",
+    "dnsSummary": "DNS summary",
+    "dnsObservationSignals": "DNS observation signals",
+    "informationalSignal": "Informational",
+    "warningSignal": "Needs attention",
+    "probeDetails": "Observation details",
+    "dnsSignals": {
+      "ptr_empty": "DNS reverse lookup (PTR) is empty",
+      "low_ttl": "DNS TTL is low",
+      "private_ip": "DNS returned a private or special address",
+      "nxdomain_with_answer": "DNS returned answers with an NXDOMAIN response",
+      "other": "DNS has an unclassified observation signal"
     }
   },
   "siteOverview": {
-    "health": "Site health",
+    "health": "Overall health",
     "scope": "Site-wide",
     "updated": "Updated",
     "summaryMissing": "No complete site health summary",
@@ -322,7 +351,7 @@
     "unavailable": "Site ecosystem data is temporarily unavailable.",
     "changes": "Recent changes",
     "changesEmpty": "No recent changes",
-    "fullEcosystem": "View full site ecosystem",
+    "fullEcosystem": "View ecosystem",
     "utc": "UTC"
   },
   "siteDetail": {
@@ -365,6 +394,33 @@
       "success": "Success",
       "failure": "Failed",
       "skipped": "Skipped"
+    },
+    "expired": "Expired",
+    "reasons": {
+      "http_missing_or_stale": "HTTP observations are missing or stale",
+      "http_failed": "HTTP is currently unreachable",
+      "dns_failed": "DNS resolution also failed",
+      "dns_missing_or_stale": "DNS observations are missing or stale",
+      "dns_failed_but_http_ok": "DNS resolution failed while HTTP remains reachable",
+      "ping_failed_but_http_ok": "Ping is unreachable while HTTP remains reachable",
+      "dns_risk_private_ip": "DNS returned a private or special address",
+      "dns_risk_low_ttl": "DNS TTL is low",
+      "dns_risk_nxdomain_with_answer": "DNS returned answers with an NXDOMAIN response",
+      "dns_risk_ptr_empty": "DNS reverse lookup (PTR) is empty",
+      "dns_risk_other": "DNS has an unclassified observation signal",
+      "tls_verify_expired": "TLS verification failed: expired certificate",
+      "tls_verify_not_yet_valid": "TLS verification failed: certificate not yet valid",
+      "tls_verify_hostname_mismatch": "TLS certificate does not match the target hostname",
+      "tls_verify_unknown_authority": "TLS certificate issuer is not trusted",
+      "tls_verify_incompatible_usage": "TLS certificate usage does not match",
+      "tls_verify_other": "TLS certificate verification failed",
+      "tls_cert_expired": "TLS certificate has expired",
+      "tls_cert_expiring_soon": "TLS certificate expires within 30 days",
+      "no_target_summary": "No target health summary is available yet",
+      "all_targets_down": "All observed targets are unreachable",
+      "all_targets_unknown": "All observed target states are unknown",
+      "some_targets_degraded": "Some observed targets are unreachable or degraded",
+      "some_targets_warning": "Some observed targets need attention"
     }
   },
   "errorPage": {

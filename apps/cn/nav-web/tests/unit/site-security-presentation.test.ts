@@ -41,7 +41,9 @@ describe('Current Target security projection', () => {
     }
     inspect(present())
     expect(present().overview.attention).toEqual([])
-    expect(present().overview.sections.find(item => item.key === 'certificate')?.value).toBe('Verification: Verified')
+    expect(present().overview.sections.find(item => item.key === 'certificate')?.value).toBe('Verified')
+    expect(present().overview.sections.find(item => item.key === 'headers')?.value).toBe('6 / 6 observed')
+    expect(present().overview.sections.find(item => item.key === 'transport')?.value).toBe('TLS 1.3')
   })
   it.each(['targetLatestCore', 'lightProbeState'] as const)('rejects foreign %s identity', key => {
     const data = source(); data[key]!.target = 'foreign'
@@ -114,10 +116,10 @@ describe('Current Target security projection', () => {
     txt.validation_errors = ['collector_specific_issue']
     expect(presentSiteSecurity(data, translate()).securityTxt.validation).toEqual(['collector_specific_issue'])
   })
-  it('keeps all port outcomes neutral and discloses collection metadata', () => {
+  it('keeps open ports neutral, distinguishes connection outcomes and discloses metadata', () => {
     const vm = present()
     expect(vm.portCheck.results.map(row => row.status)).toEqual(['open', 'closed', 'timeout', 'filtered_suspected', 'skipped'])
-    expect(vm.portCheck.results.every(row => row.tone === 'neutral')).toBe(true)
+    expect(vm.portCheck.results.map(row => row.tone)).toEqual(['neutral', 'muted', 'warning', 'muted', 'muted'])
     expect(vm.portCheck.metadata.find(item => item.key === 'duplicate_port_count')?.value).toBe('1')
     expect(vm.portCheck.truncated).toBe(true); expect(vm.overview.attention).toEqual([])
   })

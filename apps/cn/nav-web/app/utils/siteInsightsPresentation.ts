@@ -20,9 +20,9 @@ export function presentSiteInsights(data: SiteInsights | null, state: SiteInsigh
     const factState = unavailable ? null : fact?.state ?? 'missing'
     return { key: item.key, category, categoryLabel: t('siteOverview.categories.' + category), label: t(item.labelKey),
       state: factState, stateLabel: factState === null ? '—' : t(factState === 'missing' ? 'siteOverview.capabilityMissing' : 'insights.entity.states.' + factState),
-      tone: factState === 'supported' ? 'good' : factState === 'stale' || factState === 'unavailable' ? 'warning' : 'neutral',
+      tone: factState === 'supported' ? 'good' : factState === 'stale' || factState === 'unavailable' ? 'warning' : factState === 'unsupported' ? 'neutral' : 'muted',
       adoption: formatInsightRatio(fact?.ecosystem.value ?? null), coverage: formatInsightRatio(fact?.ecosystem.coverage ?? null),
-      date: fact?.as_of || '—', dateTime: fact?.as_of || undefined }
+      date: fact?.as_of || '—', shortDate: fact?.as_of?.slice(5) || '—', dateTime: fact?.as_of || undefined }
   }))
   const changes = unavailable ? [] : [...(data?.recent_changes ?? [])].sort((a, b) => insightChangeOrder(b) - insightChangeOrder(a)).map((item, index) => {
     const category = siteInsightChangeCategory(item.type)
@@ -30,7 +30,8 @@ export function presentSiteInsights(data: SiteInsights | null, state: SiteInsigh
       categoryLabel: t('siteIntelligence.changeCategories.' + (category ?? 'unknown')), label: t(insightChangeI18nKey(item.type)),
       dateTime: item.occurred_at || item.date, when: formatInsightChangeWhen(item, locale, 'UTC') + (item.occurred_at ? ' UTC' : ''), precise: Boolean(item.occurred_at) }
   })
-  return { state, rows, selected: rows.find(item => item.key === metric)!, changes,
+  return { state, rows, groups: categories.map(category => ({ key: category, label: t('siteOverview.categories.' + category), rows: rows.filter(row => row.category === category) })),
+    selected: rows.find(item => item.key === metric)!, changes,
     changesState: unavailable ? 'unavailable' as const : changes.length ? 'ready' as const : 'empty' as const }
 }
 

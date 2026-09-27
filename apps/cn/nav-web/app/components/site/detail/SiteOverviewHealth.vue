@@ -1,11 +1,11 @@
 <template>
-  <section data-site-overview-health :data-site-summary-state="health.summaryState" :data-site-status="health.status" class="site-overview-health" aria-labelledby="site-overview-health-title">
+  <section data-site-overview-health :data-site-summary-state="health.summaryState" :data-site-status="health.status" class="site-detail-surface" aria-labelledby="site-overview-health-title">
     <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <h3 id="site-overview-health-title" class="site-overview-title">{{ t('siteOverview.health') }}</h3>
       <span class="site-detail-note">{{ t('siteOverview.scope') }}</span>
     </div>
     <div class="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-      <p class="site-overview-health__status" :data-tone="health.tone">{{ health.statusLabel }}</p>
+      <p class="site-overview-health__status inline-flex items-center gap-2" :data-tone="health.tone"><span class="site-overview-dot" aria-hidden="true" />{{ health.statusLabel }}</p>
       <p v-if="health.freshnessLabel" class="site-overview-state" data-tone="warning">{{ health.freshnessLabel }}</p>
     </div>
     <div class="mt-2 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">

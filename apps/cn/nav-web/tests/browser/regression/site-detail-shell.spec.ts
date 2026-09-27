@@ -32,7 +32,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-health="status"]')).toContainText('Warning')
     await expect(page.locator('[data-site-health="certificate"]')).toContainText('Not observed')
     await expect(page.locator('[data-site-target-context]')).toContainText(longTarget)
-    await expect(page.locator('[data-site-target-context]')).toContainText('confidence: medium')
+    await expect(page.locator('[data-site-target-context]')).not.toContainText(/confidence|cloudflare|shared_canonical|same_host|redirect_to_external/)
     for (const protocol of ['ping', 'http', 'dns']) await expect(page.locator('[data-site-protocol="' + protocol + '"]')).toBeVisible()
     const geometry = await page.evaluate(() => {
       const box = (hook: string) => {
@@ -46,12 +46,12 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     expect(geometry.hero.bottom).toBeLessThan(geometry.health.y)
     expect(geometry.health.bottom).toBeLessThanOrEqual(geometry.tabs.y)
     if (width === 1440) {
-      await expect(page.locator('[data-site-infrastructure]')).toBeVisible()
+      await expect(page.locator('[data-site-infrastructure]')).toHaveCount(0)
       expect(geometry.context.x).toBeGreaterThan(geometry.workspace.x + geometry.workspace.width)
       expect(geometry.workspace.width / geometry.context.width).toBeCloseTo(3, 0)
       expect(geometry.columns).toBe(6)
     } else {
-      await expect(page.locator('[data-site-infrastructure]')).toBeHidden()
+      await expect(page.locator('[data-site-infrastructure]')).toHaveCount(0)
       expect(geometry.context.y).toBeGreaterThanOrEqual(geometry.tabs.bottom)
       expect(geometry.workspace.y).toBeGreaterThan(geometry.context.bottom)
       if (width === 390) {
@@ -74,7 +74,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
 test('router tabs survive history/reload, clear foreign state and support roving keyboard focus', async ({ page, runtime }) => {
   await openSite(page, '/en/site/41?domain=alt.example&tab=insights&metric=tls13&range=90d')
   await activeTab(page, 'insights')
-  await expect(page.locator('[data-site-insights-scope]')).toBeVisible()
+  await expect(page.locator('[data-site-insights-workspace] > header')).toContainText('Site-wide observations')
   await tab(page, 'observation').click()
   await activeTab(page, 'observation')
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'observation' })
@@ -193,6 +193,7 @@ test('pending Target preserves shell and a late response cannot overwrite a newe
     await option(page, 'alt.example').click()
     await held.wait()
     await expect(page.locator('[data-site-target-pending]')).toContainText('alt.example')
+    await expect(trigger(page)).toContainText('target.example')
     await expect(page.locator('[data-site-health-strip]')).toHaveAttribute('aria-busy', 'true')
     await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'target.example')
     expect(await hero!.evaluate(node => node.isConnected)).toBe(true)

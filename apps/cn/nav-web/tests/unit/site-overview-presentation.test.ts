@@ -66,22 +66,25 @@ describe('Site overview health and attention', () => {
     expect(vm.health.summaryText).toBe('No collected targets')
     expect(vm.health.statusItems).toEqual([])
   })
-  it('prioritizes human messages and deduplicates target-specific fallback and repeated messages', () => {
+  it.each(['en', 'zh'])('prioritizes localized reason codes over backend messages in %s', locale => {
     const vm = present(summary({
-      status: 'degraded', reason_messages: ['b.example has failed', ' b.example has failed '],
-      reason_codes: ['raw_code_must_be_hidden'],
-      targets: [target('a.example'), target('b.example', 'degraded', { reason_messages: ['b.example has failed'], reason_codes: ['another_raw_code'] })],
-    }))
-    expect(vm.attention.map(item => item.message)).toEqual(['b.example has failed'])
+      status: 'degraded', reason_messages: ['后端旧中文，不应展示'], reason_codes: ['http_failed', 'http_failed'],
+      targets: [target('a.example'), target('b.example', 'degraded', { reason_messages: ['后端旧中文，不应展示'], reason_codes: ['http_failed'] })],
+    }), facts(), false, locale)
+    expect(vm.attention.map(item => item.message)).toEqual(['b.example · ' + translator(locale)('siteDetail.reasons.http_failed')])
+    expect(JSON.stringify(vm.attention)).not.toContain('后端旧中文')
   })
-  it('deduplicates a shared human reason even if the Site message omits the hostname', () => {
-    const vm = present(summary({ reason_messages: ['Certificate expired'], targets: [target('b.example', 'warning', { reason_messages: ['Certificate expired'] })] }))
-    expect(vm.attention.map(item => item.message)).toEqual(['Certificate expired'])
+  it('groups the same reason across targets while retaining distinct reasons', () => {
+    const vm = present(summary({ status: 'warning', reason_codes: ['dns_missing_or_stale'], targets: [
+      target('a.example', 'warning', { reason_codes: ['dns_missing_or_stale'] }),
+      target('b.example', 'warning', { reason_codes: ['dns_missing_or_stale', 'tls_cert_expiring_soon'] }),
+    ] }))
+    expect(vm.attention.map(item => item.message)).toEqual(['2 targets · DNS observations are missing or stale', 'b.example · TLS certificate expires within 30 days'])
   })
-  it('falls back to reason codes only without human-readable evidence', () => {
+  it('retains unknown codes and uses localized status when no code exists', () => {
     expect(present(summary({ reason_codes: ['probe_failure', 'probe_failure'] })).attention.map(item => item.message)).toEqual(['Reported signal: probe_failure'])
     const vm = present(summary({ reason_codes: ['probe_failure'], targets: [target('b.example', 'down', { reason_messages: ['Connection refused'] })] }))
-    expect(vm.attention.map(item => item.message)).toEqual(['b.example · Connection refused'])
+    expect(vm.attention.map(item => item.message)).toEqual(['Reported signal: probe_failure', 'b.example · Down'])
   })
   it('retains uncovered affected targets while filtering healthy and unobserved unknown noise', () => {
     const vm = present(summary({ targets: [
@@ -91,11 +94,11 @@ describe('Site overview health and attention', () => {
     ] }))
     expect(vm.attention.map(item => item.target)).toEqual(['down.example', 'unknown.example', 'stale.example'])
   })
-  it('does not expose raw target codes alongside a human Site message', () => {
+  it('does not leak backend messages when codes are absent or unknown', () => {
     const vm = present(summary({ reason_messages: ['a.example is degraded'], targets: [
       target('a.example', 'degraded'), target('b.example', 'down', { reason_codes: ['raw_code'] }),
     ] }))
-    expect(vm.attention.map(item => item.message)).toEqual(['a.example is degraded', 'b.example · Down'])
+    expect(vm.attention.map(item => item.message)).toEqual(['a.example · Degraded', 'b.example · Reported signal: raw_code'])
   })
 })
 

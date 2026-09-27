@@ -159,10 +159,13 @@ snapshot. Summary `state` (ready/stale/missing) and health `status` are independ
 stale healthy remains visibly stale and missing is not backend unknown. Show
 nonzero distribution counts and `generated_at`, never Target observed time.
 
-Attention is absent for a healthy, fresh, reason-free Site. Human reason messages
-take priority over raw codes. Affected Target fallback preserves uncovered
-problems, deduplicates already-explained reasons, and excludes healthy or unknown
-Targets without meaningful evidence. It does not repeat Current Target cards.
+Attention is absent for a healthy, fresh, reason-free Site. Task B replaces P3's
+original message-first presentation: known reason codes use frontend localized
+copy, repeated Target reasons group by code, and unknown codes retain a visible
+fallback. Without codes, localized status explains affected Targets; backend
+Chinese messages must not leak into English UI. Collector remains the health
+classification owner. Healthy or unknown Targets without meaningful evidence
+remain excluded; Attention does not repeat Current Target cards.
 
 Capability rows come from the P1 registry, including grouping: Network owns IPv6
 and HTTP/2, Transport owns TLS 1.3 and certificate verification, Web policy owns
@@ -368,6 +371,43 @@ and shared messages retain their values. Existing active ESLint suppressions sta
 All P1–P6 route/request/cache/retry/SSR/SEO/evidence contracts and tests remain
 authoritative. P7 adds no feature or final golden. Maintainer Desktop/Mobile smoke
 of Overview, Observation, Security and Insights precedes separately authorized P8.
+
+## Site Detail final presentation refinement (#109 Task B)
+
+Task B supersedes the P2–P6 appearance assignments without changing their runtime,
+route, API, request, SSR/SEO or Site/Target ownership contracts. The Site Detail
+Less owner provides compact translucent Primary/Secondary surfaces and native
+disclosures, quiet evidence colors and a shared segmented pattern for Observation,
+Security, Ping samples and ecosystem ranges. New/replaced system icons use
+Phosphor. Existing public theme tokens remain authoritative; #108 and ambient
+appearance are outside this task.
+
+Hero uses a multi-row logo and the full identity content column. The Health Strip
+has exactly six primary values, no helper rows, and shares P5's certificate
+normalization/expiry presentation with Security. Target Context presents the
+selector, Ping/HTTP/DNS and observed time. P2's relation/infrastructure debug
+display is retired, while underlying evidence and selector behavior stay intact.
+
+`siteDetailPresentation.ts` owns localized health reason labels and display tones,
+never health aggregation. DNS flags remain diagnostic evidence: PTR-empty,
+low-TTL and unclassified signals are informational; private-IP and NXDOMAIN with
+answers are warning-colored. Security continues to separate verification from
+validity; header absence, open ports and canary matches never become safety or
+WAF deployment claims. Known security.txt validation codes map to localized copy;
+the frontend does not revalidate the file.
+
+Overview keeps its four-change cap and moves its ecosystem/retry actions into the
+Capability surface. Insights keeps all returned changes, groups its seven matrix
+rows by the shared registry and contains selected fact plus trend in one analysis
+surface. Adoption, coverage and dates remain neutral; only fact state uses status
+color. No secondary Insights tabs, extra requests or new route vocabulary appear.
+
+`site-detail-refinement.spec.ts` adds focused presentation checks using the shared
+deterministic runtime fixture. The six existing P1–P6 Browser owners retain their
+request, failure, cache, race and accessibility assertions. Optional temporary
+review screenshots are emitted by that same Functional owner, never a new runner
+or accepted Visual baseline. Site debt, deep and legacy-dark remain zero. Full
+maintainer visual acceptance is required before separately authorized P8 work.
 
 ## Styling ownership
 

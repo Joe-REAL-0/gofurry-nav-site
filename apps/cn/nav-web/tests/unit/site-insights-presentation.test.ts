@@ -17,6 +17,7 @@ describe('Site intelligence facts', () => {
     expect(result.rows.every(row => row.state === 'missing' && row.stateLabel === 'No fact available')).toBe(true)
     expect(result.rows.map(row => row.category)).toEqual(['network', 'network', 'transport', 'transport', 'web_policy', 'web_policy', 'web_policy'])
     expect(result.rows).toHaveLength(siteCapabilityRegistry.length)
+    expect(result.groups.map(group => [group.key, group.rows.length])).toEqual([['network', 2], ['transport', 2], ['web_policy', 3]])
   })
   it('never fabricates backend unavailable facts when the whole slice failed', () => {
     const result = present(null)

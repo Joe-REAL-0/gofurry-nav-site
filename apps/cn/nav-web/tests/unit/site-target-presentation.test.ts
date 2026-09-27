@@ -42,12 +42,14 @@ describe('Current Target presentation', () => {
     expect(missing.certificateLabel).toBe('siteDetail.notObserved')
     expect(missing.latency).toBeNull()
     expect(missing.health.map(item => item.key)).toEqual(['status', 'latency', 'http', 'tls', 'certificate', 'observed'])
-    expect(missing.health.slice(1).every(item => item.value === '—')).toBe(true)
+    expect(missing.health.filter(item => ['latency', 'http', 'tls', 'observed'].includes(item.key)).every(item => item.value === '—')).toBe(true)
+    expect(missing.health[4]).toMatchObject({ value: 'siteDetail.notObserved', tone: 'neutral' })
+    expect(missing.health.every(item => !('detail' in item))).toBe(true)
     const failed = presentSiteTarget(source({ response_time_ms: 0, cert_days_left: 0, cert_verified: false }), t)
     expect(failed.latency).toBe(0)
     expect(failed.certificateDays).toBe(0)
     expect(failed.certificateLabel).toBe('siteDetail.notVerified')
-    expect(failed.health[4]?.tone).toBe('warning')
+    expect(failed.health[4]).toMatchObject({ value: 'siteDetail.expired', tone: 'bad' })
   })
 
   it.each([{ cert_collected: false }, { tls_handshake: 'not_tls' }])('does not treat uncollected certificate defaults as evidence: %j', marker => {
@@ -55,7 +57,7 @@ describe('Current Target presentation', () => {
     expect(result.certificateDays).toBeNull()
     expect(result.certificateVerified).toBeNull()
     expect(result.certificateLabel).toBe('siteDetail.notObserved')
-    expect(result.health[4]).toMatchObject({ value: '—', tone: 'neutral' })
+    expect(result.health[4]).toMatchObject({ value: 'siteDetail.notObserved', tone: 'neutral' })
   })
 
   it('preserves target staleness and protocol state instead of inferring success', () => {

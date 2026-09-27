@@ -3,10 +3,10 @@ import { normalizeObservationHeaders, presentPingHistory, presentSiteObservation
 import type { CollectorEnvelope, TargetLatestResponse, TargetHealthSummary } from '../../app/types/nav'
 import en from '../../i18n/locales/en.json'
 import zh from '../../i18n/locales/zh.json'
-const translate = (locale = 'en') => (key: string) => {
+const translate = (locale = 'en') => (key: string, values: Record<string, string | number> = {}) => {
   const value = key.split('.').reduce<unknown>((value, part) => (value as Record<string, unknown>)[part], locale === 'en' ? en : zh)
   if (typeof value !== 'string') throw new Error('Missing translation ' + key)
-  return value
+  return value.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? '{' + key + '}'))
 }
 const target = 'a.example'
 const envelope = (protocol: string, payload: unknown, extra: Partial<CollectorEnvelope> = {}): CollectorEnvelope => ({
@@ -20,11 +20,11 @@ const present = (protocols: Record<string, CollectorEnvelope> = {}) => presentSi
 
 describe('Current Target evidence projection', () => {
   it('keeps all four protocol fields, prefers summary and preserves status separately from freshness', () => {
-    const summary = { target, state: 'ready', status: 'warning', reason_messages: ['Readable reason', 'Readable reason'], reason_codes: ['hidden_raw'],
+    const summary = { target, state: 'ready', status: 'warning', reason_messages: ['中文消息', '中文消息'], reason_codes: ['dns_missing_or_stale'],
       protocols: { ping: { status: 'success', duration_ms: 5, observed_at: '2026-09-25T12:00:00Z', stale: true } } } as TargetHealthSummary
     const vm = presentSiteObservation(source({ ping: envelope('ping', {}, { duration_ms: 100 }) }, summary), translate())
     expect(vm.protocols[0]).toMatchObject({ status: 'success', duration: '5 ms', observed: '2026-09-25 12:00:00 UTC', freshness: 'Stale' })
-    expect(vm.risks).toEqual(['Readable reason'])
+    expect(vm.risks).toEqual(['DNS observations are missing or stale'])
     expect(vm.status).toBe('warning')
   })
   it('rejects unrelated Target summaries, envelopes and light probes', () => {

@@ -668,3 +668,105 @@ verification does not stand in for that maintainer smoke. P8 remains separate an
 no final Site Visual golden has been created or updated.
 Engineering exit criteria are satisfied; the maintainer smoke criterion remains
 pending. P8 can be requested after that confirmation; it has not been started.
+
+## Task B — final Site Detail presentation refinement (2026-09-27)
+
+Task B follows the completed P1–P7 and Task A baseline on `dev`. It changes Site
+Detail presentation only. Collector, Backend, API/schema, page/composable/service
+runtime, route-state helpers, SSR/SEO, Target selection, history/trend cache and
+retry/request ownership remain unchanged. P8 has not started.
+
+### Shared presentation and workspace changes
+
+The existing `site-detail.less` owner now supplies compact translucent Primary
+and Secondary surfaces, 8–10px corners, fine borders, restrained evidence colors
+and one segmented pattern for secondary navigation, samples and ranges. Native
+disclosures remain the third level. Phosphor provides all newly introduced system
+icons; no dependency, handwritten SVG or cross-domain appearance owner is added.
+
+- Hero: multi-row 80px desktop / 56px mobile icon, full-column three-line
+  description, Name → Domain → Meta → Description order, localized formatted
+  view count and compact Visit action.
+- Health Strip: exactly six primary values, no secondary helper rows, six desktop
+  columns / mobile 2×3. Certificate expiry uses P5's evidence normalization and one
+  shared presentation helper; unobserved evidence never becomes zero or a dash.
+- Target Context: current Target selector, Ping/HTTP/DNS rows and observed time.
+  Relation/provider debug dumps are removed from rendering. The visible selector
+  keeps the loaded Target during a pending switch, with the existing separate
+  pending message; selection, keyboard/focus and race behavior remain intact.
+- Overview: light Site health, conditional Attention, grouped Capability surface
+  owning ecosystem/retry actions, and four categorized recent changes. Known
+  health codes use frontend zh/en copy and repeated Target reasons group by code;
+  unknown-code fallback remains. No frontend health classifier or blacklist is
+  introduced and backend Chinese reason messages are not rendered in English.
+- Observation: compact protocol/KPI summaries, segmented navigation, waterfall
+  surface, 232px history chart, visual redirect chain, dense headers/records and
+  two-column Web probes with four/five primary facts and disclosure details. DNS
+  labels distinguish informational PTR/TTL/other evidence from private-IP and
+  NXDOMAIN-with-answer warnings, without hiding raw flags.
+- Security: scope note only in Overview; six concise summaries, separate
+  verification/validity, combined certificate identity, header matrix and mapped
+  security.txt validation copy. Port and canary summaries remain evidence-only;
+  open ports, absent headers, OCSP/SCT and matching canaries imply no safety score
+  or WAF deployment verdict.
+- Insights: four surfaces (context, grouped seven-row matrix, selected capability
+  plus trend, full recent-change set). Adoption/coverage/date are neutral; fact
+  state alone is colored. Short mobile dates preserve full semantic dates; null
+  stays a single dash. Help icons replace persistent explanatory paragraphs.
+  Ecosystem trend remains adoption-only with the existing lazy/cache/race/retry
+  lifecycle and `connectNulls=false`.
+
+`siteDetailPresentation.ts` owns shared localized reason labels and display tones.
+Security owns shared certificate normalization/expiry and validation mappings;
+existing workspace presentation owners retain raw evidence interpretation. All
+other locale namespaces are unchanged. Contracts, Agent context and the testing
+guide describe the current Task B presentation without rewriting P1–P7 results.
+
+### Tests, debt and review boundary
+
+The new Unit owner verifies latency/HTTP boundaries, shared expiry thresholds,
+unobserved/default evidence, TLS 1.2/1.3, bilingual reason/validation mappings and
+informational/warning DNS flags. Existing presentation tests cover grouped
+Attention, seven registry rows, categories, missing/zero/date precision and
+evidence-only Security. Existing Nuxt runtime tests are unchanged.
+
+`site-detail-refinement.spec.ts` adds 20 Functional Browser cases using the same
+deterministic Nitro/upstream fixture: three workspace families across
+390/768/1440 × Light/Dark, plus zh/en grouped Attention. The six existing P1–P6
+owners retain request accounting, route/history/keyboard, pending/race, isolated
+failure, cache/retry, SSR and SEO assertions. Only assertions for intentionally
+replaced presentation are updated; pending selector identity gains an assertion.
+
+An initial focused run caught a duplicated null-date dash caused by two responsive
+date spans. The rendering was corrected, preserving the original assertion.
+Screenshot review also corrected cramped mobile English primary tabs and spacing
+between mobile adoption/coverage labels and values.
+
+No style baseline updater was run. Site Tailwind appearance, arbitrary appearance
+and raw visual debt remain **0 / 0 / 0**, deep selector **0**, legacy dark **0**.
+Ambient raw **75** and #108 important **5** remain untouched. The debt manifest,
+suppression manifest, dependencies, lockfile and accepted Visual inventory are
+unchanged; all **118 PNGs** compare byte-for-byte with the baseline (141 tracked
+Visual source/config/PNG files). No final Site Detail golden is created.
+
+Frozen installation, lint, stylelint, policy tooling **75**, exact policy, Unit
+**230**, Nuxt **20**, combined Vitest **250**, typecheck, Insights semantics, SEO
+recovery, production build and Chromium installation have passed locally.
+The final `pnpm run test:browser --workers=1` run passed **578/578 in 14.5 minutes**,
+with zero failures, skips or retries, including all six P1–P6 Site owners and the
+20 new UI cases. Remote CI and pinned Linux Visual comparison have not been
+verified for Task B.
+
+The optional `GOFURRY_SITE_DETAIL_REVIEW_DIR` export uses the existing Functional
+owner to produce 68 temporary screenshots: eleven workspace states at all six
+viewport/theme combinations, plus zh/en Attention. These are deterministic
+fixture review artifacts outside the repository, not production screenshots,
+accepted Visual PNGs or a second success-screenshot runner.
+
+Maintainer full visual review is still required: Hero identity/description and
+actions; six Health values; Target selector and protocol density; Overview normal
+and Attention states; all Observation and Security views; grouped Insights and
+analysis; long values/disclosures, mobile wrapping and Light/Dark readability.
+Automatic checks and agent screenshot inspection do not replace this acceptance.
+Task B engineering exit criteria are satisfied. Full acceptance and entry to P8
+still require that maintainer visual confirmation; P8 has not been started.

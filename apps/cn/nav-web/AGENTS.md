@@ -118,6 +118,15 @@ uses `site.siteDnsPanel.none`; other retired `site.*` labels are removed. Preser
 active ESLint suppressions, ambient raw debt and #108 important debt. P8 requires
 maintainer Desktop/Mobile smoke and separate authorization for final Visual work.
 
+Task B refines only Site Detail presentation through its existing Less owner.
+Keep the three Surface levels, Phosphor system icons and shared segmented pattern.
+`siteDetailPresentation.ts` owns localized reason copy and display tones, never
+Collector health decisions. Health Strip/Security share P5 certificate expiry
+normalization; known reason/validation codes use both locales. Target Context no
+longer renders relation/infrastructure dumps. `site-detail-refinement.spec.ts`
+adds focused UI assertions and optional temporary review screenshots through the
+same Functional fixture. Debt stays zero; full manual review precedes P8 goldens.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing

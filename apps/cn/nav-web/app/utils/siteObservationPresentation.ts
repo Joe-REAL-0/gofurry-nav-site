@@ -1,9 +1,10 @@
 import type { CollectorEnvelope } from '~/types/nav'
 import type { SiteDetailPageData } from '~/composables/useSiteDetailPage'
+import { siteHealthReasonLabel, siteDnsSignal, siteLatencyTone, siteHttpTone, siteProtocolTone, type SiteDetailTone } from './siteDetailPresentation'
 
 type Source = Pick<SiteDetailPageData, 'domain' | 'targetHealthSummary' | 'targetLatestCore' | 'lightProbeState'>
-type Translate = (key: string) => string
-export interface ObservationFact { key: string; label: string; value: string }
+type Translate = (key: string, values?: Record<string, string | number>) => string
+export interface ObservationFact { key: string; label: string; value: string; tone?: SiteDetailTone }
 export const observationRecord = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
 const text = (value: unknown) => typeof value === 'string' ? value.trim() : ''
 const strings = (value: unknown) => Array.isArray(value) ? value.map(text).filter(Boolean) : []
@@ -45,13 +46,14 @@ export function presentSiteObservation(source: Source, t: Translate) {
     const state = summary?.protocols?.[protocol], envelope = core(protocol)
     const status = observationStatus(state?.status || envelope?.status)
     const stale = state?.stale ?? (latest?.state === 'stale' ? true : null)
-    return { protocol, status, statusLabel: t('siteDetail.states.' + status), duration: ms(state?.duration_ms ?? envelope?.duration_ms),
+    return { protocol, status, statusLabel: t('siteDetail.states.' + status), tone: siteProtocolTone(status), duration: ms(state?.duration_ms ?? envelope?.duration_ms),
       observed: observationTime(state?.observed_at || envelope?.observed_at),
       freshness: t('siteObservation.' + (stale === true ? 'stale' : stale === false ? 'fresh' : 'freshnessUnknown')) }
   })
   const status = observationStatus(summary?.state === 'missing' ? null : summary?.status)
-  const messages = [...strings(summary?.reason_messages), ...strings(latest?.reason_messages)]
-  const risks = [...new Set(messages.length ? messages : [...strings(summary?.reason_codes), ...strings(latest?.reason_codes)])]
+  const codes = [...new Set([...strings(summary?.reason_codes), ...strings(latest?.reason_codes)])]
+  const risks = codes.map(code => siteHealthReasonLabel(code, t))
+  if (!risks.length && ['warning', 'degraded', 'down', 'stale'].includes(status)) risks.push(t('siteDetail.states.' + status))
   const headers = normalizeObservationHeaders(http.headers)
   const header = (key: string) => headers.find(item => item.key === key)?.value
   const response = observationNumber(http.response_time_ms) ?? observationNumber(httpEnvelope?.duration_ms)
@@ -63,8 +65,10 @@ export function presentSiteObservation(source: Source, t: Translate) {
   const timings = ['dns', 'tcp', 'tls', 'ttfb', 'transfer', 'total'].map((key, index) => ({ key,
     label: t('siteObservation.timings.' + key), value: timingValues[index] ?? null,
     text: ms(timingValues[index]), fraction: timingValues[index] === null ? 0 : timingValues[index]! / timingMax }))
-  const kpis = [fact('response', ms(response)), fact('rtt', ms(ping.avg_rtt_ms)), fact('jitter', ms(ping.jitter_ms)), fact('loss', percent(ping.loss_rate))]
-  const httpFacts = [fact('status', http.status_code), fact('protocol', http.http_protocol), fact('response', ms(response)),
+  const kpis = [{ ...fact('response', ms(response)), tone: siteLatencyTone(response) },
+    { ...fact('rtt', ms(ping.avg_rtt_ms)), tone: siteLatencyTone(observationNumber(ping.avg_rtt_ms)) },
+    fact('jitter', ms(ping.jitter_ms)), fact('loss', percent(ping.loss_rate))]
+  const httpFacts = [{ ...fact('status', http.status_code), tone: siteHttpTone(observationNumber(http.status_code)) }, fact('protocol', http.http_protocol), fact('response', ms(response)),
     fact('finalUrl', http.final_url), fact('remoteIp', http.remote_ip), fact('contentType', http.content_type || header('content-type')),
     fact('bytes', observationNumber(http.body_read_bytes) === null ? undefined : `${http.body_read_bytes} B`),
     fact('server', http.server || header('server')), fact('observed', observationTime(httpEnvelope?.observed_at))]
@@ -119,12 +123,21 @@ export function presentSiteObservation(source: Source, t: Translate) {
       section('rdap', [fact('registrableDomain', data.registrable_domain), fact('registrar', data.registrar), fact('expires', data.expires_at),
         fact('statuses', data.statuses), fact('nameservers', data.nameservers), fact('dnssecDelegation', data.dnssec_delegation_signed)])
     }
+    let visible = protocol === 'page_assets' ? 4 : 5
+    const summaryFacts: ObservationFact[] = []
+    const details = sections.flatMap(section => {
+      if (section.disclosure) return [section]
+      const take = Math.min(visible, section.items.length)
+      summaryFacts.push(...section.items.slice(0, take))
+      visible -= take
+      return section.items.length > take ? [{ ...section, items: section.items.slice(take) }] : []
+    })
     return { protocol, status: observationStatus(envelope?.status), statusLabel: t('siteDetail.states.' + observationStatus(envelope?.status)),
-      observed: observationTime(envelope?.observed_at), duration: ms(envelope?.duration_ms), sections }
+      observed: observationTime(envelope?.observed_at), duration: ms(envelope?.duration_ms), sections, summaryFacts, details }
   })
   return { target, status, statusLabel: t('siteDetail.states.' + status), protocols, risks, endpoint, timings, kpis,
     http: { facts: httpFacts, headers, commonHeaders, redirects: strings(http.redirect_chain) },
-    dns: { facts: dnsFacts, groups: dnsGroups, chains: [...new Map(chains.map(chain => [JSON.stringify(chain), chain])).values()], risks: strings(dns.risk_flags) },
+    dns: { facts: dnsFacts, groups: dnsGroups, chains: [...new Map(chains.map(chain => [JSON.stringify(chain), chain])).values()], risks: strings(dns.risk_flags), signals: strings(dns.risk_flags).map(flag => siteDnsSignal(flag, t)) },
     web: { metadata, probes: webProbes } }
 }
 export type SiteObservationPresentation = ReturnType<typeof presentSiteObservation>

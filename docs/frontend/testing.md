@@ -184,6 +184,29 @@ P1–P3/Entity tests are adjusted only for P6's authorized trend and new semanti
 hooks; original Site request, failure and SEO assertions remain strict. No new
 runner or accepted Visual baseline is introduced. Human review remains separate.
 
+## Site Detail #109 Task B
+
+`site-detail-refinement.spec.ts` adds focused UI assertions at 390/768/1440 in
+Light/Dark. It verifies full-column Hero description, six primary health values,
+compact Target context, localized/grouped Attention, segmented controls, DNS
+signal classification, evidence-only Security summaries and grouped Insights
+with one selected-capability/trend surface. Existing P1–P6 owners retain exact
+request accounting, failures, history/cache/race/retry, SSR/SEO and keyboard checks.
+
+`site-detail-refinement.test.ts` verifies shared latency/HTTP/expiry display tones,
+P5/Health Strip certificate consistency, Task A-aligned raw DNS presentation and
+bilingual reason/validation mappings. Existing presentation tests retain missing,
+false, zero, precision, full-change and no-security-verdict boundaries. Real Nuxt
+runtime owner tests are unchanged.
+
+For temporary maintainer screenshots, set `GOFURRY_SITE_DETAIL_REVIEW_DIR` to an
+untracked review directory and run the refinement spec with the existing
+`pnpm run test:browser tests/browser/regression/site-detail-refinement.spec.ts --workers=1`
+command after building. It uses the same deterministic Nitro/upstream fixture,
+readiness, Chromium and error capture; it is not a second screenshot runner.
+These artifacts are review material only, never accepted P8 goldens. Full
+maintainer visual acceptance is separate from automated acceptance.
+
 ## Migrated regression knowledge
 
 | Former `scripts/` suite | Current owner | Preserved contracts |

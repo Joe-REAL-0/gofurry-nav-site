@@ -1,11 +1,11 @@
 <template>
   <div data-site-performance class="space-y-6">
-    <dl class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <dl class="site-detail-surface grid grid-cols-2 gap-4 lg:grid-cols-4">
       <div v-for="item in presentation.kpis" :key="item.key" :data-site-performance-kpi="item.key">
-        <dt class="site-detail-note">{{ item.label }}</dt><dd class="site-detail-health__value">{{ item.value }}</dd>
+        <dt class="site-detail-note">{{ item.label }}</dt><dd class="site-detail-health__value" :data-tone="item.tone">{{ item.value }}</dd>
       </div>
     </dl>
-    <section data-site-performance-waterfall>
+    <section data-site-performance-waterfall class="site-detail-surface">
       <h3 class="site-overview-title">{{ t('siteObservation.waterfall') }}</h3>
       <p class="site-detail-note mt-1">{{ t('siteObservation.timingHint') }}</p>
       <ol class="mt-3 space-y-3">
@@ -16,10 +16,10 @@
         </li>
       </ol>
     </section>
-    <section :data-site-performance-history-state="history.state" :data-site-performance-points="history.rows.length" :aria-busy="history.state === 'loading'">
+    <section class="site-detail-surface" :data-site-performance-history-state="history.state" :data-site-performance-points="history.rows.length" :aria-busy="history.state === 'loading'">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <h3 class="site-overview-title">{{ t('siteObservation.history') }}</h3>
-        <div role="group" :aria-label="t('siteObservation.samples')" class="flex gap-1">
+        <div role="group" :aria-label="t('siteObservation.samples')" class="site-detail-segmented flex gap-1">
           <button v-for="sample in samples" :key="sample" type="button" :data-site-performance-sample="sample" :aria-pressed="history.sample === sample"
             class="site-observation-sample" @click="emit('sample', sample)">{{ sample }}</button>
         </div>

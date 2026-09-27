@@ -1,7 +1,8 @@
 import type { HealthStatus, SiteHealthSummary, TargetHealthSummaryItem } from '~/types/nav'
 import type { SiteInsights, SiteInsightCapabilityState } from '~/types/insights'
 import { siteCapabilityRegistry } from './siteCapabilityRegistry'
-import { formatInsightChangeWhen, insightChangeI18nKey, insightChangeOrder } from './insightChanges'
+import { formatInsightChangeWhen, insightChangeI18nKey, insightChangeOrder, siteInsightChangeCategory } from './insightChanges'
+import { siteHealthReasonLabel } from './siteDetailPresentation'
 
 type Tone = 'good' | 'neutral' | 'muted' | 'warning' | 'bad'
 type Translate = (key: string, values?: Record<string, string | number>) => string
@@ -9,7 +10,6 @@ type CapabilityState = SiteInsightCapabilityState | 'missing'
 const statuses: HealthStatus[] = ['healthy', 'warning', 'degraded', 'down', 'unknown']
 const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null
 const clean = (values?: string[]) => [...new Set((values ?? []).map(value => value.trim()).filter(Boolean))]
-const normalized = (value: string) => value.trim().replace(/\s+/g, ' ').toLowerCase()
 const timestamp = (value?: string) => value && value !== '0001-01-01T00:00:00Z' && Number.isFinite(Date.parse(value))
   ? new Date(value).toISOString() : null
 const healthTone = (status: HealthStatus | null): Tone => status === 'healthy' ? 'good' : status === 'down' ? 'bad'
@@ -49,35 +49,32 @@ export function presentSiteOverview(
     generatedLabel: generatedAt ? generatedAt.slice(0, 19).replace('T', ' ') + ' UTC' : '—' }
 
   const attention: { key: string; message: string; target?: string; tone: Tone }[] = []
-  const seen = new Set<string>()
-  const add = (message: string, target?: string) => {
-    const key = normalized(message)
-    if (!key || seen.has(key)) return
-    seen.add(key)
-    attention.push({ key, message, target, tone: 'warning' })
-  }
-  const messages = clean(summary?.reason_messages)
-  const codes = clean(summary?.reason_codes)
-  const codeLabel = (code: string) => code === 'summary_stale' ? t('siteOverview.staleAttention')
-    : code === 'summary_missing' ? t('siteOverview.missingAttention') : t('siteOverview.reasonCode', { code })
   const attentionTargets = (summary?.targets ?? []).filter(needsAttention)
-  const hasHumanMessages = messages.length > 0 || attentionTargets.some(target => clean(target.reason_messages).length > 0)
-  for (const message of messages.length ? messages : hasHumanMessages ? [] : codes.map(codeLabel)) add(message)
+  const grouped = new Map<string, { message: string; targets: Set<string> }>()
+  const addReason = (key: string, message: string, target?: string) => {
+    const item = grouped.get(key) ?? { message, targets: new Set<string>() }
+    if (target) item.targets.add(target)
+    grouped.set(key, item)
+  }
+  // Summary codes explain Collector conclusions; never reconstruct health or
+  // leak Chinese backend messages into English UI. Unknown codes stay visible.
+  for (const code of clean(summary?.reason_codes)) addReason(code, siteHealthReasonLabel(code, t))
   for (const target of attentionTargets) {
-    const targetMessages = clean(target.reason_messages)
-    // Human messages that name this target or repeat its reason already explain it.
-    const covered = messages.some(message => normalized(message).includes(normalized(target.target))
-      || targetMessages.some(reason => normalized(reason) === normalized(message)))
-    if (covered) continue
-    const reasons = targetMessages.length ? targetMessages : hasHumanMessages ? [] : clean(target.reason_codes).map(codeLabel)
-    if (reasons.length) {
-      for (const message of reasons) add(normalized(message).includes(normalized(target.target)) ? message : `${target.target} · ${message}`, target.target)
-    } else add(`${target.target} · ${t(`siteDetail.states.${target.status}`)}`, target.target)
+    const codes = clean(target.reason_codes)
+    if (codes.length) for (const code of codes) addReason(code, siteHealthReasonLabel(code, t), target.target)
+    else addReason('status:' + target.status, t(`siteDetail.states.${target.status}`), target.target)
+  }
+  for (const [key, item] of grouped) {
+    const targets = [...item.targets]
+    const prefix = targets.length > 1 ? t('siteOverview.targetCount', { count: targets.length }) : targets[0]
+    attention.push({ key, message: prefix ? `${prefix} · ${item.message}` : item.message,
+      target: targets.length === 1 ? targets[0] : undefined, tone: 'warning' })
   }
   if (!attention.length) {
-    if (summaryState === 'missing') add(t('siteOverview.missingAttention'))
-    else if (summaryState === 'stale') add(t('siteOverview.staleAttention'))
-    else if (status !== 'healthy') add(t('siteOverview.statusAttention', { status: statusLabel }))
+    const message = summaryState === 'missing' ? t('siteOverview.missingAttention')
+      : summaryState === 'stale' ? t('siteOverview.staleAttention')
+        : status !== 'healthy' ? t('siteOverview.statusAttention', { status: statusLabel }) : ''
+    if (message) attention.push({ key: 'summary', message, tone: 'warning' })
   }
 
   const unavailable = insightsUnavailable || insights === null
@@ -95,6 +92,8 @@ export function presentSiteOverview(
     .sort((left, right) => insightChangeOrder(right) - insightChangeOrder(left)).slice(0, 4)
     .map((item, index) => ({ key: `${item.type}:${item.occurred_at || item.date}:${index}`, type: item.type,
       label: t(insightChangeI18nKey(item.type)), dateTime: item.occurred_at || item.date,
+      category: siteInsightChangeCategory(item.type) ?? 'unknown',
+      categoryLabel: t('siteIntelligence.changeCategories.' + (siteInsightChangeCategory(item.type) ?? 'unknown')),
       // An explicit zone makes SSR and hydration agree even across time zones.
       when: formatInsightChangeWhen(item, locale, 'UTC'), precise: item.occurred_at !== null }))
   const changesState = unavailable ? 'unavailable' : recentChanges.length ? 'ready' : 'empty'

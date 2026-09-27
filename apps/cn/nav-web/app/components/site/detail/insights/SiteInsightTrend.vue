@@ -1,12 +1,11 @@
 <template>
   <section data-site-insight-trend :data-site-insight-trend-state="surfaceState" :data-site-trend-metric="metric" :data-site-trend-range="range" class="mt-6" aria-labelledby="site-ecosystem-trend-title">
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <h4 id="site-ecosystem-trend-title" class="site-overview-title">{{ t('siteIntelligence.trendTitle') }}</h4>
-      <div class="flex" :aria-label="t('siteIntelligence.range')">
+      <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1"><h4 id="site-ecosystem-trend-title" class="site-overview-title">{{ t('siteIntelligence.trendTitle') }}</h4><span class="site-detail-note">{{ t('siteIntelligence.trendScope') }}</span></div>
+      <div class="site-detail-segmented flex" role="group" :aria-label="t('siteIntelligence.range')">
         <button v-for="option in siteInsightRanges" :key="option" type="button" :data-site-insight-range="option" :aria-pressed="option === range" class="site-intelligence-range" @click="emit('range', option)">{{ t('insights.ranges.' + option) }}</button>
       </div>
     </div>
-    <p class="site-detail-note mt-2">{{ t('siteIntelligence.trendScope') }}</p>
     <div class="site-intelligence-chart-shell relative mt-3 min-w-0" :aria-busy="surfaceState === 'loading'">
       <div ref="element" data-site-insight-chart :data-site-chart-ready="ready && presentation.state === 'ready'" role="img" :aria-label="t('siteIntelligence.trendTitle')" :class="{ invisible: surfaceState !== 'ready' }" class="site-intelligence-chart w-full min-w-0" />
       <div v-if="surfaceState !== 'ready'" data-site-trend-message role="status" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">

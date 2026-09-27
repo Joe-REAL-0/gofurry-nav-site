@@ -1,8 +1,8 @@
 {
   "siteIntelligence": {
-    "scope": "生态观测属于 Site 实体，不随当前 Target 切换而改变。",
+    "scope": "站点级观测，不受当前目标切换影响。",
     "ecosystem": "网站生态",
-    "compare": "与其他站点对比",
+    "compare": "站点对比",
     "matrix": "能力矩阵",
     "capability": "能力",
     "siteState": "站点状态",
@@ -16,7 +16,7 @@
     "retry": "重新加载",
     "loading": "加载中…",
     "trendTitle": "生态采用趋势",
-    "trendScope": "此曲线展示站点生态的采用情况，不代表当前站点自身的变化历史。",
+    "trendScope": "全站生态",
     "range": "趋势范围",
     "noObservedValues": "返回的日期中尚无已观测的采用率，缺口保持未知。",
     "trendStates": {
@@ -31,7 +31,10 @@
       "target": "目标",
       "certificate": "证书",
       "unknown": "其他变化"
-    }
+    },
+    "adoptionShort": "采用率",
+    "adoptionHelp": "已知样本中支持该能力的比例。",
+    "coverageHelp": "符合统计条件的总体中，已有已知事实的比例。"
   },
   "siteSecurity": {
     "navigation": "安全二级导航",
@@ -55,15 +58,15 @@
     "cryptoHint": "OCSP 与 SCT 是采集事实，单独缺失不代表整体安全结论。",
     "headers": "Web 策略",
     "headerHint": "缺失仅表示本次响应未观测到该 Header。",
-    "collectorSummary": "采集摘要",
-    "rawHeaders": "查看原始 HTTP Headers →",
+    "collectorSummary": "观测详情",
+    "rawHeaders": "查看原始 HTTP Headers",
     "portCheck": "端口探测",
     "portHint": "开放端口表示服务可达，不等同于存在漏洞。",
     "wafCanary": "WAF Canary",
     "wafHint": "阻断可能来自代理、应用或中间件，Canary 行为不能证明已部署 WAF。",
     "probeMetadata": "采集详情",
     "cases": "Canary 用例与采集详情",
-    "attentionTitle": "需关注的观测证据",
+    "attentionTitle": "需要关注",
     "views": {
       "overview": "总览",
       "tls": "TLS 与证书",
@@ -182,6 +185,18 @@
       "blocked": "已阻断",
       "expected_blocked": "预期阻断",
       "matched_expected": "符合预期"
+    },
+    "identity": "证书身份",
+    "observedCount": "已观测",
+    "checkedCount": "个端口已检查",
+    "expectedMatched": "项预期阻断行为匹配",
+    "validation": {
+      "content_type_not_text_plain": "响应不是纯文本格式",
+      "body_empty": "文件内容为空",
+      "body_truncated": "采集内容被截断",
+      "contact_missing_or_invalid": "联系信息缺失或格式无效",
+      "expires_missing_or_invalid": "到期时间缺失或格式无效",
+      "security_txt_expired": "security.txt 已过期"
     }
   },
   "siteObservation": {
@@ -199,7 +214,7 @@
     "stale": "已过期",
     "freshnessUnknown": "新鲜度未知",
     "endpoint": "端点证据",
-    "risks": "已报告的信号",
+    "risks": "需要关注",
     "yes": "是",
     "no": "否",
     "noEvidence": "暂无观测证据",
@@ -209,7 +224,7 @@
     "resolution": "解析链",
     "recordDetails": "记录详情",
     "waterfall": "请求时序瀑布图",
-    "timingHint": "各阶段为独立采集值，可能重叠；总耗时使用采集结果，不由阶段相加。",
+    "timingHint": "各阶段可能重叠，总耗时取自采集结果。",
     "history": "Ping 延迟历史",
     "chartLoading": "正在准备延迟图…",
     "samples": "条样本",
@@ -269,7 +284,7 @@
       "dnssec": "DNSSEC",
       "provider_type": "基础设施类型",
       "hijacked": "劫持标记",
-      "risk_flags": "已报告的信号",
+      "risk_flags": "DNS 观测信号",
       "title": "标题",
       "description": "描述",
       "charset": "字符集",
@@ -295,10 +310,24 @@
       "statuses": "域名状态",
       "nameservers": "域名服务器",
       "dnssecDelegation": "DNSSEC 委派签名"
+    },
+    "currentObservation": "当前观测",
+    "responseSummary": "HTTP 响应",
+    "dnsSummary": "DNS 摘要",
+    "dnsObservationSignals": "DNS 观测信号",
+    "informationalSignal": "诊断参考",
+    "warningSignal": "需要关注",
+    "probeDetails": "观测详情",
+    "dnsSignals": {
+      "ptr_empty": "DNS 反向解析（PTR）为空",
+      "low_ttl": "DNS TTL 较低",
+      "private_ip": "DNS 返回私网或特殊地址",
+      "nxdomain_with_answer": "DNS 不存在响应中包含解析结果",
+      "other": "DNS 出现未分类观测信号"
     }
   },
   "siteOverview": {
-    "health": "站点健康",
+    "health": "整体健康",
     "scope": "整个站点",
     "updated": "更新于",
     "summaryMissing": "暂无完整站点级健康摘要",
@@ -322,7 +351,7 @@
     "unavailable": "站点生态观测数据暂时不可用。",
     "changes": "近期变化",
     "changesEmpty": "暂无近期变化记录",
-    "fullEcosystem": "查看完整站点生态观测",
+    "fullEcosystem": "查看生态观测",
     "utc": "UTC"
   },
   "siteDetail": {
@@ -365,6 +394,33 @@
       "success": "成功",
       "failure": "失败",
       "skipped": "已跳过"
+    },
+    "expired": "已过期",
+    "reasons": {
+      "http_missing_or_stale": "HTTP 观测缺失或已过期",
+      "http_failed": "HTTP 当前无法访问",
+      "dns_failed": "DNS 解析也失败",
+      "dns_missing_or_stale": "DNS 观测缺失或已过期",
+      "dns_failed_but_http_ok": "DNS 解析失败，但 HTTP 当前可访问",
+      "ping_failed_but_http_ok": "Ping 不可达，但 HTTP 当前可访问",
+      "dns_risk_private_ip": "DNS 返回私网或特殊地址",
+      "dns_risk_low_ttl": "DNS TTL 较低",
+      "dns_risk_nxdomain_with_answer": "DNS 不存在响应中包含解析结果",
+      "dns_risk_ptr_empty": "DNS 反向解析（PTR）为空",
+      "dns_risk_other": "DNS 出现未分类观测信号",
+      "tls_verify_expired": "TLS 校验未通过：证书已过期",
+      "tls_verify_not_yet_valid": "TLS 校验未通过：证书尚未生效",
+      "tls_verify_hostname_mismatch": "TLS 证书与目标域名不匹配",
+      "tls_verify_unknown_authority": "TLS 证书签发机构未获信任",
+      "tls_verify_incompatible_usage": "TLS 证书用途不匹配",
+      "tls_verify_other": "TLS 证书校验未通过",
+      "tls_cert_expired": "TLS 证书已过期",
+      "tls_cert_expiring_soon": "TLS 证书将在 30 天内过期",
+      "no_target_summary": "尚无可用的目标健康摘要",
+      "all_targets_down": "所有观测目标均不可访问",
+      "all_targets_unknown": "所有观测目标的状态均未知",
+      "some_targets_degraded": "部分观测目标不可访问或已降级",
+      "some_targets_warning": "部分观测目标需要关注"
     }
   },
   "errorPage": {

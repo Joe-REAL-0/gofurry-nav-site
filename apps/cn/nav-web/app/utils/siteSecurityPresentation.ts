@@ -1,6 +1,7 @@
 import type { CollectorEnvelope, TargetLatestResponse } from '~/types/nav'
 import type { SiteDetailPageData } from '~/composables/useSiteDetailPage'
 import { normalizeObservationHeaders, observationRecord as record, observationTime, type ObservationFact } from './siteObservationPresentation'
+import { siteProtocolTone } from './siteDetailPresentation'
 
 type Source = Pick<SiteDetailPageData, 'domain' | 'targetLatestCore' | 'targetHealthSummary' | 'lightProbeState'>
 type Translate = (key: string) => string
@@ -10,6 +11,8 @@ const rows = (value: unknown) => Array.isArray(value) ? value.map(record) : []
 const bool = (value: unknown) => typeof value === 'boolean' ? value : null
 const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value) ? value : null
 const count = (value: unknown) => number(value) !== null && (value as number) >= 0 ? value as number : null
+const securityTxtValidationCodes = new Set(['content_type_not_text_plain', 'body_empty', 'body_truncated', 'contact_missing_or_invalid', 'expires_missing_or_invalid', 'security_txt_expired'])
+export const siteSecurityTxtValidationLabel = (code: string, t: Translate) => securityTxtValidationCodes.has(code) ? t('siteSecurity.validation.' + code) : code
 const headerCatalog = [
   ['hsts', 'strict_transport_security', 'strict-transport-security', 'HSTS'],
   ['content_security_policy', 'content_security_policy', 'content-security-policy', 'Content-Security-Policy'],
@@ -26,6 +29,16 @@ export function readSiteCertificateEvidence(value: unknown): Record<string, unkn
   const observed = collected === true || bool(payload.cert_verified) !== null || number(payload.cert_days_left) !== null
     || Boolean(text(payload.cert_subject_cn) || text(payload.cert_not_after) || text(payload.cert_fingerprint_sha256))
   return observed ? payload : null
+}
+
+/** Shared expiry presentation uses collector evidence, never the client clock. */
+export function presentSiteCertificateExpiry(payload: unknown, t: Translate) {
+  const days = number(readSiteCertificateEvidence(payload)?.cert_days_left)
+  const state = days === null ? 'not_observed' : days <= 0 ? 'expired' : days <= 7 ? 'warning' : days <= 30 ? 'attention' : 'normal'
+  return { state, days, label: t('siteSecurity.states.' + state),
+    value: days === null ? t('siteDetail.notObserved') : days <= 0 ? t('siteDetail.expired') : `${days} ${t('siteDetail.days')}`,
+    tone: state === 'normal' ? 'good' as const : state === 'attention' ? 'warning' as const
+      : state === 'warning' || state === 'expired' ? 'bad' as const : 'neutral' as const }
 }
 
 /** Current Target evidence only. No I/O, client-clock validity calculation or security verdict. */
@@ -67,9 +80,9 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   const verified = bool(cert.cert_verified), days = number(cert.cert_days_left)
   const verification = verified === true ? 'verified' : verified === false ? 'failed'
     : httpMeta.state === 'unavailable' && !hasCertificate ? 'unavailable' : handshake === 'not_tls' ? 'not_applicable' : 'not_observed'
-  const expiry = days === null ? 'not_observed' : days <= 0 ? 'expired' : days <= 7 ? 'warning' : days <= 30 ? 'attention' : 'normal'
+  const expiryPresentation = presentSiteCertificateExpiry(payload, t), expiry = expiryPresentation.state
   const certificate = {
-    verification: state(verification), expiry: state(expiry), days, collected,
+    verification: { ...state(verification), tone: siteProtocolTone(verification) }, expiry: expiryPresentation, days, collected,
     errors: compact(facts(cert, ['verify_error_category', 'verify_error'])),
     validity: [fact('cert_not_before', observationTime(cert.cert_not_before)), fact('cert_not_after', observationTime(cert.cert_not_after)), fact('cert_days_left', days)],
     subject: facts(cert, ['cert_subject_cn', 'cert_subject_org', 'cert_san_count']), san: strings(cert.cert_dns_names),
@@ -86,15 +99,18 @@ export function presentSiteSecurity(source: Source, t: Translate) {
     const present = bool(item.present) ?? bool(headerFlags[flag]) ?? (typeof headerFlags[flag] === 'string' || hasRawHeaders ? Boolean(value) : null)
     const headerState = httpMeta.state !== 'present' ? httpMeta.state : present === null ? 'not_observed' : present ? 'present' : 'missing'
     return { key, ...state(headerState), name: label, value: value || '—',
+      tone: headerState === 'present' ? 'good' : headerState === 'unavailable' ? 'warning' : headerState === 'not_observed' ? 'muted' : 'neutral',
       details: compact(facts(item, ['max_age', 'include_subdomains', 'preload', 'has_default_src', 'unsafe_inline', 'unsafe_eval', 'wildcard_source', 'mode', 'nosniff', 'policy', 'directive_count'])) }
   })
   const headers = { ...httpMeta, rows: headerRows }
 
   const txtEnvelope = envelope(light, 'security_txt'), txt = record(txtEnvelope?.payload)
   const txtMeta = meta(txtEnvelope, light?.state === 'stale'), validation = strings(txt.validation_errors)
+  const validationLabels = validation.map(code => siteSecurityTxtValidationLabel(code, t))
   const txtState = txtMeta.state !== 'present' ? txtMeta.state : bool(txt.exists) === true ? validation.length ? 'found_with_issues' : 'found'
     : bool(txt.exists) === false ? 'not_found' : 'unknown'
   const securityTxt = { ...txtMeta, ...state(txtState), metaFacts: txtMeta.facts, validation: txtMeta.state === 'present' ? validation : [],
+    validationLabels: txtMeta.state === 'present' ? validationLabels : [],
     facts: facts(txt, ['exists', 'recognition', 'path_used', 'status_code', 'content_type', 'contact', 'expires', 'policy', 'canonical', 'preferred_languages']),
     truncated: txtMeta.truncated || txt.body_truncated === true }
 
@@ -102,7 +118,7 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   const portMeta = meta(portEnvelope, light?.state === 'stale')
   const portRows = rows(ports.results).map((item, index) => ({ key: String(index),
     status: ['open', 'closed', 'timeout', 'filtered_suspected', 'skipped'].includes(text(item.status)) ? text(item.status) : 'unknown',
-    tone: 'neutral' as const,
+    tone: item.status === 'timeout' ? 'warning' : ['closed', 'filtered_suspected', 'skipped'].includes(text(item.status)) ? 'muted' : 'neutral',
     facts: [fact('port', item.port), fact('service_hint', item.service_hint), fact('status', t('siteSecurity.states.' + (['open', 'closed', 'timeout', 'filtered_suspected', 'skipped'].includes(text(item.status)) ? text(item.status) : 'unknown'))), fact('duration_ms', ms(item.duration_ms))],
     errors: compact(facts(item, ['error_code', 'error_message'])) }))
   const portCheck = { ...portMeta, ...state(portMeta.state === 'present' && Array.isArray(ports.results) && !portRows.length ? 'empty' : portMeta.state),
@@ -122,6 +138,9 @@ export function presentSiteSecurity(source: Source, t: Translate) {
     && mismatchKeys.every(key => count(waf[key]) === 0)
   const wafState = wafMeta.state !== 'present' ? wafMeta.state : truncated ? 'incomplete' : mismatches.length ? 'mismatch' : matched ? 'matched' : 'present'
   const wafCanary = { ...wafMeta, ...state(wafState), truncated,
+    tone: wafState === 'matched' ? 'info' : ['mismatch', 'unavailable', 'incomplete'].includes(wafState) ? 'warning' : 'neutral',
+    summaryText: wafMeta.state === 'present' && count(waf.expected_blocked_matched_count) !== null && count(waf.expected_blocked_count) !== null
+      ? `${waf.expected_blocked_matched_count} / ${waf.expected_blocked_count} ${t('siteSecurity.expectedMatched')}` : state(wafState).label,
     summary: facts(waf, ['cases_total', 'cases_executed', 'blocked_count', 'expected_blocked_count', 'expected_blocked_matched_count', ...mismatchKeys]),
     metadata: facts(waf, ['target_run_truncated', 'truncated_target_count']),
     cases: rows(waf.cases).map((item, index) => ({ key: String(index), facts: [...facts(item, ['case_id', 'category', 'method', 'status_code', 'blocked', 'expected_blocked', 'matched_expected']), fact('duration_ms', ms(item.duration_ms))], errors: compact(facts(item, ['error_code', 'error_message'])) })),
@@ -131,15 +150,18 @@ export function presentSiteSecurity(source: Source, t: Translate) {
   const addAttention = (key: string, detail = '') => attention.push({ key, message: t('siteSecurity.attention.' + key), detail })
   if (verification === 'failed') addAttention('verification', text(cert.verify_error) || text(cert.verify_error_category))
   if (['attention', 'warning', 'expired'].includes(expiry)) addAttention('expiry', `${days} ${t('siteDetail.days')}`)
-  if (txtState === 'found_with_issues') addAttention('securityTxt', validation.join('; '))
+  if (txtState === 'found_with_issues') addAttention('securityTxt', validationLabels.join('; '))
   for (const key of mismatches) addAttention(key, display(waf[key]))
   const overview = { attention, sections: [
-    { key: 'transport', title: t('siteSecurity.transport'), value: transport.label, detail: [text(payload.tls_version), handshake].filter(Boolean).join(' · ') || '—' },
-    { key: 'certificate', title: t('siteSecurity.certificate'), value: `${t('siteSecurity.verification')}: ${certificate.verification.label}`, detail: days === null ? '—' : `${days} ${t('siteDetail.days')}` },
-    { key: 'headers', title: t('siteSecurity.headers'), value: headerRows.map(row => `${row.name}: ${row.label}`).join('\n'), detail: '' },
+    { key: 'transport', title: t('siteSecurity.transport'), value: text(payload.tls_version) || transport.label, detail: '', tone: siteProtocolTone(transport.state) },
+    { key: 'certificate', title: t('siteSecurity.certificate'), value: certificate.verification.label, detail: expiryPresentation.value, tone: certificate.verification.tone },
+    { key: 'headers', title: t('siteSecurity.headers'), value: headerRows.some(row => row.state === 'present' || row.state === 'missing')
+      ? `${headerRows.filter(row => row.state === 'present').length} / ${headerRows.length} ${t('siteSecurity.observedCount')}`
+      : state(httpMeta.state === 'present' ? 'not_observed' : httpMeta.state).label, detail: '' },
     { key: 'securityTxt', title: 'security.txt', value: securityTxt.label, detail: '' },
-    { key: 'portCheck', title: t('siteSecurity.portCheck'), value: portCheck.label, detail: `${t('siteSecurity.fields.ports_checked')}: ${display(ports.ports_checked)}` },
-    { key: 'wafCanary', title: t('siteSecurity.wafCanary'), value: wafCanary.label, detail: '' },
+    { key: 'portCheck', title: t('siteSecurity.portCheck'), value: portMeta.state === 'present' && count(ports.ports_checked) !== null
+      ? `${ports.ports_checked} ${t('siteSecurity.checkedCount')}` : portCheck.label, detail: '' },
+    { key: 'wafCanary', title: t('siteSecurity.wafCanary'), value: wafCanary.summaryText, detail: wafState === 'matched' ? '' : wafCanary.label, tone: wafCanary.tone },
   ] }
   return { target, overview, transport, certificate, headers, securityTxt, portCheck, wafCanary }
 }
