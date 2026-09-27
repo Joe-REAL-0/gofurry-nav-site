@@ -43,4 +43,3 @@ export function useSiteObservationHistory(input: {
   return { state: computed(() => current.value.state), rows, sample, total: computed(() => current.value.rows.length),
     selectSample: (value: SiteHistorySample) => { sample.value = value }, retry: () => load(true) }
 }
-export type SiteObservationHistory = ReturnType<typeof useSiteObservationHistory>

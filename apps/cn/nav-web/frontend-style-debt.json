@@ -1,19 +1,10 @@
 {
   "schema_version": 1,
   "baseline": {
-    "tailwind-appearance": {
-      "app/components/site/SiteHealthSummaryPanel.vue": 42,
-      "app/components/site/SiteOverview.vue": 85,
-      "app/components/site/SiteSignalCards.vue": 20
-    },
-    "tailwind-arbitrary-appearance": {
-      "app/components/site/SiteHealthSummaryPanel.vue": 1,
-      "app/components/site/SiteOverview.vue": 1
-    },
+    "tailwind-appearance": {},
+    "tailwind-arbitrary-appearance": {},
     "raw-visual-value": {
-      "app/components/experimental/ambient/GoFurryGridBackground.vue": 75,
-      "app/components/site/SiteChangeEvents.vue": 22,
-      "app/components/site/SiteSignalCards.vue": 11
+      "app/components/experimental/ambient/GoFurryGridBackground.vue": 75
     },
     "important": {
       "app/assets/styles/pages/insights.less": 3,

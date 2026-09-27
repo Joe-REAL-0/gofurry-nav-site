@@ -559,3 +559,112 @@ Lint, stylelint, exact style policy, typecheck and production build passed for
 this correction; the final focused Site runtime/Shell Browser run passed all
 30 cases with zero retries. The full suite and remote CI were not rerun for this
 one-import correction. Functional inventory is now 558; Visual remains 119/118 PNGs.
+
+## P7 — Appearance ownership and legacy cleanup
+
+The maintainer's P7 instruction accepts P2–P6 as the visual/behavior baseline.
+Work starts on clean `dev`, synchronized with `origin/dev`, including the Home
+entry correction above. P7 removes dead ownership only; no P8 work is included.
+
+### Consumer audit and deletion
+
+Repository `rg` searches covered explicit imports, Pascal/kebab Nuxt component
+tags, dynamic component/registration/glob paths, application/server source and
+tests/scripts. Manifest entries, generated component declarations and historical
+documents are not runtime consumers. No dynamic component registry is present.
+
+| Deleted component | Consumer result | Current owner retained |
+| --- | --- | --- |
+| SiteHealthSummaryPanel | No runtime or test consumer | Overview, Target Context, Observation, Security |
+| SiteOverview | No runtime or test consumer; distinct from SiteOverviewWorkspace | P2 Hero and Target Context |
+| SiteSignalCards | No runtime or test consumer | Health Strip, Performance, TLS/Certificate |
+| SiteChangeEvents | No runtime or test consumer | P6 Recent Site Changes |
+
+No Legacy/Old clones or legacy-only tests remain. The deleted SFCs take their
+private formatting/domain/provider helpers, transitions and scoped styles with
+them. Shared Site routes, API wrappers and active presentation helpers are kept.
+
+All fourteen `detailTypes.ts` exports were checked separately:
+
+| Type | References before deletion |
+| --- | --- |
+| DetailInfoItem | Only DetailSection and LightProbeEntry in the same dead file |
+| DetailSection | None |
+| LightProbeEntry | None |
+| SiteHeroBadge | None |
+| SiteSignalCard | Only deleted SiteSignalCards |
+| ObservationStripItem | None |
+| ProtocolTrackEntry | None |
+| SecurityHeaderItem | None |
+| ChangeEventItem | Only deleted SiteChangeEvents |
+| ObservationProtocol | Only ObservationHistoryItem in the same dead file |
+| ObservationHistoryItem | None |
+| ObservationTone | Only ObservationMetricItem/ObservationInfoItem in the same dead file |
+| ObservationMetricItem | None |
+| ObservationInfoItem | None |
+
+The whole file is removed, plus the separately confirmed unused
+`SiteObservationHistory` return-type alias. That composable's executable code,
+cache, requests and public behavior are unchanged. Other exported helpers/types
+without external consumers still have internal consumers and are preserved.
+
+### i18n, suppression and documentation
+
+Exact namespace and dynamic-prefix searches found `site.overview.*` and
+`site.healthSummary.*` only in deleted components. Retired performance/HTTP/DNS
+labels and the old title have no remaining consumers. Both locales remove 84
+dead leaves, preserving `site.siteDnsPanel.none` for the active Home popover.
+Parsed before/after comparisons preserve every other namespace and message,
+including siteDetail/siteOverview/siteObservation/siteSecurity/siteIntelligence.
+
+No deleted component has a suppression entry; `eslint-suppressions.json` is
+unchanged. The active useSiteDetailPage, service and shared-code suppressions stay.
+The historical style-system table now identifies Site dark/deep exceptions as
+retired. Contract, Agent router and frontend guides distinguish historical #124
+inventories from current #109 closure without rewriting old acceptance results.
+
+### Appearance and exact debt delta
+
+Every class and token declared by `site-detail.less` still has an active consumer;
+no healthy rule is removed. `insights.less` has no residual Site-only selector.
+All CSS/Less files, active Site components, APIs, route owners, presentation
+helpers, SSR/SEO code, tests and Visual sources remain byte-identical to baseline.
+The only active composable edit removes the unused type alias described above.
+There is no spacing/color/layout/animation change or active appearance migration.
+
+After deletion, policy failed on exactly seven stale Site rule/file pairs:
+Tailwind 42+85+20, arbitrary 1+1 and raw 22+11. Only then was
+`style:policy:update` run; its diff removes precisely those pairs and no exception.
+
+| Debt | Before | After |
+| --- | ---: | ---: |
+| Site Tailwind appearance | 147 | 0 |
+| Site arbitrary appearance | 2 | 0 |
+| Site raw visual | 33 | 0 |
+| Deep selector | 0 | 0 |
+| Legacy dark entry | 0 | 0 |
+| Ambient raw, out of scope | 75 | 75 |
+| #108 important, out of scope | 5 | 5 |
+
+The final manifest contains no `app/components/site/*` entry. No budget was
+raised, transferred, renamed or hidden. Visual inventory remains 119 tests and
+118 accepted PNGs; hashes of all 141 Visual source/config/PNG files are unchanged.
+
+### Verification and handoff
+
+Frozen installation, lint, stylelint, style-policy tooling (75), exact policy,
+Unit (198), Nuxt (20), combined Vitest (218), typecheck, Insights semantics and
+SEO recovery, production build and Chromium installation passed. The full
+`pnpm run test:browser --workers=1` run passed **558/558 in 13.4 minutes**, with
+zero failures, skips or retries. All six P1–P6 Site contract owners remain intact
+and pass alongside the rest of the frontend. Remote CI and pinned Linux Visual
+comparison remain unverified for P7.
+
+Maintainer lightweight smoke is still required on Desktop and Mobile: Overview,
+Observation, Security and Insights; confirm Hero/Health/Target/Tabs render as before
+with no layout collapse, unexpected appearance change or console error. No full
+appearance review is requested because active appearance is unchanged. Automated
+verification does not stand in for that maintainer smoke. P8 remains separate and
+no final Site Visual golden has been created or updated.
+Engineering exit criteria are satisfied; the maintainer smoke criterion remains
+pending. P8 can be requested after that confirmation; it has not been started.

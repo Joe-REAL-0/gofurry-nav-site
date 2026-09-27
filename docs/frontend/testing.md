@@ -10,7 +10,9 @@ shell/context cases for 435 Functional Browser. #109 P3 adds 16 Overview cases
 for 451 Functional Browser. #109 P4 adds 30 Observation cases for
 481 Functional Browser. #109 P5 adds 50 Security cases for
 531 Functional Browser. #109 P6 adds 26 Site intelligence cases for
-**557 Functional Browser /119 Visual /118 PNG**. The
+557 Functional Browser. The Home-to-Site client entry regression adds one for
+**558 Functional Browser /119 Visual /118 PNG**; #109 P7 preserves that inventory
+and all six P1–P6 Site Browser owners without adding a runner or golden. The
 phase-labelled sections preserve earlier acceptance matrices/counts; use
 [Full verification](#full-verification) for current commands and the
 [closure record](../acceptance/issue-124-frontend-engineering-closure.md) for

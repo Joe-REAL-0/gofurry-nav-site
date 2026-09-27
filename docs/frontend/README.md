@@ -10,8 +10,9 @@
 P4–P6 appearance migration is complete. P7 replaces the old ad hoc browser and
 visual-report runners with the existing formal gates. Performance tools, explicit
 cloud acceptance and source/tooling Contract Guards retain their separate scope.
-Site Detail #109, Insights #108 and preserved ambient effects keep measured debt;
-new code in those areas follows the same contract.
+Site Detail #109 P7 closes its measured debt through consumer-audited legacy
+deletion, preserving P2–P6 appearance and behavior. Only Insights #108 important
+debt and preserved ambient raw values remain; new code follows the same contract.
 
 The original [#124 plan](https://github.com/gofurry/gofurry-nav-site/issues/124#issuecomment-5740012423)
 and older Nav Web style-system/roadmap/handoff documents are historical context.

@@ -74,8 +74,8 @@ maintainer visual review before P3 and does not create a Visual golden.
 
 P3 Overview consumes `siteOverviewPresentation.ts`, a pure Site-only projection.
 Keep the first Site/language summary for the page session, use all seven registry
-capabilities, and preserve empty/unavailable plus day/exact precision. The legacy
-Insights panel now belongs only to its tab; Overview owns no fetch or Target
+capabilities, and preserve empty/unavailable plus day/exact precision. P6 replaced
+the legacy Insights panel; Overview owns no fetch or Target
 protocol checks. `site-overview.spec.ts` owns this contract using the shared
 fixture. P3 adds no appearance debt or Visual golden and requires maintainer
 visual acceptance before P4.
@@ -89,7 +89,7 @@ out of Web, raw timings unsummed and collector loss percentages unscaled. Use
 may decrease. P4 requires manual review before P5 and no accepted Visual updates.
 
 [frontend-style-debt.json](frontend-style-debt.json) is measured state, never an
-example or permission. Remaining style debt belongs to Site Detail #109, Insights
+example or permission. After #109 P7, remaining style debt belongs to Insights
 #108 and intentionally preserved ambient effects. No opportunistic migration of
 these areas; their new code still follows the contract.
 
@@ -109,6 +109,14 @@ slice/fact failure distinctions and classify every active chart state. Public
 copy keeps Ecosystem naming. `site-insights.spec.ts` and real Nuxt tests own this
 contract; Site Detail owns appearance, #108 remains separate. Manual review precedes
 P7, and accepted Visual files are unchanged.
+
+P7 retires the consumer-audited SiteHealthSummaryPanel, SiteOverview, SiteSignalCards,
+SiteChangeEvents and detailTypes. Site Detail has zero style debt; do not restore
+legacy clones or historical dark/deep exceptions. Active P2–P6 components and
+`site-detail.less` keep their existing appearance/runtime ownership. Home still
+uses `site.siteDnsPanel.none`; other retired `site.*` labels are removed. Preserve
+active ESLint suppressions, ambient raw debt and #108 important debt. P8 requires
+maintainer Desktop/Mobile smoke and separate authorization for final Visual work.
 
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never

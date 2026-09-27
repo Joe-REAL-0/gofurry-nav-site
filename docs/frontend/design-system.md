@@ -349,13 +349,20 @@ spacers and runtime geometry. Review/Filter/Jump/Lightbox remain body-owned;
 NSFW and Rating retain their existing primitives. No global Common palette or
 file relocation is needed to close P6.
 
-Remaining baseline ownership is explicit: Site #109 owns Tailwind 632, arbitrary
+At the #124 P6 exit, baseline ownership was: Site #109 Tailwind 632, arbitrary
 5, deep 33 and raw 388 (382 in Site SFCs, 6 Site capability values in
 `insights.less`). Ambient's 75 raw values remain experimental. The three shared
 Insights foundation `!important` declarations and two Insights domain declarations
 remain #108/shared-boundary work; shared consumers do not authorize Game-only
 removal. P6 closure does not authorize #108/#109 changes. P7 subsequently retires
 the legacy runners after mapping their assertions into the formal gates.
+
+That is a historical inventory. #109 P2–P6 established `site-detail.less` and
+the active workspace components; #109 P7 deletes the four remaining unconsumed
+Site components and their private styles. Site Tailwind/arbitrary/raw debt is
+now zero, as are deep selectors and legacy dark entries. All active Site selectors
+and tokens remain unchanged. Ambient raw 75 and #108 important 5 remain owned
+exactly as before; historical Site dark/deep exceptions are retired.
 
 ## Preserve semantic identity
 

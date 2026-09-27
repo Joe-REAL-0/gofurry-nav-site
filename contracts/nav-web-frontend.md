@@ -347,6 +347,28 @@ accounting explicitly for P6's first activated trend. SEO remains Entity-only.
 No backend/schema changes, accepted Visual updates or P8 golden are authorized.
 Maintainer visual acceptance is required before P7; remote CI is a separate status.
 
+## Site Detail legacy and appearance closure (#109 P7)
+
+P7 deletes the consumer-audited SiteHealthSummaryPanel, SiteOverview,
+SiteSignalCards and SiteChangeEvents, their private helpers/styles and all fourteen
+retired detailTypes definitions. No explicit import, Nuxt template tag, dynamic
+registration or test consumes these components. The unused SiteObservationHistory
+type alias is also retired; active history behavior is unchanged.
+
+Site Detail Tailwind appearance, arbitrary appearance and raw visual debt are
+zero. Deep selectors and legacy dark entries remain zero. `site-detail.less`
+retains the P2–P6 appearance; no healthy selector/token or active UI is redesigned.
+Historical Site dark/deep exceptions MUST NOT be treated as current permissions.
+The remaining baseline is ambient raw 75 and #108 important 5; no budget transfer,
+increase, new exception or unrelated cleanup is authorized.
+
+Retired `site.*` messages are removed from both locales after consumer audit;
+`site.siteDnsPanel.none` remains required by Home. The five active Site namespaces
+and shared messages retain their values. Existing active ESLint suppressions stay.
+All P1–P6 route/request/cache/retry/SSR/SEO/evidence contracts and tests remain
+authoritative. P7 adds no feature or final golden. Maintainer Desktop/Mobile smoke
+of Overview, Observation, Security and Insights precedes separately authorized P8.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**
@@ -604,9 +626,10 @@ the removal condition MUST be actionable. Unexplained ignore lists and permanent
 directory wildcards are prohibited. Existing visual-guard allowlists MUST NOT
 be silently promoted to exceptions. P0 grants no exceptions automatically.
 
-#108 Insights and #109 Site Detail are **migration exclusions**, not style
-exceptions. P4–P6 MUST NOT proactively migrate those surfaces. Their historical
-debt MUST still be measured, and new code there MUST follow this contract.
+#108 Insights and #109 Site Detail were **migration exclusions** from #124
+P4–P6, not style exceptions. #109 P7 now closes Site-specific debt under its own
+scope; #108 remains separately owned. Any remaining historical debt MUST still
+be measured, and new code there MUST follow this contract.
 Any precise exception tied to those redesigns MUST be removed when its stated
 replacement lands; issue membership is not a blanket exemption.
 
@@ -775,8 +798,9 @@ current token hierarchy, aliasing or annotation, nor establish another token
 level; further consolidation belongs to later phases. `foundation.less` has structural
 values/aliases and excludes no raw colors. Ordinary selectors in every listed
 file remain measured. Game-detail-specific text overrides, datepicker `--dp-*`
-overrides and `SiteDetailPage.vue`'s local theme are not approved declaration
-layers and remain raw-color debt. P4.5.3 moves Error and Dock declarations into
+overrides and `SiteDetailPage.vue`'s local theme were not approved declaration
+layers in this P0 snapshot and were counted as raw-color debt. The Site theme is
+retired under #109; these are historical evidence anchors. P4.5.3 moves Error and Dock declarations into
 the exact component owners above; ordinary properties there still count as debt.
 
 P1 MUST compare its initial detector results against this same source snapshot,
