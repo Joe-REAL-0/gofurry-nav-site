@@ -10,14 +10,17 @@
         <div class="site-detail-perforation relative mx-5 flex items-center justify-between sm:mx-7" aria-hidden="true"><span /><span /><span /></div>
         <SiteHealthStrip :presentation="targetPresentation" :pending="pending" />
       </div>
-      <SitePrimaryTabs :active="routeState.tab" class="mt-6" @select="changeTab" />
+      <SitePrimaryTabs :active="routeState.tab" :has-similar="hasSimilar" :aux-active="mobileAuxTab === 'similar'" :desktop="isDesktop" class="mt-6" @select="changeTab" @similar="mobileAuxTab = 'similar'" />
       <div class="mt-5 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(16rem,1fr)] xl:gap-6">
-        <SiteTargetContext
-          :presentation="targetPresentation" :pending="pending"
-          :selected="routeState.domain || sitePageData.domain" :site-scope="routeState.tab === 'insights'"
-          @select="changeTarget"
-        />
-        <SiteDetailWorkspace
+        <div data-site-detail-aside class="site-detail-aside min-w-0 space-y-5 xl:sticky xl:order-2">
+          <SiteTargetContext
+            :presentation="targetPresentation" :pending="pending"
+            :selected="routeState.domain || sitePageData.domain" :site-scope="routeState.tab === 'insights'"
+            @select="changeTarget"
+          />
+          <SiteSimilarSites v-if="visibleSimilar.length || mobileAuxTab" :items="visibleSimilar" :variant="mobileAuxTab ? 'panel' : 'aside'" :class="mobileAuxTab ? '' : 'hidden xl:block'" />
+        </div>
+        <SiteDetailWorkspace v-show="!mobileAuxTab"
           :data="sitePageData" :active="routeState.tab" :site-id="siteId" :pending="pending"
           :insights="insightsPresentation" :insights-retrying="siteInsights.retrying.value" :trend="insightTrend.current.value"
           :insight-metric="insightMetric" :insight-range="insightRange"
@@ -35,7 +38,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
+import { useSiteRecommendations } from '~/composables/useSiteRecommendations'
+import { readDisplayMode, subscribeModeChange, type DisplayMode } from '~/utils/modeStorage'
+import SiteSimilarSites from './detail/SiteSimilarSites.vue'
 import SiteDetailHero from './SiteDetailHero.vue'
 import SiteHealthStrip from './detail/SiteHealthStrip.vue'
 import SitePrimaryTabs from './detail/SitePrimaryTabs.vue'
@@ -59,8 +65,29 @@ const router = useRouter()
 const { locale, t } = useI18n()
 const requestedSiteId = computed(() => String(route.params.id ?? ''))
 const detailRequest = useSiteDetailPage()
-const [detailState, siteInsights] = await Promise.all([detailRequest, useSiteInsights(requestedSiteId)])
+const [detailState, siteInsights, recommendations] = await Promise.all([detailRequest, useSiteInsights(requestedSiteId), useSiteRecommendations(requestedSiteId)])
 const { data, pending, error, siteId, routeState } = detailState
+const displayMode = ref<DisplayMode>('sfw'), mobileAuxTab = ref<'similar' | null>(null), isDesktop = ref(false)
+const hasSimilar = computed(() => recommendations.items.value.length > 0)
+const visibleSimilar = computed(() => recommendations.items.value.filter(site => displayMode.value === 'nsfw' || site.nsfw !== '1'))
+let stopMode: (() => void) | undefined, stopDesktop: (() => void) | undefined
+onMounted(() => {
+  displayMode.value = readDisplayMode()
+  stopMode = subscribeModeChange(({ displayMode: mode }) => { displayMode.value = mode })
+  const media = window.matchMedia('(min-width: 1280px)')
+  const update = () => {
+    isDesktop.value = media.matches
+    if (media.matches && mobileAuxTab.value) {
+      mobileAuxTab.value = null
+      if (document.activeElement?.id === 'site-tab-similar') document.getElementById('site-tab-' + routeState.value.tab)?.focus({ preventScroll: true })
+    }
+  }
+  update(); media.addEventListener('change', update)
+  stopDesktop = () => media.removeEventListener('change', update)
+})
+onBeforeUnmount(() => { stopMode?.(); stopDesktop?.() })
+watch([requestedSiteId, locale, hasSimilar], () => { mobileAuxTab.value = null })
+watch(() => route.fullPath, () => { mobileAuxTab.value = null })
 const insightMetric = computed(() => routeState.value.tab === 'insights' ? routeState.value.metric : 'ipv6')
 const insightRange = computed(() => routeState.value.tab === 'insights' ? routeState.value.range : '30d')
 const insightsPresentation = computed(() => presentSiteInsights(siteInsights.data.value, siteInsights.state.value, insightMetric.value, t, locale.value))
@@ -107,6 +134,7 @@ watch(error, failure => {
   }))
 })
 function changeTab(tab: SiteDetailTab) {
+  mobileAuxTab.value = null
   void router.push(tabLocation(tab))
 }
 function tabLocation(tab: SiteDetailTab) {

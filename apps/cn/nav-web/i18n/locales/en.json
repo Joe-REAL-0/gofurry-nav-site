@@ -369,6 +369,8 @@
     "utc": "UTC"
   },
   "siteDetail": {
+    "similarSites": "Similar Sites",
+    "noVisibleSimilarSites": "No similar sites are available to display.",
     "cdn": {
       "cloudflare": "Cloudflare CDN",
       "tencent_cloud": "Tencent Cloud CDN",

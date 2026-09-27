@@ -87,7 +87,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await assertRuntimeSurface(page, '[data-site-overview]', theme)
     await reviewOverview(page, `healthy-${width}-${theme}`)
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([
-      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view',
+      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations', '/api/v2/nav/sites/41/view',
     ])
     runtime.assertQuiet()
   })
@@ -115,7 +115,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await assertOverviewComposition(page, width)
     await assertRuntimeSurface(page, '[data-site-overview]', theme)
     await reviewOverview(page, `attention-${width}-${theme}`)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 
@@ -146,7 +146,7 @@ for (const scenario of ['stale', 'missing', 'unknown', 'zero', 'mixed'] as const
       await expect(attention).not.toContainText('后端旧中文')
     }
     await expect(attention).toHaveCount(scenario === 'zero' ? 0 : 1)
-    expect(runtime.calls).toHaveLength(3)
+    expect(runtime.calls).toHaveLength(4)
     runtime.assertQuiet()
   })
 }
@@ -218,7 +218,7 @@ test('Site snapshot survives pending Target switch, Overview remount and history
     expect(runtime.count('/sites/41/detail')).toBe(2)
     expect(runtime.count('/sites/41/insights')).toBe(1)
     expect(runtime.count('/sites/41/view')).toBe(1)
-    expect(runtime.calls).toHaveLength(5)
+    expect(runtime.calls).toHaveLength(6)
     expect(runtime.count('/trend')).toBe(1)
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
     // A new page session adopts the new Site summary; client Target switching did not.
@@ -227,7 +227,7 @@ test('Site snapshot survives pending Target switch, Overview remount and history
     await (await view).finished()
     await expect(page.locator('[data-site-overview-health]')).toHaveAttribute('data-site-status', 'degraded')
     await expect(page.locator('[data-site-overview-health] time')).toHaveText('2026-09-26 13:00:00 UTC')
-    expect(runtime.calls).toHaveLength(8)
+    expect(runtime.calls).toHaveLength(10)
     runtime.assertQuiet()
   } finally { held.release() }
 })

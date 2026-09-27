@@ -204,8 +204,13 @@ html.dark .site-detail-page {
 // at the viewport top; the Context offset tracks its fixed internal height.
 .site-detail-tabs {
   height: var(--site-detail-tabs-height);
+  scrollbar-width: none;
 
   background: var(--site-detail-tabs-surface);
+}
+
+.site-detail-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .site-detail-tab {
@@ -1022,4 +1027,61 @@ html.dark .site-detail-page {
 
 .site-detail-flow-arrow {
   color: var(--gf-text-muted);
+}
+
+
+// Site discovery shares the existing panel material and soft row interaction.
+.site-detail-aside {
+  top: calc(var(--site-detail-tabs-height) + 1.25rem);
+}
+
+.site-detail-similar {
+  border-radius: var(--site-detail-radius);
+  padding: 1rem;
+  background: var(--site-detail-panel);
+}
+
+.site-detail-similar-item {
+  border-radius: 7px;
+  padding: 0.6rem;
+  color: var(--gf-text-main);
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-similar-item:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-detail-similar-item:focus-visible,
+.site-detail-similar:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-similar-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 7px;
+}
+
+.site-detail-similar-name {
+  font-size: 0.85rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.site-detail-similar-info {
+  color: var(--gf-text-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.site-detail-similar-views,
+.site-detail-similar-domain {
+  color: var(--gf-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
+.site-detail-similar-domain {
+  font-family: ui-monospace, monospace;
 }

@@ -151,6 +151,13 @@ do not run full tests or production build. `GOFURRY_FIXTURE_DEV=1` opts the exis
 fixture into isolated local Nuxt source checks, never CI/production acceptance.
 No P8 or final golden is authorized.
 
+Task E adds one optional Site ID + language recommendation SSR slice. Backend
+membership uses full groups; candidates use the existing Home Top-8 builder before
+union/dedupe/daily SHA-256 shuffle. Mobile Similar is auxiliary local state, never
+a fifth route tab. SSR-rendered recommendations are SFW; mode changes only filter
+raw items. Similar links never count views themselves. The focused Task E budget
+also forbids full suites/build; reuse the opt-in source fixture. No P8/goldens.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing

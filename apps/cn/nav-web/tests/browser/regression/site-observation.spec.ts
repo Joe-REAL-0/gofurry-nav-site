@@ -38,7 +38,7 @@ for (const view of ['overview', 'performance', 'http', 'dns', 'web']) test('Obse
   expect(html).toContain(`data-site-observation-view="${view}"`)
   if (view === 'performance') expect(html).toContain('data-site-performance-history-state="loading"')
   if (view === 'web') expect(html).toContain('data-site-web-metadata')
-  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights'])
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations'])
   runtime.assertQuiet()
 })
 
@@ -53,11 +53,11 @@ test('secondary navigation owns history/reload/keyboard and omits the default vi
     await page.keyboard.press(key!); await activeView(page, view!); await expect(tab(page, view!)).toBeFocused()
     if (view === 'overview') expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ tab: 'observation', view: 'overview' })
   }
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   const counted = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   expect((await page.reload({ waitUntil: 'domcontentloaded' }))?.status()).toBe(200)
   await (await counted).finished(); await activeView(page, 'web')
-  expect(runtime.calls).toHaveLength(6)
+  expect(runtime.calls).toHaveLength(8)
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
   runtime.assertQuiet()
 })
@@ -98,7 +98,7 @@ test('default Performance sample auto-loads exactly once, slices locally and sur
     expect(runtime.count('/sites/41/detail')).toBe(3)
     expect(runtime.count('/observations')).toBe(2)
     expect(runtime.count('/sites/41/insights')).toBe(1); expect(runtime.count('/sites/41/view')).toBe(1)
-    expect(runtime.calls).toHaveLength(7)
+    expect(runtime.calls).toHaveLength(8)
     runtime.assertQuiet()
   } finally { held.release() }
 })
@@ -170,7 +170,7 @@ for (const view of ['overview', 'http', 'dns', 'web']) test('non-Performance Tar
   if (view === 'http' || view === 'overview') await expect(page.locator('[data-site-observation]')).toContainText('https://alt.example/')
   if (view === 'dns') await expect(page.locator('[data-site-dns]')).toContainText('203.0.113.42')
   if (view === 'web') await expect(page.locator('[data-site-web-metadata]')).toContainText('alt.example page')
-  expect(runtime.calls).toHaveLength(4)
+  expect(runtime.calls).toHaveLength(5)
   expect(runtime.count('/sites/41/detail')).toBe(2); expect(runtime.count('/observations')).toBe(0)
   expect(runtime.count('/sites/41/insights')).toBe(1); expect(runtime.count('/sites/41/view')).toBe(1)
   runtime.assertQuiet()
@@ -245,7 +245,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-web]')).not.toContainText('security.txt')
     await assertRuntimeSurface(page, '[data-site-web]', theme)
     await reviewObservation(page, 'web', width, theme)
-    expect(runtime.calls).toHaveLength(3)
+    expect(runtime.calls).toHaveLength(4)
     runtime.assertQuiet()
   })
   test(`Performance chart and waterfall ${width} ${theme}`, async ({ page, context, runtime }) => {
@@ -269,7 +269,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-history-table] tbody tr')).toHaveCount(20)
     await expect(page.locator('[data-site-history-table] tbody tr').nth(1)).toContainText('10%')
     await assertRuntimeSurface(page, '[data-site-performance]', theme)
-    expect(runtime.calls).toHaveLength(4)
+    expect(runtime.calls).toHaveLength(5)
     runtime.assertQuiet()
   })
 }
@@ -281,7 +281,7 @@ test('no redirect and no CNAME do not invent chains or history requests', async 
   await expect(page.locator('[data-site-redirect-separator]')).toHaveCount(0)
   await tab(page, 'dns').click()
   await expect(page.locator('[data-site-dns-chain], [data-site-dns-group="CNAME"]')).toHaveCount(0)
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   runtime.assertQuiet()
 })
 
@@ -291,7 +291,7 @@ test('Attention follows Target health reasons while raw DNS diagnostics remain a
   await expect(page.locator('[data-site-observation-risks]')).toHaveCount(0)
   await tab(page, 'dns').click()
   await expect(page.locator('[data-site-dns-signal]')).toHaveCount(5)
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   runtime.assertQuiet()
 })
 
@@ -310,7 +310,7 @@ test('Observation hover is 500ms with immediate selected feedback and no movemen
   await expect(sample).toHaveCSS('transition-duration', '0.5s, 0.5s')
   await sample.click(); await expect(sample).toHaveCSS('transition-duration', '0s')
   await expect(history(page)).toHaveAttribute('data-site-performance-history-state', 'ready')
-  expect(runtime.calls).toHaveLength(4)
+  expect(runtime.calls).toHaveLength(5)
   runtime.assertQuiet()
 })
 
@@ -323,7 +323,7 @@ for (const [scenario, state, label] of [['not-found', 'not_found', 'Not found'],
     await expect(robots).toHaveAttribute('data-site-web-state', state)
     await expect(robots.locator('.site-observation-probe-state')).toHaveText(label)
     await expect(page.locator('[data-site-web]')).not.toContainText(/SECURITY_ONLY|security\.txt|port_check|waf_canary/)
-    expect(runtime.calls).toHaveLength(3)
+    expect(runtime.calls).toHaveLength(4)
     runtime.assertQuiet()
   })
 }

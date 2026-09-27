@@ -18,24 +18,24 @@ for (const prefix of ['', '/en']) for (const domain of ['', '&domain=alt.example
   expect(html.match(/data-site-capability="/g)).toHaveLength(7)
   expect(html).toContain('data-site-selected-metric="tls13"'); expect(html).toContain('data-site-trend-range="90d"')
   expect(html).toContain('data-site-insight-change')
-  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights'])
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations'])
   runtime.assertQuiet()
 })
 
 test('Insights activation adds exactly one default trend; tab remount reuses cache', async ({ page, runtime }) => {
-  await openSite(page, '/en/site/41?tab=overview'); expect(runtime.calls).toHaveLength(3); expect(runtime.count('/trend')).toBe(0)
+  await openSite(page, '/en/site/41?tab=overview'); expect(runtime.calls).toHaveLength(4); expect(runtime.count('/trend')).toBe(0)
   for (const workspace of ['security', 'observation', 'overview']) {
     await tab(page, workspace).click(); await expect(page.locator('[data-site-workspace]')).toHaveAttribute('data-site-workspace-tab', workspace)
     if (workspace === 'observation') await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'ready')
   }
-  await settleRuntime(page); expect(runtime.calls).toHaveLength(4); expect(runtime.count('/observations')).toBe(1)
+  await settleRuntime(page); expect(runtime.calls).toHaveLength(5); expect(runtime.count('/observations')).toBe(1)
   await tab(page, 'insights').click(); await ready(page)
-  expect(runtime.calls).toHaveLength(5)
+  expect(runtime.calls).toHaveLength(6)
   expect(runtime.calls.at(-1)!.url.pathname).toBe('/api/v2/nav/insights/metrics/ipv6/trend')
   expect(Object.fromEntries(runtime.calls.at(-1)!.url.searchParams)).toEqual({ range: '30d' })
   await tab(page, 'overview').click(); await expect(page.locator('[data-site-overview]')).toBeVisible()
   await page.goBack(); await ready(page)
-  expect(runtime.calls).toHaveLength(5)
+  expect(runtime.calls).toHaveLength(6)
   await expect(page.locator('[data-site-insights-workspace] [role="tablist"]')).toHaveCount(0)
   runtime.assertQuiet()
 })
@@ -57,7 +57,7 @@ test('metric/range are URL owned through keyboard, history, cache and reload', a
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/view'))
   expect((await page.reload({ waitUntil: 'domcontentloaded' }))?.status()).toBe(200); await (await view).finished(); await ready(page)
   await expect(metric(page, 'csp')).toHaveAttribute('aria-pressed', 'true'); await expect(range(page, 'all')).toHaveAttribute('aria-pressed', 'true')
-  expect(runtime.count('/trend')).toBe(4); expect(runtime.calls).toHaveLength(10)
+  expect(runtime.count('/trend')).toBe(4); expect(runtime.calls).toHaveLength(12)
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
   runtime.assertQuiet()
 })
@@ -68,7 +68,7 @@ test('all seven backend states remain facts while absent facts remain missing', 
   for (const [key, state] of [['ipv6', 'supported'], ['http2', 'unsupported'], ['tls13', 'stale'], ['certificate_verified', 'not_probed'], ['hsts', 'unavailable'], ['csp', 'unknown'], ['security_txt', 'not_applicable']]) {
     await expect(metric(page, key!)).toHaveAttribute('data-site-capability-state', state!)
   }
-  expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
+  expect(runtime.calls).toHaveLength(5); runtime.assertQuiet()
 })
 
 test('ecosystem null differs from zero and the selected detail uses the same fact', async ({ page, runtime }) => {
@@ -157,7 +157,7 @@ test('late metric/range response only populates its cache and every active ident
     await expect(trend(page)).toHaveAttribute('data-site-trend-range', '90d')
     await expect(range(page, '90d')).toHaveAttribute('aria-pressed', 'true')
     await range(page, '30d').click(); await ready(page)
-    expect(runtime.count('/trend')).toBe(3); expect(runtime.calls).toHaveLength(6)
+    expect(runtime.count('/trend')).toBe(3); expect(runtime.calls).toHaveLength(7)
     runtime.assertQuiet()
   } finally { held.release() }
 })

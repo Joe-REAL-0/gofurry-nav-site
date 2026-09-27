@@ -19,7 +19,7 @@ for (const view of ['overview', 'tls', 'web', 'exposure']) test('Security SSR ow
   expect(response.status()).toBe(200)
   const html = await response.text()
   expect(html).toContain(`data-site-security-view="${view}"`)
-  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights'])
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations'])
   runtime.assertQuiet()
 })
 test('Security router, back/forward, reload and keyboard retain Target with no view fetch', async ({ page, runtime }) => {
@@ -33,15 +33,15 @@ test('Security router, back/forward, reload and keyboard retain Target with no v
     await page.keyboard.press(key!); await activeView(page, view!); await expect(tab(page, view!)).toBeFocused()
     if (view === 'overview') expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'security' })
   }
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   const counted = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   expect((await page.reload({ waitUntil: 'domcontentloaded' }))?.status()).toBe(200)
   await (await counted).finished(); await activeView(page, 'exposure')
-  expect(runtime.calls).toHaveLength(6)
+  expect(runtime.calls).toHaveLength(8)
   await tab(page, 'web').click(); await page.locator('[data-site-security-raw-headers]').click()
   await expect(page.locator('[data-site-observation-view]')).toHaveAttribute('data-site-observation-view', 'http')
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'observation', view: 'http' })
-  expect(runtime.calls).toHaveLength(6)
+  expect(runtime.calls).toHaveLength(8)
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
   runtime.assertQuiet()
 })
@@ -50,7 +50,7 @@ test('raw headers keep an implicit primary Target without creating a Detail fetc
   await openSecurity(page, 'web')
   await page.locator('[data-site-security-raw-headers]').click()
   await expect(page.locator('[data-site-observation-view]')).toHaveAttribute('data-site-observation-view', 'http')
-  await settleRuntime(page); expect(runtime.calls).toHaveLength(3)
+  await settleRuntime(page); expect(runtime.calls).toHaveLength(4)
   runtime.assertQuiet()
 })
 for (const view of ['overview', 'tls', 'web', 'exposure']) test('Security Target switch adds only Detail and retains ' + view, async ({ page, runtime }) => {
@@ -66,7 +66,7 @@ for (const view of ['overview', 'tls', 'web', 'exposure']) test('Security Target
     if (view === 'tls') await expect(page.locator('[data-site-security-tls]')).toContainText('TLS 1.2')
     if (view === 'web') await expect(page.locator('[data-site-security-txt]')).toContainText('security@alt.example')
     await settleRuntime(page)
-    expect(runtime.calls).toHaveLength(4); expect(runtime.count('/sites/41/detail')).toBe(2)
+    expect(runtime.calls).toHaveLength(5); expect(runtime.count('/sites/41/detail')).toBe(2)
     expect(runtime.count('/sites/41/insights')).toBe(1); expect(runtime.count('/sites/41/view')).toBe(1)
     expect(runtime.count('/observations')).toBe(0)
     runtime.assertQuiet()
@@ -86,7 +86,7 @@ for (const [tls, state] of [['verified', 'verified'], ['failed', 'failed'], ['mi
       await expect(strip).not.toContainText('0 days')
     }
     await expect(page.locator('[data-site-security-tab]')).toHaveCount(4)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 for (const [days, expiry] of [[31, 'normal'], [30, 'attention'], [7, 'warning'], [0, 'expired']] as const) {
@@ -97,7 +97,7 @@ for (const [days, expiry] of [[31, 'normal'], [30, 'attention'], [7, 'warning'],
     await expect(page.locator('[data-site-certificate-verification]')).toHaveAttribute('data-state', 'verified')
     await tab(page, 'overview').click()
     await expect(page.locator('[data-site-security-attention-item="expiry"]')).toHaveCount(expiry === 'normal' ? 0 : 1)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 for (const [headers, found, missing] of [['all', 6, 0], ['some', 2, 4], ['missing', 0, 6], ['not_observed', 0, 0]] as const) {
@@ -109,7 +109,7 @@ for (const [headers, found, missing] of [['all', 6, 0], ['some', 2, 4], ['missin
     await expect(page.locator('[data-site-security-header][data-state="missing"]')).toHaveCount(missing)
     if (headers === 'not_observed') await expect(page.locator('[data-site-security-header][data-state="not_observed"]')).toHaveCount(6)
     await expect(page.locator('[data-site-security-headers]')).not.toContainText(/Dangerous|Unsafe|Critical/)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 for (const [txt, state] of [['found', 'found'], ['issues', 'found_with_issues'], ['not_found', 'not_found'], ['unavailable', 'unavailable'], ['not_observed', 'not_observed']] as const) {
@@ -122,7 +122,7 @@ for (const [txt, state] of [['found', 'found'], ['issues', 'found_with_issues'],
       await expect(page.locator('[data-site-security-txt-validation]')).not.toContainText('contact_missing_or_invalid')
     }
     if (txt === 'unavailable') await expect(page.locator('[data-site-security-txt]')).toContainText('Fixture probe unavailable')
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 for (const [ports, state] of [['empty', 'empty'], ['skipped', 'skipped'], ['unavailable', 'unavailable'], ['not_observed', 'not_observed']] as const) {
@@ -131,7 +131,7 @@ for (const [ports, state] of [['empty', 'empty'], ['skipped', 'skipped'], ['unav
     await openSecurity(page, 'exposure')
     await expect(page.locator('[data-site-port-check]')).toHaveAttribute('data-state', state)
     if (ports === 'empty') await expect(page.locator('[data-site-port-result]')).toHaveCount(0)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 for (const [waf, state] of [['matched', 'matched'], ['unexpected_pass', 'mismatch'], ['network_error', 'mismatch'], ['unexpected_status', 'mismatch'], ['truncated', 'incomplete'], ['unavailable', 'unavailable'], ['not_observed', 'not_observed']] as const) {
@@ -145,7 +145,7 @@ for (const [waf, state] of [['matched', 'matched'], ['unexpected_pass', 'mismatc
     await expect(page.locator('[data-site-security]')).not.toContainText(/Security Score|WAF Enabled|WAF Detected|Protected by WAF|Highly Secure|Poor Security/)
     await tab(page, 'overview').click()
     await expect(page.locator('[data-site-security-attention]')).toHaveCount(state === 'mismatch' ? 1 : 0)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }
 for (const slice of ['insights', 'view']) test('Security survives optional ' + slice + ' failure', async ({ page, runtime }) => {
@@ -192,6 +192,6 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await page.locator('[data-site-waf-cases] summary').click()
     await expect(page.locator('[data-site-waf-case]')).toHaveCount(2)
     await assertRuntimeSurface(page, '[data-site-security]', theme)
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 }

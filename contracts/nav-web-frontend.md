@@ -49,9 +49,9 @@ observations belong to `siteId + selectedDomain + lang`. `useSiteDetailPage`
 loads `/nav/sites/:id/detail` under that identity; `SiteDetailPage` loads
 `/nav/sites/:id/insights` under Site ID alone. Domain and workspace query MUST NOT
 hide Insights or enter its fetch key. A normal hydrated visit has exactly one
-Detail GET, one Insights GET and one View POST, plus the active lazy slice below.
+Detail GET, one Insights GET, one Recommendations GET (Task E), and one View POST, plus the active lazy slice below.
 Task C makes Observation/Performance the default entry, so default hydration adds
-exactly one Ping history request; SSR still requests only Detail and Insights.
+exactly one Ping history request; SSR requests Detail, Insights and Recommendations in parallel.
 Outside P4 Performance, switching
 Target within the same hydrated Site session MUST fetch only Detail; no Target
 switch may recount View. UI-only
@@ -518,6 +518,54 @@ lint/style checks, without full build/suites. The opt-in local source fixture
 mode is documented in the testing guide and is not production/remote acceptance.
 Keep Site/deep/legacy-dark debt zero, #108/ambient budgets and accepted Visual
 inventory unchanged. Stop before P8.
+
+## Site Detail Task E — Similar Sites discovery (pre-P8)
+
+`GET /api/v2/nav/sites/:siteId/recommendations?lang=zh|en&limit=8` owns optional
+Site Entity discovery. Limit defaults/caps at eight. It returns schema_version 1,
+UTC generated_at, state (`ready`/`unavailable`), site_id and SiteVo items, including
+view_count. It neither reads display mode nor accepts Target/workspace selectors.
+Invalid ID/language/non-integer limit returns 400; unavailable read models return
+an unavailable slice with an empty array. Existing Detail remains authoritative.
+
+Backend resolves full Group membership through the existing localized Site/Group
+reader, then feeds matched groups into `BuildHomeGroupsForCache`. Each group's
+Home Top-8 cutoff precedes union, ID dedupe and self exclusion. SHA-256 of
+`siteId|candidateId|UTC YYYY-MM-DD`, sorted lexicographically (ID tie-break), selects
+up to eight. Never refill from rank nine, unrelated groups or random global Sites.
+No ranking/reason/score, new table, Redis key or refresh job is introduced; existing
+read-model cache/DB fallback and Home ordering remain their current owners.
+
+`useSiteRecommendations` loads concurrently with Detail/Insights, keyed only by
+Site ID + normalized language. It captures identity and ignores stale Site/locale
+responses. Hydration reuses SSR data; Target/query/mode/local-tab changes do not
+reload it. Errors/unavailable/empty hide discovery without an error card or retry.
+Default Performance still loads Ping after hydration. Task E's shorthand
+"Target switch = Detail only" applies outside Performance: existing P4 permits a
+new Target's uncached Ping history while Performance is active. Task E does not
+change that exception or P4/P6 cache/race/retry behavior.
+
+`SiteSimilarSites` renders a single shared list below Current Target on Desktop,
+or as Mobile's local Similar panel. Raw nonempty items control the auxiliary tab;
+SSR rendering filters to SFW, then mounted display-mode subscription filters raw
+items without fetching. Mobile can show a neutral empty message when all raw
+items are hidden; Desktop hides an empty visible list. No hidden-item reason is
+shown. Raw optional-slice data remains in Nuxt payload for local mode switching;
+NSFW names/icons/links never appear in SSR-rendered recommendation markup.
+
+The four route-owned tabs stay unchanged. Similar is a mobile-only local state,
+with tab semantics/keyboard order, no URL/history entry and no independent SEO.
+Desktop resize clears the local selection and restores the underlying route
+workspace without navigation. Primary tabs scroll horizontally only when needed.
+One Site Detail appearance owner supplies borderless rows and 500ms tint; list
+content is limited to managed icon, name, one-line info, display domain and
+formatted view snapshot. Links use localized query-free Entity paths; the Similar
+component never increments views. The destination page retains exactly-once View.
+
+Task E keeps verification focused on recommendation/group Go tests, recommendation
+SSR/request/discovery Browser cases, typecheck and relevant lint/style checks.
+Do not run full frontend tests/build or create final Visual goldens. Stop before
+P8 and await maintainer visual acceptance.
 
 ## Styling ownership
 

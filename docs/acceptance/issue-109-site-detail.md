@@ -1044,3 +1044,107 @@ hover/focus/click/Escape on Site, and average/tooltip display in Game Insights.
 Remote CI is **unverified**; earlier Task C CI is not evidence for Task D.
 Engineering exit criteria are satisfied within the explicitly focused budget;
 manual visual acceptance remains open. Stop here, before P8.
+
+
+## Task E — Similar Sites discovery (2026-09-27)
+
+Task E runs directly on current `dev` after Task D. It adds Site-level discovery,
+not a recommendation score/ranking system, and stops before P8.
+
+### API and candidate ownership
+
+- New independent `/api/v2/nav/sites/:siteId/recommendations` accepts `lang=zh|en`
+  and `limit` (default/max eight), registered alongside enabled Detail routes.
+  Response schema 1 has UTC generated_at, state, site_id and SiteVo items with
+  view_count. Invalid parameters are 400; unavailable reads produce an optional
+  unavailable/empty slice. No existing Detail payload is expanded.
+- The service reuses the existing localized Site/Group reader and its cache/DB
+  fallback. Full group membership identifies eligible groups, even when the
+  current Site is below preview rank eight. `BuildHomeGroupsForCache` alone owns
+  each group's curated ordering and Top-8. Union/dedupe/self exclusion precede
+  SHA-256 ordering by Site ID + candidate ID + UTC date, then the final max eight.
+  Shortage stays shortage; there is no rank-nine/global/random backfill.
+- No table, migration, recommendation Redis key, scheduler, score or reason field.
+  Collector and the existing Home builder/cache owners are unchanged.
+
+### Frontend and request contract
+
+- `useSiteRecommendations` is page-owned, parallel SSR data keyed by Site ID and
+  language. Hydration reuses it; Site/locale changes select a new identity, with
+  old results guarded. Target, route-only query, local tab and display mode do
+  not refetch it. Failures have no error card/retry and do not fail the page.
+- One `SiteSimilarSites` instance renders below Current Target on Desktop or as
+  Mobile's local panel. Main/Aside proportions are unchanged. ManagedAssetImage,
+  name, one-line info, first display domain (including stored Home domain JSON)
+  and PhEye/formatted view snapshot are the only item fields. Rows share existing
+  borderless material, radius and 500ms hover tokens; no movement or ranking.
+- SSR markup filters to SFW; mounted `readDisplayMode`/`subscribeModeChange` only
+  filter the raw response locally. NSFW raw payload remains available for mode
+  switching, but its items are absent from server-rendered recommendation markup.
+  Raw nonempty data controls mobile tab existence; all-filtered Mobile has neutral
+  empty copy and Desktop hides the list.
+- Four route tabs remain exactly unchanged. Mobile Similar is local-only, does
+  not write URL/history/SEO, participates in tab keyboard navigation, and leaves
+  the underlying workspace mounted. Resize to Desktop restores that route state.
+  The extended tab row scrolls when needed and keeps keyboard selection visible.
+- Similar uses localized Entity NuxtLinks and has no view mutation. The destination
+  Site page alone posts View; the Browser test verifies exactly one, not zero/two.
+- Normal SSR now has Detail + Insights + Recommendations. Hydration keeps the
+  existing View and active lazy slice. The document's "Target switch = Detail
+  only" shorthand is qualified by the existing P4 Performance exception: a new
+  Target may load its uncached Ping history while Performance is active. Task E
+  preserves that behavior and guarantees zero recommendation refetches.
+
+The primary route vocabulary/parser, canonical/hreflang/sitemap owners, P4/P6
+history/trend/retry owners and health/security evidence semantics are unchanged.
+Old Site Browser request-budget assertions and the SEO/Entity fixtures explicitly
+include the new slice rather than hiding it from request/error accounting.
+
+### Actual focused verification
+
+Backend, after gofmt of changed Go files:
+
+```text
+go test ./apps/nav/recommendations/... ./apps/nav/sitegroup/... ./apps/nav/home/service -run 'Recommendations|Group|Sort' -count=1
+```
+
+Passed six recommendation service tests, one controller contract with six request
+cases, and three existing Home-group ordering/preview tests. Sitegroup packages
+compile but have no test files. Covered multigroup union/dedupe, below-preview
+membership, Home Top-8 eligibility, shortage, self exclusion, final limit,
+UTC-day/locale/order stability, localization, raw mode and view-count preservation,
+and optional missing/empty semantics. No live PostgreSQL/Redis was used.
+
+Frontend used the existing deterministic Nitro/upstream fixture with the Task D
+opt-in local source mode (`GOFURRY_FIXTURE_DEV=1`), not stale `.output`. The final
+focused run passed **11/11**: ten new recommendation cases plus the existing blank
+Task C default SSR/hydration/reload contract. The mobile keyboard/resize case was
+then rerun successfully after adding immediate horizontal reveal and its visible
+bounds assertion. Zero retries; no fixed sleeps/networkidle; strict error capture
+is unchanged. This is development-runtime evidence, not production acceptance.
+
+Coverage includes parallel SSR/SFW markup, exactly one recommendation read,
+Desktop Light/Dark, managed image readiness, max eight and view snapshots,
+mode filtering without fetch, Target/workspace identity, 390px local tabs and
+history/SEO invariance, keyboard/resize, raw-adult empty state, empty/unavailable/
+503 isolation, language refetch and exactly-once destination View.
+
+Final typecheck, focused ESLint (19 changed/new TS/Vue files), Site Detail stylelint,
+style policy and whitespace checks passed. Site appearance/arbitrary/raw debt,
+deep selectors and legacy dark remain **0**. Ambient raw **75** and #108 important
+**5** remain unchanged; no baseline updater, dependency or suppression changes.
+All **118 accepted PNGs** are byte-identical; the **142-file Visual inventory**
+is unchanged. No full frontend suite, full Browser run or production build was run.
+
+### Review and exit boundary
+
+The existing Functional screenshot export produced three temporary images and a
+static linking gallery outside the repository: 1440 Light, 390 Light, 1440 Dark.
+Agent review corrected missing icon import and narrow English tab spacing; this
+is not maintainer approval. Review the aside placement/density, small icons and
+view hierarchy, hover/focus, local mobile panel/resize and in-site navigation.
+
+Task E engineering criteria are satisfied within the requested focused budget.
+Maintainer visual acceptance remains pending; remote CI is unverified. No P8 or
+final golden was started. Both Nav Backend and Nav Web require normal deployment
+for the feature; no database or Redis migration is required.

@@ -9,11 +9,12 @@ export const longTarget = 'a-long-collected-target-name-for-layout-review.commun
 // browser diagnostics remain in the shared runtime fixture.
 export const test = runtimeTest(
   () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, viewCount: 2, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
+    recommendations: 'empty' as 'empty' | 'ready' | 'adult' | 'unavailable' | 'failure',
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
     cdnScenario: 'none' as 'none' | 'reliable' | 'unreliable', protocolScenario: 'normal' as 'normal' | 'slow' | 'failure' | 'missing', observationRich: false, observationHealthReasons: true, webProbeScenario: 'ready' as 'ready' | 'not-found' | 'failure' | 'stale' | 'missing', historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, redirectCount: 2, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
-  url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
+  url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|recommendations|view)$/.test(url.pathname)
     || url.pathname === '/api/v2/nav/home'
-    || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
+    || /^\/api\/v2\/nav\/sites\/(41|42)\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
   (url, media, _body, state) => {
     if (url.pathname === '/api/v2/nav/home') return { data: {
       schema_version: 4, groups: [{ id: '12', name: 'Site entry fixture', priority: 1, sites: [{
@@ -22,6 +23,19 @@ export const test = runtimeTest(
       }] }], spotlight: { page_size: 6, featured: [], popular: [], latest: [], random: [] },
       saying: { saying: 'Fixture', author: 'Fixture' }, ping: {}, hero: { desktop: null, mobile: null },
     } }
+    if (url.pathname.endsWith('/recommendations')) {
+      const id = Number(url.pathname.split('/').at(-2)), lang = url.searchParams.get('lang')
+      if (url.searchParams.size !== 2 || !['zh', 'en'].includes(lang ?? '') || url.searchParams.get('limit') !== '8') throw new Error('Invalid recommendation identity ' + url)
+      if (state.recommendations === 'failure') return { status: 503 }
+      return { data: { schema_version: 1, generated_at: '2026-09-27T00:00:00Z', site_id: id,
+        state: state.recommendations === 'unavailable' ? 'unavailable' : 'ready',
+        items: ['empty', 'unavailable'].includes(state.recommendations) ? [] : Array.from({ length: 8 }, (_, index) => ({
+          id: String(id + index + 1), name: `${lang === 'en' ? 'Similar fixture' : '相似站点示例'} ${id + index + 1}`,
+          domain: index === 0 ? '{"domain":["first.example","second.example"]}' : `similar${index}.example`, info: lang === 'en' ? 'A community to explore.' : '探索新的社群。',
+          icon: '', country: 'CN', welfare: '1', nsfw: state.recommendations === 'adult' || index === 1 || index === 5 ? '1' : '0',
+          view_count: 24088 + index, create_time: '', update_time: '',
+        })) } }
+    }
     if (isSiteTrend(url)) return siteTrendResponse(url, state.intelligence.trend)
     if (url.pathname.endsWith('/view')) return state.viewFailure ? { status: 503 } : { data: { site_id: Number(url.pathname.split('/').at(-2)), view_count: state.viewCount } }
     if (url.pathname.endsWith('/insights') && state.insightsEmpty) return {

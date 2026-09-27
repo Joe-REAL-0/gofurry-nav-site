@@ -18,7 +18,7 @@ for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const)
     await (await view).finished()
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([
       '/api/v2/nav/insights/metrics/ipv6/trend',
-      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view',
+      '/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations', '/api/v2/nav/sites/41/view',
     ])
     runtime.assertQuiet()
   })

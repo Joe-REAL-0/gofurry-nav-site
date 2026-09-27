@@ -1,5 +1,5 @@
 <template>
-  <aside data-site-target-context :aria-label="t('siteDetail.currentTarget')" class="site-detail-context min-w-0 self-start xl:sticky xl:order-2">
+  <aside data-site-target-context :aria-label="t('siteDetail.currentTarget')" class="site-detail-context min-w-0 self-start">
     <h2 class="site-detail-label mb-2">{{ t('siteDetail.currentTarget') }}</h2>
     <SiteTargetSelector :targets="presentation.targetList" :selected="selected" :display-target="presentation.target" @select="emit('select', $event)" />
     <p v-if="pending" data-site-target-pending role="status" class="site-detail-note mt-3 break-words">{{ t('siteDetail.loadingTarget', { target: selected }) }}</p>

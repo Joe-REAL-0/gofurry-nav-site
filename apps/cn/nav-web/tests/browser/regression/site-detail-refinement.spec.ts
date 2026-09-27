@@ -46,7 +46,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
   await expect(page.locator('[data-site-cdn]')).toHaveText('Fastly CDN')
   await expect(trigger).toBeFocused()
   expect(runtime.count('/sites/41/detail')).toBe(2); expect(runtime.count('/sites/41/insights')).toBe(1); expect(runtime.count('/sites/41/view')).toBe(1)
-  expect(runtime.count('/observations')).toBe(1); expect(runtime.count('/trend')).toBe(0); expect(runtime.calls).toHaveLength(5)
+  expect(runtime.count('/observations')).toBe(1); expect(runtime.count('/trend')).toBe(0); expect(runtime.calls).toHaveLength(6)
   await assertRuntimeSurface(page, '[data-site-detail]', theme); runtime.assertQuiet()
 })
 
@@ -54,7 +54,7 @@ for (const scenario of ['none', 'unreliable'] as const) test('Task C omits unrel
   runtime.state.cdnScenario = scenario
   await open(page, '/en/site/41?tab=overview')
   await expect(page.locator('[data-site-cdn]')).toHaveCount(0)
-  expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+  expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
 })
 
 for (const scenario of ['failure', 'missing'] as const) test('Task C protocol exceptions remain visible: ' + scenario, async ({ page, runtime }) => {
@@ -64,7 +64,7 @@ for (const scenario of ['failure', 'missing'] as const) test('Task C protocol ex
     await expect(page.locator(owner + ' [data-site-protocol-status].sr-only')).toHaveCount(0)
     await expect(page.locator(owner + ' [data-site-protocol-status]')).toHaveText(Array(3).fill('· ' + (scenario === 'failure' ? 'Failed' : 'Unknown')))
   }
-  expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+  expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
 })
 
 // Optional review artifacts use the Functional Browser owner, never Visual goldens.
@@ -200,7 +200,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
       await assertRuntimeSurface(page, '[data-site-detail]', theme); await review(page, `observation-${view}-${suffix}`)
     }
     expect(runtime.count('/sites/41/detail')).toBe(1); expect(runtime.count('/sites/41/insights')).toBe(1); expect(runtime.count('/sites/41/view')).toBe(1)
-    expect(runtime.count('/observations')).toBe(1); expect(runtime.count('/trend')).toBe(0); expect(runtime.calls).toHaveLength(4)
+    expect(runtime.count('/observations')).toBe(1); expect(runtime.count('/trend')).toBe(0); expect(runtime.calls).toHaveLength(5)
     runtime.assertQuiet()
   })
 
@@ -246,7 +246,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
       await assertAcrylic(page); await assertTitleNav(page, 'security')
       await assertRuntimeSurface(page, '[data-site-detail]', theme); await review(page, `security-${view}-${suffix}`)
     }
-    expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+    expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
   })
 
   test(`final Site intelligence analysis presentation ${suffix}`, async ({ page, context, runtime }) => {
@@ -280,7 +280,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-insight-change]')).toHaveCount(6)
     await expect(page.locator('[data-site-insights-workspace]')).not.toContainText(/score|ranking|percentile/i)
     await assertRuntimeSurface(page, '[data-site-detail]', theme); await review(page, `insights-${suffix}`)
-    expect(runtime.count('/trend')).toBe(1); expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
+    expect(runtime.count('/trend')).toBe(1); expect(runtime.calls).toHaveLength(5); runtime.assertQuiet()
   })
 }
 
@@ -290,7 +290,7 @@ for (const locale of ['en', 'zh']) test('localized multi-target Attention ' + lo
   await expect(page.locator('[data-site-overview-attention] li')).toHaveText([locale === 'en' ? '2 targets · HTTP is currently unreachable' : '2 个目标 · HTTP 当前无法访问'])
   await expect(page.locator('[data-site-overview-attention]')).not.toContainText('后端旧中文')
   await review(page, `overview-attention-${locale}`)
-  expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+  expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
 })
 
 for (const locale of ['en', 'zh']) test('first-round finite title nav and localized request evidence ' + locale, async ({ page, runtime }) => {
@@ -319,7 +319,7 @@ for (const locale of ['en', 'zh']) test('first-round finite title nav and locali
   await expect(page.locator('[data-site-observation-tab="web"]')).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('[data-site-observation-tab="web"]')).toBeFocused()
   await assertAcrylic(page); await assertRuntimeSurface(page, '[data-site-detail]', 'light')
-  expect(runtime.count('/observations')).toBe(1); expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
+  expect(runtime.count('/observations')).toBe(1); expect(runtime.calls).toHaveLength(5); runtime.assertQuiet()
 })
 
 test('first-round unavailable Insights retains its borderless explorer and shared inline retry', async ({ page, runtime }) => {
@@ -428,7 +428,7 @@ test('Task D Overview and Observation composites retain the default/history cont
   await expect(page.locator('[data-site-hero-meta] [data-site-views]')).toHaveCount(1)
   await expect(page.locator('[data-site-hero-meta] [data-site-cdn]')).toHaveText('Cloudflare CDN')
   await taskDChanges(page, '[data-site-recent-changes]', 4)
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   await review(page, 'task-d-overview-1440-light')
   await page.locator('[data-site-primary-tab="observation"]').click()
   await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
@@ -465,7 +465,7 @@ test('Task D Overview and Observation composites retain the default/history cont
   await expect(page.locator('[data-site-dns-signal="private_ip"] p')).toHaveAttribute('data-tone', 'warning')
   await review(page, 'task-d-dns-1440-light')
   await assertRuntimeSurface(page, '[data-site-detail]', 'light')
-  expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
+  expect(runtime.calls).toHaveLength(5); runtime.assertQuiet()
 })
 
 test('Task D Security evidence and Insights help/changes preserve request ownership', async ({ page, runtime }) => {

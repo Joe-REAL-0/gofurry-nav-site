@@ -369,6 +369,8 @@
     "utc": "UTC"
   },
   "siteDetail": {
+    "similarSites": "相似站点",
+    "noVisibleSimilarSites": "暂无可显示的相似站点",
     "cdn": {
       "cloudflare": "Cloudflare CDN",
       "tencent_cloud": "腾讯云 CDN",

@@ -93,7 +93,7 @@ test('router tabs survive history/reload, clear foreign state and support roving
   }
   await settleRuntime(page)
   await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
-  expect(runtime.calls).toHaveLength(6)
+  expect(runtime.calls).toHaveLength(7)
   expect(runtime.count('/observations')).toBe(1)
   expect(runtime.count('/trend')).toBe(2)
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
@@ -162,7 +162,7 @@ test('long Target lists reveal keyboard focus inside the scrollable listbox', as
   await expect(option(page, 'target.example')).toBeInViewport({ ratio: 1 })
   await page.keyboard.press('Escape')
   await expect(trigger(page)).toBeFocused()
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   runtime.assertQuiet()
 })
 
@@ -238,6 +238,6 @@ test('missing Target evidence stays unknown and sticky tabs leave Hero/health in
   expect(await page.locator('[data-site-health-strip]').evaluate(node => node.getBoundingClientRect().bottom)).toBeLessThan(0)
   expect(await page.locator('[data-site-target-context]').evaluate(node => node.getBoundingClientRect().top)).toBeGreaterThanOrEqual(56)
   await assertRuntimeSurface(page, '[data-site-detail]', 'light')
-  expect(runtime.calls).toHaveLength(3)
+  expect(runtime.calls).toHaveLength(4)
   runtime.assertQuiet()
 })

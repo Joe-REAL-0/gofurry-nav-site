@@ -1,6 +1,6 @@
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '../fixtures/site-detail'
 
-const initialPaths = ['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view']
+const initialPaths = ['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/recommendations', '/api/v2/nav/sites/41/view']
 
 for (const query of ['', '?domain=alt.example', '?tab=observation', '?tab=banana&view=tls']) test('Task C clean default hydrates one Ping history: ' + (query || 'blank'), async ({ page, runtime }) => {
   runtime.state.historyCount = 100
@@ -29,7 +29,7 @@ for (const query of ['', '?domain=alt.example', '?tab=observation', '?tab=banana
   await page.reload({ waitUntil: 'domcontentloaded' })
   await (await performanceReloadView).finished()
   await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
-  expect(runtime.count('/observations')).toBe(2); expect(runtime.calls).toHaveLength(8)
+  expect(runtime.count('/observations')).toBe(2); expect(runtime.calls).toHaveLength(10)
   await page.locator('[data-site-observation-tab="overview"]').click()
   await expect(page.locator('[data-site-observation-view]')).toHaveAttribute('data-site-observation-view', 'overview')
   expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ ...(target === 'alt.example' ? { domain: target } : {}), tab: 'observation', view: 'overview' })
@@ -89,7 +89,7 @@ for (const prefix of ['', '/en']) for (const query of ['', '?domain=target.examp
     expect(html).toContain('data-site-observation-view="performance"')
     expect(html).toContain('data-site-performance-history-state="loading"')
     expect(runtime.count('/observations')).toBe(0)
-    expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 2))
+    expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 3))
     const detail = runtime.calls.find(call => call.url.pathname.endsWith('/detail'))!
     expect(detail.url.searchParams.get('lang')).toBe(prefix ? 'en' : 'zh')
     expect(detail.url.searchParams.get('target')).toBe(query ? 'target.example' : null)
@@ -136,7 +136,7 @@ for (const query of ['?tab=overview', '?tab=observation&view=dns', '?tab=securit
     if (!startsInInsights) await page.locator('[data-site-primary-tab="insights"]').click()
     await expect(page.locator('[data-site-insights]')).toHaveText(insightsBefore!)
     await assertRuntimeSurface(page, '[data-site-detail]', 'light')
-    expect(runtime.calls.slice(4).map(call => [call.url.pathname, call.url.searchParams.get('target')])).toEqual([
+    expect(runtime.calls.slice(5).map(call => [call.url.pathname, call.url.searchParams.get('target')])).toEqual([
       ['/api/v2/nav/sites/41/detail', 'alt.example'],
     ])
     expect(runtime.count('/sites/41/insights')).toBe(1)
@@ -160,7 +160,7 @@ test('invalid UI query falls back without becoming a business target or issuing 
     expect(html).toContain(`data-site-tab="${tab}"`)
     if (tab === 'observation') expect(html).toContain('data-site-observation-view="performance"')
     if (tab === 'insights') expect(html).toContain('data-site-insights-state="ready"')
-    expect(runtime.calls.slice(start).map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 2))
+    expect(runtime.calls.slice(start).map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 3))
     const detail = runtime.calls.slice(start).find(call => call.url.pathname.endsWith('/detail'))!
     expect([...detail.url.searchParams.keys()].sort()).toEqual(['lang', 'payload_mode', 'target'])
   }
@@ -242,7 +242,7 @@ test('Ping history loads only in Performance and non-Performance Target selectio
   await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
   await expect(page.locator('[data-site-performance]')).toHaveCount(0)
   await settleRuntime(page)
-  expect(runtime.calls.slice(3).map(call => call.url.pathname)).toEqual([
+  expect(runtime.calls.slice(4).map(call => call.url.pathname)).toEqual([
     '/api/v2/nav/sites/41/targets/target.example/observations', '/api/v2/nav/sites/41/detail',
   ])
   expect(runtime.count('/sites/41/insights')).toBe(1)

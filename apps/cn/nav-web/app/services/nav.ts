@@ -13,6 +13,7 @@ import type {
   SayingModel,
   Site,
   SiteViewResponse,
+  SiteRecommendations,
 } from '~/types/nav'
 import { heroQuery, type HeroPreference } from '~/utils/heroPreferences'
 import type {
@@ -119,4 +120,8 @@ export function getSiteCompare(ids: number[]): Promise<SiteCompare> {
 
 export function getSiteInsights(siteId: string | number): Promise<SiteInsights> {
   return useApi('navV2')(`/nav/sites/${encodeURIComponent(String(siteId))}/insights`)
+}
+
+export function getSiteRecommendations(siteId: string, lang: 'zh' | 'en'): Promise<SiteRecommendations> {
+  return useApi('navV2')(`/nav/sites/${encodeURIComponent(siteId)}/recommendations`, { query: { lang, limit: 8 }, retry: 0 })
 }
