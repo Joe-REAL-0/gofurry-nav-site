@@ -1,17 +1,12 @@
 .site-detail-page {
-  // One acrylic family for all Site-owned workspaces; row tint is not a health verdict.
-  --site-detail-plane-a: color-mix(in srgb, var(--gf-surface) 58%, transparent);
-  --site-detail-plane-b: color-mix(in srgb, var(--gf-surface) 34%, transparent);
-  --site-detail-plane-c: color-mix(in srgb, var(--gf-surface) 12%, transparent);
-  --site-detail-plane-tint: color-mix(in srgb, var(--gf-accent) 3%, transparent);
-  --site-detail-hover: color-mix(in srgb, var(--gf-accent-soft) 28%, transparent);
-  --site-detail-selected: color-mix(in srgb, var(--gf-surface-strong) 48%, transparent);
+  // One fixed material; hierarchy comes from composition, never opacity falloff.
+  --site-detail-panel: color-mix(in srgb, var(--gf-surface) 46%, transparent);
+  --site-detail-hover: color-mix(in srgb, var(--gf-accent-soft) 48%, transparent);
+  --site-detail-selected: color-mix(in srgb, var(--gf-accent-soft) 72%, transparent);
   --site-detail-motion-soft: 500ms;
-  --site-detail-surface: var(--site-detail-plane-a);
-  --site-detail-secondary: var(--site-detail-plane-b);
+  --site-detail-popularity: var(--gf-accent);
   --site-detail-border: var(--gf-border);
   --site-detail-radius: 10px;
-  --site-detail-selection: var(--site-detail-selected);
   --site-detail-tabs-surface: var(--gf-page-background);
   --site-detail-tabs-height: 3.5rem;
   --site-detail-positive: #216b4b;
@@ -25,11 +20,11 @@
 .site-detail-surface {
   border-radius: var(--site-detail-radius);
   padding: 1rem;
-  background: var(--site-detail-plane-a);
+  background: var(--site-detail-panel);
 }
 
 .site-detail-surface--secondary {
-  background: var(--site-detail-plane-b);
+  background: var(--site-detail-panel);
 }
 
 .site-detail-icon {
@@ -78,7 +73,7 @@
 
 .site-intelligence-row:hover,
 .site-intelligence-range:hover {
-  background: var(--site-detail-plane-a);
+  background: var(--site-detail-hover);
 }
 
 .site-intelligence-capability {
@@ -116,6 +111,8 @@ html.dark .site-detail-page {
   --site-detail-warning: #f2c47a;
   --site-detail-danger: #e4a39d;
   --site-detail-info: #9bc9ce;
+  // Popularity is a warm brand emphasis, independent of evidence/status tones.
+  --site-detail-popularity: #e5b69a;
 }
 
 .site-detail-hero {
@@ -126,7 +123,7 @@ html.dark .site-detail-page {
   width: 3.5rem;
   height: 3.5rem;
   border-radius: var(--gf-radius-sm);
-  background: var(--site-detail-plane-a);
+  background: var(--site-detail-panel);
 }
 
 .site-detail-hero__name {
@@ -245,7 +242,7 @@ html.dark .site-detail-page {
 
   border-radius: var(--site-detail-radius);
   padding: 1rem;
-  background: var(--site-detail-plane-b);
+  background: var(--site-detail-panel);
 }
 
 .site-detail-protocol-row {
@@ -289,7 +286,7 @@ html.dark .site-detail-page {
 .site-detail-segmented {
   border-radius: var(--gf-radius-sm);
   padding: 0.2rem;
-  background: var(--site-detail-plane-b);
+  background: var(--site-detail-panel);
 }
 
 .site-observation-tab,
@@ -316,7 +313,7 @@ html.dark .site-detail-page {
 .site-observation-tab:hover,
 .site-security-tab:hover,
 .site-observation-sample:hover {
-  background: var(--site-detail-plane-a);
+  background: var(--site-detail-hover);
 }
 
 .site-observation-tab:focus-visible,
@@ -361,7 +358,7 @@ html.dark .site-detail-page {
 .site-observation-timing-track {
   height: 0.65rem;
   border-radius: var(--gf-radius-sm);
-  background: var(--site-detail-plane-a);
+  background: var(--site-detail-panel);
 }
 
 .site-observation-timing-bar {
@@ -421,7 +418,7 @@ html.dark .site-detail-page {
 .site-overview-capability-composite {
   border-radius: var(--site-detail-radius);
   padding: 1.2rem;
-  background: var(--site-detail-plane-a);
+  background: var(--site-detail-panel);
 }
 
 .site-overview-heading {
@@ -453,7 +450,7 @@ html.dark .site-detail-page {
 
 .site-overview-attention-row {
   padding-top: 0.85rem;
-  background: var(--site-detail-plane-c);
+  background: transparent;
 }
 
 .site-overview-attention-message {
@@ -493,7 +490,7 @@ html.dark .site-detail-page {
 .site-overview-change-card {
   border-radius: var(--gf-radius-sm);
   padding: 0.9rem;
-  background: var(--site-detail-plane-c);
+  background: var(--site-detail-panel);
 }
 
 .site-overview-change-event {
@@ -540,7 +537,7 @@ html.dark .site-detail-page {
 .site-overview-attention {
   border-radius: var(--site-detail-radius);
   padding: 0.85rem 1rem;
-  background: var(--site-detail-plane-b);
+  background: var(--site-detail-panel);
 }
 
 .site-overview-attention__item,
@@ -597,23 +594,18 @@ html.dark .site-detail-page {
 
 // Observation retains its composition and consumes the shared acrylic planes.
 .site-observation {
-  --site-observation-plane: var(--site-detail-plane-a);
-  --site-observation-plane-soft: var(--site-detail-plane-b);
   --site-observation-line: color-mix(in srgb, var(--gf-border) 45%, transparent);
-  --site-observation-tint: var(--site-detail-plane-tint);
-  --site-observation-hover: var(--site-detail-hover);
-  --site-observation-selection: var(--site-detail-selected);
 }
 
 .site-observation-composite,
 .site-observation-evidence {
   border-radius: 10px;
   padding: 1rem;
-  background: var(--site-observation-plane-soft);
+  background: var(--site-detail-panel);
 }
 
 .site-observation-composite {
-  background: linear-gradient(120deg, var(--site-observation-tint), transparent 65%), var(--site-observation-plane);
+  background: var(--site-detail-panel);
 }
 
 .site-observation-heading {
@@ -665,13 +657,13 @@ html.dark .site-detail-page {
 }
 
 .site-observation-segment:hover {
-  background-color: var(--site-observation-hover);
+  background-color: var(--site-detail-hover);
   color: var(--gf-text-main);
 }
 
 .site-observation-segment[aria-selected="true"],
 .site-observation-segment[aria-pressed="true"] {
-  background-color: var(--site-observation-selection);
+  background-color: var(--site-detail-selected);
   color: var(--gf-text-main);
   font-weight: 650;
   transition: none;
@@ -690,7 +682,7 @@ html.dark .site-detail-page {
 
 .site-observation-evidence-list > div:hover,
 .site-observation-ledger-row:hover {
-  background-color: var(--site-observation-hover);
+  background-color: var(--site-detail-hover);
 }
 
 .site-observation-attention-rail,
@@ -762,7 +754,7 @@ html.dark .site-detail-page {
 // The single intentional separator belongs to the Identity Note, never to facts rows.
 .site-detail-identity-note {
   border-radius: var(--site-detail-radius);
-  background: linear-gradient(115deg, var(--site-detail-plane-tint), transparent 70%), var(--site-detail-plane-a);
+  background: var(--site-detail-panel);
 }
 
 .site-detail-perforation {
@@ -869,8 +861,7 @@ html.dark .site-detail-page {
 }
 
 .site-intelligence-row[aria-pressed="true"] {
-  background: var(--site-detail-selection);
-  background-color: var(--site-detail-selected);
+  background: var(--site-detail-selected);
   transition: none;
 }
 
@@ -887,7 +878,7 @@ html.dark .site-detail-page {
 .site-security-attention {
   border-radius: var(--site-detail-radius);
   padding: 0.85rem 1rem;
-  background: var(--site-detail-plane-c);
+  background: transparent;
 }
 
 .site-detail-text-link {
@@ -954,5 +945,50 @@ html.dark .site-detail-page {
 .site-observation-signal-rail,
 .site-security-crypto {
   border-radius: 7px;
-  background: var(--site-detail-plane-c);
+  background: transparent;
+}
+
+.site-detail-target-trigger {
+  min-height: 38px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0.5rem 0.65rem;
+  background: transparent;
+  color: var(--gf-text-main);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--site-detail-motion-soft), color var(--site-detail-motion-soft);
+}
+
+.site-detail-target-trigger:hover {
+  background-color: var(--site-detail-hover);
+}
+
+.site-detail-target-trigger[aria-expanded="true"],
+.site-detail-target-option[aria-selected="true"] {
+  background-color: var(--site-detail-selected);
+  transition: none;
+}
+
+.site-detail-target-trigger:focus-visible {
+  .gf-focus-ring();
+}
+
+.site-detail-hero__views {
+  color: var(--site-detail-popularity);
+  font-size: 0.95rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.site-detail-hero__views .site-detail-icon {
+  opacity: 0.7;
+}
+
+.site-detail-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
 }

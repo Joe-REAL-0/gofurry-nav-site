@@ -134,6 +134,14 @@ Security and Insights preserve all runtime and evidence contracts. This supersed
 earlier card/divider appearance only. See the frontend contract. Stop before P8
 or a second round; final Visual work still needs separate authorization.
 
+Task C explicitly authorizes the second-round consistency/entry refinement and
+supersedes that material hierarchy: all content panels use `--site-detail-panel`,
+with one shared hover/selected family. `siteTargetSignals.ts` owns reliable typed
+CDN hints and shared protocol status display. Blank/domain-only URLs now mean
+Observation/Performance; both Overviews are explicit. Default hydration adds one
+Ping history call, never SSR. Preserve P4/P6 cache/race internals and all other
+runtime/SEO/debt boundaries. Task C still does not authorize P8 or final goldens.
+
 Absent rule/file budgets are zero. Both increases and stale larger budgets fail.
 After removing debt, inspect stale-only output before `style:policy:update`; never
 raise budgets, move debt between files, or manually rebalance totals. A debt-bearing

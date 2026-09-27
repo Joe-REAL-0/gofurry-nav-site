@@ -14,7 +14,7 @@ async function reviewObservation(page: Page, view: string, width: number, theme:
 }
 async function openObservation(page: Page, view = 'overview') {
   const counted = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
-  const html = await openRuntime(page, '/en/site/41?tab=observation' + (view === 'overview' ? '' : '&view=' + view))
+  const html = await openRuntime(page, '/en/site/41?tab=observation&view=' + view)
   await (await counted).finished()
   return html
 }
@@ -51,7 +51,7 @@ test('secondary navigation owns history/reload/keyboard and omits the default vi
   await tab(page, 'http').click(); await tab(page, 'http').focus()
   for (const [key, view] of [['ArrowRight', 'dns'], ['End', 'web'], ['Home', 'overview'], ['ArrowLeft', 'web']]) {
     await page.keyboard.press(key!); await activeView(page, view!); await expect(tab(page, view!)).toBeFocused()
-    if (view === 'overview') expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ tab: 'observation' })
+    if (view === 'overview') expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ tab: 'observation', view: 'overview' })
   }
   expect(runtime.calls).toHaveLength(3)
   const counted = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
@@ -184,7 +184,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await context.addInitScript(theme => localStorage.setItem('theme', theme), theme)
     await openObservation(page)
     await expect(page.locator('[data-site-observation-protocol]')).toHaveCount(3)
-    await expect(page.locator('[data-site-observation-protocol="dns"]')).toContainText('Success')
+    await expect(page.locator('[data-site-observation-protocol="dns"]')).toContainText('Stale')
     await expect(page.locator('[data-site-observation-protocol="dns"] [data-site-protocol-freshness]')).toContainText('Stale')
     await expect(page.locator('[data-site-observation-risks]')).toContainText('DNS observations are missing or stale')
     await expect(page.locator('[data-site-observation-risks]')).not.toContainText('后端旧中文')

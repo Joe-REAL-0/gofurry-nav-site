@@ -8,9 +8,9 @@ export const longTarget = 'a-long-collected-target-name-for-layout-review.commun
 // #109 owns only scenario data; Nitro, request instances, release gates and
 // browser diagnostics remain in the shared runtime fixture.
 export const test = runtimeTest(
-  () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
+  () => ({ ...seoState(), insightsEmpty: false, viewFailure: false, viewCount: 2, noTargetEvidence: false, missingSummary: false, longTarget: false, primaryStatus: 200, extraTargets: [] as string[],
     summaryScenario: 'healthy' as 'healthy' | 'mixed' | 'stale' | 'unknown' | 'zero', summaryChangesOnTarget: false, fullCapabilities: false, manyChanges: false,
-    observationRich: false, observationHealthReasons: true, webProbeScenario: 'ready' as 'ready' | 'not-found' | 'failure' | 'stale' | 'missing', historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
+    cdnScenario: 'none' as 'none' | 'reliable' | 'unreliable', protocolScenario: 'normal' as 'normal' | 'slow' | 'failure' | 'missing', observationRich: false, observationHealthReasons: true, webProbeScenario: 'ready' as 'ready' | 'not-found' | 'failure' | 'stale' | 'missing', historyCount: 1, historyFailure: false, historyNoRtt: false, noRedirects: false, noCname: false, longEvidence: false, security: securityState(), intelligence: siteInsightScenario() }),
   url => /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|view)$/.test(url.pathname)
     || url.pathname === '/api/v2/nav/home'
     || /^\/api\/v2\/nav\/sites\/41\/targets\/(target|alt)\.example\/observations$/.test(url.pathname) || isSiteTrend(url),
@@ -23,7 +23,7 @@ export const test = runtimeTest(
       saying: { saying: 'Fixture', author: 'Fixture' }, ping: {}, hero: { desktop: null, mobile: null },
     } }
     if (isSiteTrend(url)) return siteTrendResponse(url, state.intelligence.trend)
-    if (url.pathname.endsWith('/view') && state.viewFailure) return { status: 503 }
+    if (url.pathname.endsWith('/view')) return state.viewFailure ? { status: 503 } : { data: { site_id: Number(url.pathname.split('/').at(-2)), view_count: state.viewCount } }
     if (url.pathname.endsWith('/insights') && state.insightsEmpty) return {
       data: { site: { id: 41, name: 'Site fixture 41' }, capabilities: [], recent_changes: [] },
     }
@@ -88,8 +88,15 @@ export const test = runtimeTest(
           target_relation_hints: [{ relation: 'shared_canonical', host: 'target.example', targets: ['target.example', alternative] }] },
         target_summary: state.noTargetEvidence ? { state: 'missing', target, status: 'unknown', observed_at: '0001-01-01T00:00:00Z', protocols: {} } : { state: 'ready', target, status: target === 'target.example' ? 'healthy' : 'warning', observed_at: observed,
           reason_messages: state.observationRich ? ['后端旧中文 DNS 观测过期'] : [], reason_codes: state.observationRich && state.observationHealthReasons ? ['dns_missing_or_stale'] : [],
-          protocols: Object.fromEntries(['ping', 'http', 'dns'].map(protocol => [protocol, { protocol, status: 'success', observed_at: observed, duration_ms: 24, stale: state.observationRich && protocol === 'dns' }])),
-          edge_provider_hints: [{ provider: 'cloudflare', hint_type: 'response_header', confidence: 'medium', evidence: [{ source: 'http', field: 'server', value: 'cloudflare' }] }] },
+          protocols: Object.fromEntries(['ping', 'http', 'dns'].map(protocol => [protocol, { protocol, status: state.protocolScenario === 'failure' ? 'failure' : state.protocolScenario === 'missing' ? 'unknown' : 'success', observed_at: observed, duration_ms: state.protocolScenario === 'slow' ? 4302 : 24, stale: state.observationRich && protocol === 'dns' }])),
+          edge_provider_hints: state.cdnScenario === 'reliable' ? [
+            { provider: 'aliyun', hint_type: 'waf', confidence: 'high', evidence: [] },
+            { provider: 'tencent_cloud', hint_type: 'cdn', confidence: 'medium', evidence: [] },
+            { provider: target === 'target.example' ? 'cloudflare' : 'fastly', hint_type: 'cdn', confidence: 'high', evidence: [] },
+          ] : state.cdnScenario === 'unreliable' ? [
+            { provider: 'cloudflare', hint_type: 'waf', confidence: 'high', evidence: [] },
+            { provider: 'tencent_cloud', hint_type: 'cdn', confidence: 'low', evidence: [] },
+          ] : [{ provider: 'cloudflare', hint_type: 'response_header', confidence: 'medium', evidence: [{ source: 'http', field: 'server', value: 'cloudflare' }] }] },
         latest_core: state.noTargetEvidence ? null : {
         target, protocols: { ...(state.observationRich ? { ping: envelope('ping', { avg_rtt_ms: target === 'target.example' ? 24 : 70, jitter_ms: 0, loss_rate: 0, resolved_ip: ip }), dns: envelope('dns', dns) } : {}), http: {
           target, status: 'success', observed_at: observed, duration_ms: 120,

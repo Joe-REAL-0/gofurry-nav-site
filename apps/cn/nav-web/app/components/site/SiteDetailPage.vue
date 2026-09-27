@@ -5,6 +5,7 @@
         <SiteDetailHero
           :site="sitePageData.siteInfo" :name="siteName" :domain="sitePageData.domain"
           :view-count="siteViewCount" :visit-url="targetPresentation.visitUrl"
+          :edge-hints="targetPresentation.edgeProviderHints"
         />
         <div class="site-detail-perforation relative mx-5 flex items-center justify-between sm:mx-7" aria-hidden="true"><span /><span /><span /></div>
         <SiteHealthStrip :presentation="targetPresentation" :pending="pending" />

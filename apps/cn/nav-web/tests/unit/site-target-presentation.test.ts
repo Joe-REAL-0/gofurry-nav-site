@@ -67,7 +67,7 @@ describe('Current Target presentation', () => {
     const result = presentSiteTarget(data, t)
     expect(result.status).toBe('stale')
     expect(result.protocolStates[1]).toMatchObject({ status: 'stale', duration: '12 ms', observedAt: '—' })
-    expect(result.protocolStates[0]).toMatchObject({ status: 'unknown', tone: 'neutral', duration: '—' })
+    expect(result.protocolStates[0]).toMatchObject({ status: 'unknown', tone: 'muted', duration: '—' })
   })
 
   it('formats deterministic evidence and keeps infrastructure confidence and relations', () => {

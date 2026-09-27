@@ -1,6 +1,7 @@
 import type { CollectorEnvelope } from '~/types/nav'
 import type { SiteDetailPageData } from '~/composables/useSiteDetailPage'
-import { siteHealthReasonLabel, siteDnsSignal, siteLatencyTone, siteHttpTone, siteProtocolTone, type SiteDetailTone } from './siteDetailPresentation'
+import { siteHealthReasonLabel, siteDnsSignal, siteLatencyTone, siteHttpTone, type SiteDetailTone } from './siteDetailPresentation'
+import { presentSiteProtocolStatus } from './siteTargetSignals'
 
 type Source = Pick<SiteDetailPageData, 'domain' | 'targetHealthSummary' | 'targetLatestCore' | 'lightProbeState'>
 type Translate = (key: string, values?: Record<string, string | number>) => string
@@ -44,10 +45,10 @@ export function presentSiteObservation(source: Source, t: Translate) {
   const compact = (items: ObservationFact[]) => items.filter(item => item.value !== '—')
   const protocols = ['ping', 'http', 'dns'].map(protocol => {
     const state = summary?.protocols?.[protocol], envelope = core(protocol)
-    const status = observationStatus(state?.status || envelope?.status)
     const stale = state?.stale ?? (latest?.state === 'stale' ? true : null)
+    const protocolStatus = presentSiteProtocolStatus(state?.status || envelope?.status, stale, t)
     const duration = state?.duration_ms ?? envelope?.duration_ms
-    return { protocol, status, statusLabel: t('siteDetail.states.' + status), tone: siteProtocolTone(status), duration: ms(duration), durationTone: siteLatencyTone(observationNumber(duration)),
+    return { protocol, ...protocolStatus, duration: ms(duration), durationTone: siteLatencyTone(observationNumber(duration)),
       observed: observationTime(state?.observed_at || envelope?.observed_at),
       freshness: t('siteObservation.' + (stale === true ? 'stale' : stale === false ? 'fresh' : 'freshnessUnknown')) }
   })

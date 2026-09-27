@@ -32,8 +32,9 @@ function member<T extends string>(value: unknown, values: readonly T[], fallback
 
 export function parseSiteDetailRouteState(query: SiteDetailQuery): SiteDetailRouteState {
   const domain = queryValue(query.domain)
-  const tab = member(query.tab, siteDetailTabs, 'overview')
-  if (tab === 'observation') return { domain, tab, view: member(query.view, siteObservationViews, 'overview') }
+  const requestedTab = queryValue(query.tab)
+  const tab = member(query.tab, siteDetailTabs, 'observation')
+  if (tab === 'observation') return { domain, tab, view: member(requestedTab && requestedTab !== 'observation' ? undefined : query.view, siteObservationViews, 'performance') }
   if (tab === 'security') return { domain, tab, view: member(query.view, siteSecurityViews, 'overview') }
   if (tab === 'insights') return {
     domain, tab,
@@ -49,8 +50,15 @@ export function buildSiteDetailQuery(state: SiteDetailRouteState): Record<string
   const normalized = parseSiteDetailRouteState(state)
   const query: Record<string, string> = {}
   if (normalized.domain) query.domain = normalized.domain
-  if (normalized.tab !== 'overview') query.tab = normalized.tab
-  if ('view' in normalized && normalized.view !== 'overview') query.view = normalized.view
+  if (normalized.tab === 'observation') {
+    if (normalized.view !== 'performance') {
+      query.tab = normalized.tab
+      query.view = normalized.view
+    }
+  } else {
+    query.tab = normalized.tab
+    if (normalized.tab === 'security' && normalized.view !== 'overview') query.view = normalized.view
+  }
   if (normalized.tab === 'insights') {
     if (normalized.metric !== 'ipv6') query.metric = normalized.metric
     if (normalized.range !== '30d') query.range = normalized.range

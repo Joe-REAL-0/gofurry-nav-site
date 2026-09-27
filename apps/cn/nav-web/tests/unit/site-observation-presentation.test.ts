@@ -19,11 +19,11 @@ const source = (protocols: Record<string, CollectorEnvelope> = {}, summary: Targ
 const present = (protocols: Record<string, CollectorEnvelope> = {}) => presentSiteObservation(source(protocols), translate())
 
 describe('Current Target evidence projection', () => {
-  it('keeps all four protocol fields, prefers summary and preserves status separately from freshness', () => {
+  it('keeps all four protocol fields, prefers summary and projects stale status while retaining duration and freshness', () => {
     const summary = { target, state: 'ready', status: 'warning', reason_messages: ['中文消息', '中文消息'], reason_codes: ['dns_missing_or_stale'],
       protocols: { ping: { status: 'success', duration_ms: 5, observed_at: '2026-09-25T12:00:00Z', stale: true } } } as TargetHealthSummary
     const vm = presentSiteObservation(source({ ping: envelope('ping', {}, { duration_ms: 100 }) }, summary), translate())
-    expect(vm.protocols[0]).toMatchObject({ status: 'success', duration: '5 ms', observed: '2026-09-25 12:00:00 UTC', freshness: 'Stale' })
+    expect(vm.protocols[0]).toMatchObject({ status: 'stale', success: false, duration: '5 ms', observed: '2026-09-25 12:00:00 UTC', freshness: 'Stale' })
     expect(vm.risks).toEqual(['DNS observations are missing or stale'])
     expect(vm.status).toBe('warning')
   })

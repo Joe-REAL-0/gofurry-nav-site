@@ -369,6 +369,14 @@
     "utc": "UTC"
   },
   "siteDetail": {
+    "cdn": {
+      "cloudflare": "Cloudflare CDN",
+      "tencent_cloud": "腾讯云 CDN",
+      "aliyun": "阿里云 CDN",
+      "aws_cloudfront": "CloudFront",
+      "fastly": "Fastly CDN",
+      "other": "{provider} CDN"
+    },
     "tabs": {
       "overview": "概览",
       "observation": "观测",

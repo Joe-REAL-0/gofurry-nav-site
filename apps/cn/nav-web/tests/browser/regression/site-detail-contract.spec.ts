@@ -2,6 +2,48 @@ import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '
 
 const initialPaths = ['/api/v2/nav/sites/41/detail', '/api/v2/nav/sites/41/insights', '/api/v2/nav/sites/41/view']
 
+for (const query of ['', '?domain=alt.example', '?tab=observation', '?tab=banana&view=tls']) test('Task C clean default hydrates one Ping history: ' + (query || 'blank'), async ({ page, runtime }) => {
+  runtime.state.historyCount = 100
+  const path = '/en/site/41' + query
+  const target = query.includes('alt.example') ? 'alt.example' : 'target.example'
+  const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
+  const html = await openRuntime(page, path)
+  await (await view).finished()
+  expect(html).toContain('data-site-observation-view="performance"')
+  expect(html).toContain('data-site-performance-history-state="loading"')
+  await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-points', '20')
+  await expect(page).toHaveURL(path)
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual([...initialPaths, `/api/v2/nav/sites/41/targets/${target}/observations`].sort())
+  expect(Object.fromEntries(runtime.calls.find(call => call.url.pathname.endsWith('/observations'))!.url.searchParams)).toEqual({ protocol: 'ping', limit: '100', payload_mode: 'preview' })
+  await page.locator('[data-site-primary-tab="overview"]').click()
+  await expect(page.locator('[data-site-overview]')).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('tab')).toBe('overview')
+  await page.locator('[data-site-primary-tab="observation"]').click()
+  await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual(target === 'alt.example' ? { domain: target } : {})
+  await page.goBack(); await expect(page.locator('[data-site-overview]')).toBeVisible()
+  await page.goForward(); await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  expect(runtime.count('/observations')).toBe(1)
+  const performanceReloadView = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await (await performanceReloadView).finished()
+  await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  expect(runtime.count('/observations')).toBe(2); expect(runtime.calls).toHaveLength(8)
+  await page.locator('[data-site-observation-tab="overview"]').click()
+  await expect(page.locator('[data-site-observation-view]')).toHaveAttribute('data-site-observation-view', 'overview')
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ ...(target === 'alt.example' ? { domain: target } : {}), tab: 'observation', view: 'overview' })
+  const reloadedView = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await (await reloadedView).finished()
+  await expect(page.locator('[data-site-observation-view]')).toHaveAttribute('data-site-observation-view', 'overview')
+  await settleRuntime(page)
+  expect(runtime.count('/observations')).toBe(2)
+  expect(runtime.count('/sites/41/detail')).toBe(3); expect(runtime.count('/sites/41/insights')).toBe(3); expect(runtime.count('/sites/41/view')).toBe(3)
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com/en/site/41')
+  runtime.assertQuiet()
+})
+
 test('Home domain popover enters Site Detail through client navigation', async ({ page, context, runtime }) => {
   await page.setViewportSize({ width: 960, height: 1040 })
   // Home's existing weather iframe is an exact isolated third-party boundary.
@@ -26,12 +68,13 @@ test('Home domain popover enters Site Detail through client navigation', async (
   await expect(page).toHaveURL('/site/41?domain=target.example')
   await expect(page.locator('[data-site-hero] h1')).toHaveText('Site fixture 41')
   await expect(page.locator('[data-site-primary-tab]')).toHaveCount(4)
-  await expect(page.locator('[data-site-primary-tab="overview"]')).toHaveAttribute('aria-selected', 'true')
-  await expect(page.locator('[data-site-overview]')).toBeVisible()
+  await expect(page.locator('[data-site-primary-tab="observation"]')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('[data-site-observation-view]')).toHaveAttribute('data-site-observation-view', 'performance')
+  await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'ready')
   await (await view).finished()
   await settleRuntime(page)
   expect(documents).toEqual([])
-  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/home', ...initialPaths].sort())
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/nav/home', ...initialPaths, '/api/v2/nav/sites/41/targets/target.example/observations'].sort())
   expect(runtime.calls.find(call => call.url.pathname.endsWith('/detail'))!.url.searchParams.get('target')).toBe('target.example')
   runtime.assertQuiet()
 })
@@ -42,10 +85,10 @@ for (const prefix of ['', '/en']) for (const query of ['', '?domain=target.examp
     expect(response.status()).toBe(200)
     const html = await response.text()
     expect(html).toContain('data-site-detail')
-    expect(html).toContain('data-site-capabilities-state="ready"')
-    expect(html).toContain('data-site-capability-state="unknown"')
-    expect(html).toContain('data-site-capability-state="unavailable"')
-    expect(html).toContain('data-site-capability-state="unsupported"')
+    expect(html).toContain('data-site-tab="observation"')
+    expect(html).toContain('data-site-observation-view="performance"')
+    expect(html).toContain('data-site-performance-history-state="loading"')
+    expect(runtime.count('/observations')).toBe(0)
     expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 2))
     const detail = runtime.calls.find(call => call.url.pathname.endsWith('/detail'))!
     expect(detail.url.searchParams.get('lang')).toBe(prefix ? 'en' : 'zh')
@@ -55,7 +98,7 @@ for (const prefix of ['', '/en']) for (const query of ['', '?domain=target.examp
   })
 }
 
-for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', '?tab=insights&metric=tls13&range=90d']) {
+for (const query of ['?tab=overview', '?tab=observation&view=dns', '?tab=security&view=tls', '?tab=insights&metric=tls13&range=90d']) {
   test('hydrated target switch fetches only detail and preserves workspace ' + (query || 'overview'), async ({ page, runtime }) => {
     const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view')
       && response.request().method() === 'POST')
@@ -106,16 +149,16 @@ for (const query of ['', '?tab=observation&view=dns', '?tab=security&view=tls', 
 }
 
 test('invalid UI query falls back without becoming a business target or issuing extra requests', async ({ request, runtime }) => {
-  for (const [query, tab] of [['tab=banana', 'overview'], ['tab=observation&view=tls', 'observation'],
+  for (const [query, tab] of [['tab=banana', 'observation'], ['tab=observation&view=tls', 'observation'],
     ['tab=security&view=dns', 'security'], ['tab=insights&metric=banana&range=7d', 'insights'],
-    ['tab&view&metric&range', 'overview'], ['tab=security&tab=insights&view=tls', 'security']]) {
+    ['tab&view&metric&range', 'observation'], ['tab=security&tab=insights&view=tls', 'security']]) {
     const start = runtime.calls.length
     const response = await request.get('/site/41?domain=alt.example&' + query)
     expect(response.status()).toBe(200)
     const html = await response.text()
     expect(html).toContain('data-site-target="alt.example"')
     expect(html).toContain(`data-site-tab="${tab}"`)
-    if (tab === 'overview') expect(html).toContain('data-site-capabilities-state="ready"')
+    if (tab === 'observation') expect(html).toContain('data-site-observation-view="performance"')
     if (tab === 'insights') expect(html).toContain('data-site-insights-state="ready"')
     expect(runtime.calls.slice(start).map(call => call.url.pathname).sort()).toEqual(initialPaths.slice(0, 2))
     const detail = runtime.calls.slice(start).find(call => call.url.pathname.endsWith('/detail'))!
@@ -183,7 +226,7 @@ test('a failed hydrated Target switch reaches the authoritative page error', asy
 
 test('Ping history loads only in Performance and non-Performance Target selection does not refetch it', async ({ page, runtime }) => {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
-  await openRuntime(page, '/site/41?tab=observation')
+  await openRuntime(page, '/site/41?tab=observation&view=overview')
   await (await view).finished()
   await expect(page.locator('[data-site-performance]')).toHaveCount(0)
   expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(initialPaths)

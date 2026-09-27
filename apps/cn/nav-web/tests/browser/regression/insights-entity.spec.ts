@@ -48,7 +48,9 @@ for (const id of [41, 42, 82, 83]) test('Overview real change link preserves ind
   await expect(page.locator(site ? '.site-detail-page' : '.game-detail-page')).toBeVisible()
   await (await view).finished()
   if (site) {
-    await expect(page.locator('[data-site-overview]')).toBeVisible()
+    await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'empty')
+    expect(runtime.count('/observations')).toBe(1)
+    expect(Object.fromEntries(runtime.calls.find(call => call.url.pathname.endsWith('/observations'))!.url.searchParams)).toEqual({ protocol: 'ping', limit: '100', payload_mode: 'preview' })
     await page.locator('[data-site-primary-tab="insights"]').click()
     if (id === 42) await expect(page.locator('[data-site-insights-unavailable]')).toBeVisible()
     else {

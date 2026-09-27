@@ -3,6 +3,69 @@ import { join } from 'node:path'
 import type { Page } from '@playwright/test'
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '../fixtures/site-detail'
 
+for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as const) test(`Task C entry, Current Target signals and shared material ${width}-${theme}`, async ({ page, context, runtime }) => {
+  Object.assign(runtime.state, { cdnScenario: 'reliable', protocolScenario: 'slow', observationRich: true, historyCount: 100, viewCount: 20457 })
+  await page.setViewportSize({ width, height: 900 }); await context.addInitScript(value => localStorage.setItem('theme', value), theme)
+  const prefix = width === 390 ? '' : '/en', success = prefix ? 'Success' : '成功', stale = prefix ? 'Stale' : '已过期'
+  const path = prefix + '/site/41' + (width === 390 ? '?domain=target.example' : '')
+  await open(page, path)
+  await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+  await expect(page).toHaveURL(path)
+  await expect(page.locator('[data-site-cdn]')).toHaveText('Cloudflare CDN')
+  await expect(page.locator('[data-site-hero]')).not.toContainText(/confidence|medium|high|hint_type/)
+  const trigger = page.locator('[data-site-target-trigger]')
+  await expect(trigger).not.toHaveClass(/gf-button/)
+  await expect(trigger).toHaveCSS('border-width', '0px'); await expect(trigger).toHaveCSS('min-height', '38px')
+  await expect(trigger).toHaveCSS('transition-duration', '0.5s, 0.5s'); await expect(trigger).toHaveCSS('transform', 'none')
+  const views = await page.locator('[data-site-views]').evaluate(node => {
+    const style = getComputedStyle(node)
+    return { font: parseFloat(style.fontSize), weight: Number(style.fontWeight) }
+  })
+  expect(views.font).toBeGreaterThanOrEqual(14.4); expect(views.weight).toBeGreaterThanOrEqual(600)
+  await expect(page.locator('[data-site-views]')).toHaveText('20,457')
+  await assertAcrylic(page); await assertRuntimeSurface(page, '[data-site-detail]', theme)
+  await review(page, `task-c-entry-${width}-${theme}`)
+  await page.locator('[data-site-observation-tab="overview"]').click()
+  for (const owner of ['[data-site-target-context]', '[data-site-observation-overview]']) {
+    await expect(page.locator(owner + ' .site-detail-status-dot')).toHaveCount(3)
+    await expect(page.locator(owner + ' [data-site-protocol-status].sr-only')).toHaveText([success, success])
+    await expect(page.locator(owner + ' [data-site-protocol-status]:not(.sr-only)')).toHaveText('· ' + stale)
+    await expect(page.locator(owner + ' .site-detail-status-dot[data-tone="good"]')).toHaveCount(2)
+    await expect(page.locator(owner + ' .site-detail-status-dot[data-tone="warning"]')).toHaveCount(1)
+  }
+  await expect(page.locator('[data-site-protocol="ping"] dd')).toHaveAttribute('data-tone', 'bad')
+  await expect(page.locator('[data-site-observation-protocol="ping"] dd').first()).toHaveAttribute('data-tone', 'bad')
+  await review(page, `task-c-protocols-${width}-${theme}`)
+  await trigger.hover()
+  await expect.poll(() => trigger.evaluate(node => node.getAnimations().filter(animation => animation.playState === 'running').length)).toBe(0)
+  await review(page, `task-c-hover-${width}-${theme}`)
+  await trigger.click(); await expect(trigger).toHaveCSS('transition-duration', '0s')
+  await page.keyboard.press('End'); await page.keyboard.press('Enter')
+  await expect(page.locator('[data-site-detail]')).toHaveAttribute('data-site-target', 'alt.example')
+  await expect(page.locator('[data-site-cdn]')).toHaveText('Fastly CDN')
+  await expect(trigger).toBeFocused()
+  expect(runtime.count('/sites/41/detail')).toBe(2); expect(runtime.count('/sites/41/insights')).toBe(1); expect(runtime.count('/sites/41/view')).toBe(1)
+  expect(runtime.count('/observations')).toBe(1); expect(runtime.count('/trend')).toBe(0); expect(runtime.calls).toHaveLength(5)
+  await assertRuntimeSurface(page, '[data-site-detail]', theme); runtime.assertQuiet()
+})
+
+for (const scenario of ['none', 'unreliable'] as const) test('Task C omits unreliable CDN badge: ' + scenario, async ({ page, runtime }) => {
+  runtime.state.cdnScenario = scenario
+  await open(page, '/en/site/41?tab=overview')
+  await expect(page.locator('[data-site-cdn]')).toHaveCount(0)
+  expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+})
+
+for (const scenario of ['failure', 'missing'] as const) test('Task C protocol exceptions remain visible: ' + scenario, async ({ page, runtime }) => {
+  runtime.state.protocolScenario = scenario
+  await open(page, '/en/site/41?tab=observation&view=overview')
+  for (const owner of ['[data-site-target-context]', '[data-site-observation-overview]']) {
+    await expect(page.locator(owner + ' [data-site-protocol-status].sr-only')).toHaveCount(0)
+    await expect(page.locator(owner + ' [data-site-protocol-status]')).toHaveText(Array(3).fill('· ' + (scenario === 'failure' ? 'Failed' : 'Unknown')))
+  }
+  expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+})
+
 // Optional review artifacts use the Functional Browser owner, never Visual goldens.
 async function review(page: Page, name: string) {
   const directory = process.env.GOFURRY_SITE_DETAIL_REVIEW_DIR
@@ -12,13 +75,18 @@ async function review(page: Page, name: string) {
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({ path: join(directory, name + '.png'), fullPage: true })
 }
-async function open(page: Page, path = '/en/site/41') {
+async function open(page: Page, path = '/en/site/41?tab=overview') {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   await openRuntime(page, path)
   await (await view).finished()
 }
 
 async function assertAcrylic(page: Page) {
+  const panels = '[data-site-identity-note], [data-site-target-context], .site-detail-surface, [data-site-overview-status-composite], [data-site-overview-capability-composite], [data-site-change], .site-observation-composite, .site-observation-evidence'
+  // Theme hydration can start the same color transition as hover. Observe its end,
+  // without fixed sleep or a hard-coded color snapshot.
+  await page.mouse.move(0, 0)
+  await expect.poll(() => page.locator(panels).evaluateAll(nodes => new Set(nodes.map(node => getComputedStyle(node).backgroundColor)).size)).toBe(1)
   const material = await page.locator('[data-site-detail]').evaluate(root => {
     const css = (selector: string) => getComputedStyle(root.querySelector(selector)!)
     const alpha = (value: string) => Number(value.match(/\/\s*([\d.]+)\)$/)?.[1] ?? value.match(/rgba\([^)]*,\s*([\d.]+)\)$/)?.[1] ?? 1)
@@ -27,9 +95,12 @@ async function assertAcrylic(page: Page) {
       const s = getComputedStyle(node)
       return { hook: node.tagName + ' ' + node.className, widths: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth], shadow: s.boxShadow }
     })
-    return { a: alpha(a.backgroundColor), b: alpha(b.backgroundColor), borders }
+    const panels = Array.from(root.querySelectorAll('[data-site-identity-note], [data-site-target-context], .site-detail-surface, [data-site-overview-status-composite], [data-site-overview-capability-composite], [data-site-change], .site-observation-composite, .site-observation-evidence')).map(node => ({ fill: getComputedStyle(node).backgroundColor, image: getComputedStyle(node).backgroundImage }))
+    return { a: alpha(a.backgroundColor), b: alpha(b.backgroundColor), borders, panels }
   })
-  expect(material.a).toBeLessThan(0.7); expect(material.b).toBeLessThan(material.a); expect(material.b).toBeGreaterThan(0)
+  expect(material.a).toBeLessThan(0.7); expect(material.b).toBe(material.a); expect(material.b).toBeGreaterThan(0)
+  expect(new Set(material.panels.map(panel => panel.fill)).size).toBe(1)
+  expect(material.panels.every(panel => panel.image === 'none')).toBe(true)
   for (const item of material.borders) {
     expect(item.widths, item.hook).toEqual(['0px', '0px', '0px', '0px'])
     expect(item.shadow, item.hook).toBe('none')
@@ -91,6 +162,8 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await expect(page.locator('[data-site-change][data-site-change-category]')).toHaveCount(4)
     await assertRuntimeSurface(page, '[data-site-detail]', theme); await review(page, `overview-${suffix}`)
     await page.locator('[data-site-primary-tab="observation"]').click()
+    await expect(page.locator('[data-site-performance-chart]')).toHaveAttribute('data-site-chart-ready', 'true')
+    await page.locator('[data-site-observation-tab="overview"]').click()
     await expect(page.locator('[data-site-observation]')).not.toContainText('Current Target ·')
     await assertTitleNav(page, 'observation')
     await assertAcrylic(page)
@@ -212,7 +285,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
 
 for (const locale of ['en', 'zh']) test('localized multi-target Attention ' + locale, async ({ page, runtime }) => {
   runtime.state.summaryScenario = 'mixed'; runtime.state.extraTargets = ['third.example']
-  await open(page, locale === 'en' ? '/en/site/41' : '/site/41')
+  await open(page, locale === 'en' ? '/en/site/41?tab=overview' : '/site/41?tab=overview')
   await expect(page.locator('[data-site-overview-attention] li')).toHaveText([locale === 'en' ? '2 targets · HTTP is currently unreachable' : '2 个目标 · HTTP 当前无法访问'])
   await expect(page.locator('[data-site-overview-attention]')).not.toContainText('后端旧中文')
   await review(page, `overview-attention-${locale}`)
@@ -240,11 +313,12 @@ for (const locale of ['en', 'zh']) test('first-round finite title nav and locali
   await page.keyboard.press('Home'); await expect(page.locator('[data-site-security-tab="overview"]')).toBeFocused()
   await page.locator('[data-site-primary-tab="observation"]').click()
   await assertTitleNav(page, 'observation')
+  await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'ready')
   await page.locator('[data-site-observation-tab="overview"]').focus(); await page.keyboard.press('End')
   await expect(page.locator('[data-site-observation-tab="web"]')).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('[data-site-observation-tab="web"]')).toBeFocused()
   await assertAcrylic(page); await assertRuntimeSurface(page, '[data-site-detail]', 'light')
-  expect(runtime.calls).toHaveLength(3); runtime.assertQuiet()
+  expect(runtime.count('/observations')).toBe(1); expect(runtime.calls).toHaveLength(4); runtime.assertQuiet()
 })
 
 test('first-round unavailable Insights retains its borderless explorer and shared inline retry', async ({ page, runtime }) => {

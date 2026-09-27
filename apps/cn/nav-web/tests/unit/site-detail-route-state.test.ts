@@ -8,14 +8,25 @@ describe('Site Detail route state', () => {
   it('selects Observation views through the owner while retaining Target and clearing foreign state', () => {
     const state = parseSiteDetailRouteState({ domain: 'a.example', tab: 'insights', metric: 'csp', range: 'all' })
     expect(buildSiteDetailQuery(selectSiteObservationView(state, 'http'))).toEqual({ domain: 'a.example', tab: 'observation', view: 'http' })
-    expect(buildSiteDetailQuery(selectSiteObservationView(state, 'overview'))).toEqual({ domain: 'a.example', tab: 'observation' })
+    expect(buildSiteDetailQuery(selectSiteObservationView(state, 'overview'))).toEqual({ domain: 'a.example', tab: 'observation', view: 'overview' })
   })
-  it('defaults to the entity overview and omits default query values', () => {
-    expect(parseSiteDetailRouteState({})).toEqual({ domain: '', tab: 'overview' })
-    for (const query of [{}, { tab: 'overview' }, { tab: 'banana', view: 'dns', metric: 'csp', range: 'all' }]) {
+  it.each([
+    [{}, { domain: '', tab: 'observation', view: 'performance' }],
+    [{ domain: 'a.example' }, { domain: 'a.example', tab: 'observation', view: 'performance' }],
+    [{ tab: 'overview' }, { domain: '', tab: 'overview' }],
+    [{ tab: 'observation' }, { domain: '', tab: 'observation', view: 'performance' }],
+    [{ tab: 'observation', view: 'overview' }, { domain: '', tab: 'observation', view: 'overview' }],
+    [{ tab: 'observation', view: 'dns' }, { domain: '', tab: 'observation', view: 'dns' }],
+    [{ tab: 'banana', view: 'dns' }, { domain: '', tab: 'observation', view: 'performance' }],
+  ])('parses the Task C entry state %j', (query, expected) => {
+    expect(parseSiteDetailRouteState(query)).toEqual(expected)
+  })
+  it('keeps Performance URLs clean and makes both Overviews explicit', () => {
+    for (const query of [{}, { tab: 'observation' }, { tab: 'observation', view: 'performance' }, { tab: 'banana', view: 'dns' }]) {
       expect(buildSiteDetailQuery(parseSiteDetailRouteState(query))).toEqual({})
     }
-    expect(buildSiteDetailQuery(parseSiteDetailRouteState({ tab: 'observation', view: 'overview' }))).toEqual({ tab: 'observation' })
+    expect(buildSiteDetailQuery(parseSiteDetailRouteState({ tab: 'overview' }))).toEqual({ tab: 'overview' })
+    expect(buildSiteDetailQuery(parseSiteDetailRouteState({ tab: 'observation', view: 'overview' }))).toEqual({ tab: 'observation', view: 'overview' })
     expect(buildSiteDetailQuery(parseSiteDetailRouteState({ tab: 'security', view: 'overview' }))).toEqual({ tab: 'security' })
     expect(buildSiteDetailQuery(parseSiteDetailRouteState({ tab: 'insights', metric: 'ipv6', range: '30d' }))).toEqual({ tab: 'insights' })
   })
@@ -44,13 +55,13 @@ describe('Site Detail route state', () => {
 
   it.each([
     [{ tab: 'security', view: 'dns' }, { domain: '', tab: 'security', view: 'overview' }],
-    [{ tab: 'observation', view: 'tls' }, { domain: '', tab: 'observation', view: 'overview' }],
+    [{ tab: 'observation', view: 'tls' }, { domain: '', tab: 'observation', view: 'performance' }],
     [{ tab: 'insights', metric: 'banana', range: '7d' }, { domain: '', tab: 'insights', metric: 'ipv6', range: '30d' }],
-    [{ tab: null, domain: null }, { domain: '', tab: 'overview' }],
+    [{ tab: null, domain: null }, { domain: '', tab: 'observation', view: 'performance' }],
     [{ tab: ['security', 'insights'], view: ['tls', 'dns'], domain: ['first.example', 'second.example'] },
       { domain: 'first.example', tab: 'security', view: 'tls' }],
-    [{ tab: [null, 'insights'], domain: [null, 'second.example'] }, { domain: '', tab: 'overview' }],
-    [{ tab: 1, domain: {}, view: true }, { domain: '', tab: 'overview' }],
+    [{ tab: [null, 'insights'], domain: [null, 'second.example'] }, { domain: '', tab: 'observation', view: 'performance' }],
+    [{ tab: 1, domain: {}, view: true }, { domain: '', tab: 'observation', view: 'performance' }],
   ])('normalizes invalid and repeated UI state %j', (query, expected) => {
     expect(parseSiteDetailRouteState(query)).toEqual(expected)
   })
@@ -75,8 +86,8 @@ describe('Site Detail route state', () => {
       expect(selectSiteDetailTab(state, 'observation')).toEqual(state)
     }
     const insights = parseSiteDetailRouteState({ domain: 'a.example', tab: 'insights', metric: 'tls13', range: 'all' })
-    expect(buildSiteDetailQuery(selectSiteDetailTab(insights, 'observation'))).toEqual({ domain: 'a.example', tab: 'observation' })
-    expect(buildSiteDetailQuery(selectSiteDetailTab(insights, 'overview'))).toEqual({ domain: 'a.example' })
+    expect(buildSiteDetailQuery(selectSiteDetailTab(insights, 'observation'))).toEqual({ domain: 'a.example' })
+    expect(buildSiteDetailQuery(selectSiteDetailTab(insights, 'overview'))).toEqual({ domain: 'a.example', tab: 'overview' })
   })
 
   it('does not silently erase or double-decode business targets; backend owns validation', () => {

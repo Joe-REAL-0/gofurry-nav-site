@@ -864,3 +864,82 @@ final goldens as part of this task.
 First-round engineering exit criteria are satisfied. The full exit criteria
 remain open only for maintainer visual acceptance; no approval is inferred from
 automated checks or agent screenshot inspection.
+
+## Task C — second-round consistency and entry refinement (2026-09-27)
+
+Task C is explicitly authorized after first-round completion on `dev`. It keeps
+all first-round workspace compositions while replacing opacity falloff with one
+fixed content material and intentionally changing the default route entry.
+
+### Presentation and entry contract
+
+- `--site-detail-panel` supplies every content panel's identical base hue and
+  transparency within a theme (46% mix of the existing public surface). Ghost
+  disclosures and flows are transparent. Plane A/B/C and workspace tint/hover
+  aliases are removed. One 48% accent-soft hover and stronger 72% selected mix
+  serve all workspace rows/segments; 500ms color-only hover and immediate
+  selection remain. No global primitive or #108 owner changes.
+- The local Target trigger is borderless/transparent at rest, 38px minimum
+  height, with shared hover/open fill and existing focus ring. Its selection,
+  listbox, keyboard, outside dismissal and focus-return script is unchanged.
+- Hero puts formatted view count below Visit with stronger warm, non-semantic
+  emphasis. Its CDN badge consumes only Current Target `edgeProviderHints`:
+  explicitly typed CDN, medium/high confidence, high first and stable tie order.
+  WAF/hosting/reverse-proxy hints and low-confidence CDN hints never qualify.
+  Known labels are localized; raw confidence/evidence stays out of Hero.
+- `siteTargetSignals.ts` is the shared pure owner for CDN selection and protocol
+  display status. Observation Overview and Context use identical 8px status dots;
+  ordinary success keeps screen-reader text, exceptions stay visible. Slow
+  success retains latency tone independently. No health conclusion changes.
+- Blank/domain-only routes and `tab=observation` now mean Observation/Performance.
+  Builders omit both defaults; Site Overview requires `tab=overview`, and
+  Observation Overview requires `tab=observation&view=overview`. Invalid UI state
+  falls back to the new default; business Target validation stays authoritative.
+  Primary Observation enters Performance from another workspace and retains
+  the current view when already active.
+- Default SSR renders the Performance loading surface using only Detail and
+  Site Insights. Hydration adds exactly one Ping history request with
+  `protocol=ping`, `limit=100`, `payload_mode=preview`, then slices 20 locally.
+  Existing P4 cache/race/retry internals and P6 trend runtime are untouched.
+  Non-Performance Target switches still request Detail only; active Performance
+  may load a new Target's uncached Ping history. Neither repeats Insights/View.
+
+API/DB/Collector/Backend, Security runtime, Site/Target ownership and Entity-only
+canonical/hreflang/sitemap are unchanged. No P8 or final golden is introduced.
+
+### Verification and review boundary
+
+Route Unit tests cover defaults, explicit Overviews, invalid UI state, builders
+and round trips. New pure tests cover confidence/type selection, bilingual CDN
+copy, shared stale/failure/unknown status and slow-success latency separation.
+The existing Browser owners add default-entry SSR/hydration/reload/back/forward
+and Home client-entry accounting, reliable/absent CDN, Target badge updates,
+accessible success, visible exceptions and material consistency across all
+workspaces at 390/768/1440 Light/Dark. Existing Overview scenarios now select
+Overview explicitly; request/error assertions are preserved. The independent
+Insights Entity fixture adds only the exact history boundary its new entry needs.
+
+Frozen installation and Chromium installation passed. Unit **268**, Nuxt **20**,
+combined Vitest **288**, policy tooling **75**, lint/stylelint, exact style policy,
+typecheck, Insights semantics, SEO recovery and the final production build passed.
+The final `pnpm run test:browser --workers=1` run passed **607/607 in 15.5 minutes**,
+with zero failures, skips or retries. This includes all existing Site runtime
+owners and **33** refinement cases (10 added in Task C). The separate focused
+entry/refinement run also passed **55/55** before the full run.
+
+Site appearance/arbitrary/raw debt, deep selectors and legacy dark remain zero.
+Ambient raw 75 and #108 important 5 are preserved without running the baseline
+updater. Debt/suppression manifests and the lockfile are unchanged. All **118
+accepted Visual PNGs** are byte-identical; their source/configuration inventory
+is unchanged. The existing Functional export supplies **86 temporary screenshots**,
+including default Performance, protocol rows and selector hover. Its local gallery
+only links those images; it is not a runner or a Visual golden.
+
+Maintainer review is pending for 1440 Light/Dark, 768 Light and 390 Light/Dark:
+uniform panel material, visible consistent hover, integrated selector, warm view
+count, reliable CDN badge, protocol alignment/exception text and the new entry.
+Remote CI remains unverified. This task stops before P8.
+
+Task C engineering exit criteria are satisfied. Full exit remains pending only
+for maintainer visual acceptance; agent screenshot review and automated checks
+do not imply that approval.

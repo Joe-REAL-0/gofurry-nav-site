@@ -23,18 +23,19 @@ for (const prefix of ['', '/en']) for (const domain of ['', '&domain=alt.example
 })
 
 test('Insights activation adds exactly one default trend; tab remount reuses cache', async ({ page, runtime }) => {
-  await openSite(page, '/en/site/41'); expect(runtime.calls).toHaveLength(3); expect(runtime.count('/trend')).toBe(0)
+  await openSite(page, '/en/site/41?tab=overview'); expect(runtime.calls).toHaveLength(3); expect(runtime.count('/trend')).toBe(0)
   for (const workspace of ['security', 'observation', 'overview']) {
     await tab(page, workspace).click(); await expect(page.locator('[data-site-workspace]')).toHaveAttribute('data-site-workspace-tab', workspace)
+    if (workspace === 'observation') await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'ready')
   }
-  await settleRuntime(page); expect(runtime.calls).toHaveLength(3)
+  await settleRuntime(page); expect(runtime.calls).toHaveLength(4); expect(runtime.count('/observations')).toBe(1)
   await tab(page, 'insights').click(); await ready(page)
-  expect(runtime.calls).toHaveLength(4)
+  expect(runtime.calls).toHaveLength(5)
   expect(runtime.calls.at(-1)!.url.pathname).toBe('/api/v2/nav/insights/metrics/ipv6/trend')
   expect(Object.fromEntries(runtime.calls.at(-1)!.url.searchParams)).toEqual({ range: '30d' })
   await tab(page, 'overview').click(); await expect(page.locator('[data-site-overview]')).toBeVisible()
   await page.goBack(); await ready(page)
-  expect(runtime.calls).toHaveLength(4)
+  expect(runtime.calls).toHaveLength(5)
   await expect(page.locator('[data-site-insights-workspace] [role="tablist"]')).toHaveCount(0)
   runtime.assertQuiet()
 })

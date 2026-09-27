@@ -369,6 +369,14 @@
     "utc": "UTC"
   },
   "siteDetail": {
+    "cdn": {
+      "cloudflare": "Cloudflare CDN",
+      "tencent_cloud": "Tencent Cloud CDN",
+      "aliyun": "Aliyun CDN",
+      "aws_cloudfront": "CloudFront",
+      "fastly": "Fastly CDN",
+      "other": "{provider} CDN"
+    },
     "tabs": {
       "overview": "Overview",
       "observation": "Observation",

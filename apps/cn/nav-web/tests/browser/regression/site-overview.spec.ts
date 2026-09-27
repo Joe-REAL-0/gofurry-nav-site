@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface } from '../fixtures/site-detail'
 
-async function openOverview(page: Page, path = '/en/site/41') {
+async function openOverview(page: Page, path = '/en/site/41?tab=overview') {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   const html = await openRuntime(page, path)
   await (await view).finished()

@@ -49,7 +49,10 @@ observations belong to `siteId + selectedDomain + lang`. `useSiteDetailPage`
 loads `/nav/sites/:id/detail` under that identity; `SiteDetailPage` loads
 `/nav/sites/:id/insights` under Site ID alone. Domain and workspace query MUST NOT
 hide Insights or enter its fetch key. A normal hydrated visit has exactly one
-Detail GET, one Insights GET and one View POST. Outside P4 Performance, switching
+Detail GET, one Insights GET and one View POST, plus the active lazy slice below.
+Task C makes Observation/Performance the default entry, so default hydration adds
+exactly one Ping history request; SSR still requests only Detail and Insights.
+Outside P4 Performance, switching
 Target within the same hydrated Site session MUST fetch only Detail; no Target
 switch may recount View. UI-only
 state MUST NOT introduce trend/history, comparison or other data requests except
@@ -70,8 +73,8 @@ Entity path. Vue components MUST NOT create competing query preservation rules.
 
 | State | Vocabulary | Default |
 | --- | --- | --- |
-| `tab` | `overview`, `observation`, `security`, `insights` | `overview` |
-| Observation `view` | `overview`, `performance`, `http`, `dns`, `web` | `overview` |
+| `tab` | `overview`, `observation`, `security`, `insights` | `observation` (Task C) |
+| Observation `view` | `overview`, `performance`, `http`, `dns`, `web` | `performance` (Task C) |
 | Security `view` | `overview`, `tls`, `web`, `exposure` | `overview` |
 | Insights `metric` | `ipv6`, `tls13`, `http2`, `hsts`, `csp`, `security_txt`, `certificate_verified` | `ipv6` |
 | Insights `range` | `30d`, `90d`, `all` | `30d` |
@@ -80,8 +83,10 @@ Invalid UI values fall back; they never cause 404. Query values use the first
 array entry, trim whitespace and are not decoded again after Vue Router. Target
 membership remains an authoritative backend decision; unknown nonempty domains
 MUST NOT silently become the primary Target. Normalization need not rewrite an
-incoming URL. Builders omit defaults and unrelated query: Overview keeps only
-Domain, Observation/Security keep Domain/tab/view, Insights keeps
+incoming URL. Task C builders omit tab/view for Observation/Performance; Site
+Overview explicitly keeps `tab=overview`, and Observation Overview explicitly
+keeps `tab=observation&view=overview`. Other Observation/Security views keep
+Domain/tab/view (Security still omits its default Overview); Insights keeps
 Domain/tab/metric/range. Target switches retain the active valid workspace;
 primary-tab changes reset the previous workspace's secondary state, even shared
 view names. Canonical, hreflang and sitemap always use localized `/site/:id`
@@ -104,8 +109,9 @@ migration and P8 Visual/closure. #108 remains separate.
 
 `SiteDetailPage` owns the responsive shell. Its identity-only Hero contains icon,
 name, display domain, description, country, SFW/NSFW, welfare, views and Visit.
-Technical/edge evidence and Target selection belong to the Target Context, not
-the Hero. The former domain hover popover and large signal-card path are retired.
+Task C additionally exposes one reliable, explicitly typed Current Target CDN
+hint in Hero; detailed edge evidence and Target selection do not belong there.
+The former domain hover popover and large signal-card path are retired.
 
 `siteTargetPresentation.ts` is the shared Current Target adapter for the six-item
 Health Strip and the responsive Target Context. It reads only matching Target
@@ -195,8 +201,9 @@ and review screenshots do not constitute that approval or remote CI acceptance.
 
 Observation owns Current Target evidence and five non-sticky secondary tabs:
 Overview, Performance, HTTP, DNS and Web. `selectSiteObservationView` extends the
-existing route-state owner; it retains Target, clears foreign tab state and omits
-the default Overview value. Tabs use router history/reload, roving tabindex and
+existing route-state owner; it retains Target and clears foreign tab state. Task C
+replaces P4's default Overview with Performance, omitting both tab/view for that
+state and keeping Overview explicit. Tabs use router history/reload, roving tabindex and
 ArrowLeft/ArrowRight/Home/End; mobile navigation scrolls within its own row.
 
 `siteObservationPresentation.ts` is the only raw-payload projection for these
@@ -448,6 +455,36 @@ temporary review screenshots. Full local verification does not grant maintainer
 visual acceptance or remote CI acceptance. Stop after first-round completion;
 P8 and any second round require separate user authorization. Accepted Visual PNGs
 and the zero Site/deep/legacy-dark debt budgets stay unchanged.
+
+## Site Detail Task C consistency and default entry (pre-P8)
+
+Task C supersedes the first round's Plane A/B/C opacity hierarchy, retaining its
+composition. `--site-detail-panel` is the sole base material for Identity Note,
+Context and all content panels across workspaces, with the same hue and opacity
+within a theme. Flows/ghost disclosures are transparent. One shared hover and
+same-hue stronger selected token serve rows, segments and the local Target
+trigger. Color-only hover takes 500ms; selection is immediate. Do not modify the
+global button primitive to style this trigger. Preserve selector behavior/a11y.
+
+Hero view count keeps `Intl.NumberFormat` and an accessible Eye label with stronger
+warm brand emphasis. CDN comes only from Current Target `edgeProviderHints`, with
+`type=cdn` and medium/high confidence, preferring high and preserving input order
+for ties. Provider names cannot imply CDN type. `siteTargetSignals.ts` owns this
+selection/localized provider mapping and the protocol status projection used by
+Context and Observation Overview. Success has a shared dot and screen-reader
+text; stale/failure/unknown stay visibly labelled. Latency tone is independent of
+success, and Collector health classification is unchanged.
+
+The route table above records Task C's intentional UX change. Clean and domain-only
+URLs render Observation/Performance; entering primary Observation selects
+Performance, while selecting the already active primary tab preserves its view.
+Invalid UI values fall back without changing authoritative Target validation.
+Default history remains hydration-only, one `protocol=ping&limit=100&payload_mode=preview`
+request and a local 20-sample slice. Returning uses P4's existing cache. While
+Performance is active, a new Target may load its own uncached history; non-Performance
+switches still fetch Detail only. Neither recounts View or refetches Site Insights.
+P4/P6 cache/race internals, API shape, Site/Target ownership and Entity-only SEO
+remain unchanged. No final Visual golden or P8 work is authorized by Task C.
 
 ## Styling ownership
 

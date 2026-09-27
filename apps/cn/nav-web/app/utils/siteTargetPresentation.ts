@@ -1,6 +1,7 @@
 import type { SiteHealthSummary, TargetHealthSummary, TargetLatestResponse } from '~/types/nav'
 import { readSiteCertificateEvidence, presentSiteCertificateExpiry } from './siteSecurityPresentation'
 import { siteLatencyTone, siteHttpTone, siteProtocolTone } from './siteDetailPresentation'
+import { presentSiteProtocolStatus } from './siteTargetSignals'
 
 type Translate = (key: string) => string
 interface TargetSource {
@@ -58,9 +59,10 @@ export function presentSiteTarget(source: TargetSource, t: Translate) {
     const current = summary?.protocols?.[protocol]
     const envelope = protocols[protocol]
     const matching = envelope?.target && envelope.target !== target ? undefined : envelope
-    const state = current?.stale ? 'stale' : current?.status || matching?.status || 'unknown'
-    return { protocol, label: protocol === 'ping' ? 'Ping' : protocol.toUpperCase(), status: state,
-      statusLabel: stateLabel(state), tone: tone(state), duration: duration(number(current?.duration_ms) ?? number(matching?.duration_ms)),
+    const state = presentSiteProtocolStatus(current?.status || matching?.status, current?.stale ?? (latest?.state === 'stale'), t)
+    const milliseconds = number(current?.duration_ms) ?? number(matching?.duration_ms)
+    return { protocol, label: protocol === 'ping' ? 'Ping' : protocol.toUpperCase(), ...state,
+      duration: duration(milliseconds), durationTone: siteLatencyTone(milliseconds),
       observedAt: date(current?.observed_at, matching?.observed_at) }
   })
   const relation = (host: string) => {

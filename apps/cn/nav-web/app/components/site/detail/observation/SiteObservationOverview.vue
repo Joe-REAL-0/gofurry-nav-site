@@ -4,7 +4,10 @@
       <h3 class="site-observation-heading">{{ t('siteObservation.currentObservation') }}</h3>
       <dl class="site-observation-protocol-strip mt-4 grid min-w-0 gap-4 md:grid-cols-3">
         <div v-for="item in presentation.protocols" :key="item.protocol" :data-site-observation-protocol="item.protocol" class="min-w-0">
-          <dt class="site-observation-caption flex flex-wrap items-center justify-between gap-2"><span>{{ item.protocol.toUpperCase() }}</span><span :data-tone="item.tone">{{ item.statusLabel }}</span></dt>
+          <dt class="site-observation-caption site-detail-protocol-heading flex flex-wrap items-center gap-2">
+            <span class="site-detail-status-dot shrink-0" :data-tone="item.tone" aria-hidden="true" />{{ item.protocol.toUpperCase() }}
+            <span data-site-protocol-status :class="{ 'sr-only': item.success }"><span v-if="!item.success" aria-hidden="true">· </span>{{ item.statusLabel }}</span>
+          </dt>
           <dd class="site-observation-measure mt-2" :data-tone="item.durationTone"><span class="sr-only">{{ t('siteObservation.fields.duration') }}</span>{{ item.duration }}</dd>
           <dd data-site-protocol-freshness class="site-observation-caption mt-2"><span class="sr-only">{{ t('siteObservation.freshness') }}</span>{{ item.freshness }}</dd>
           <dd class="site-observation-caption mt-1 break-words"><span class="sr-only">{{ t('siteObservation.fields.observed') }}</span>{{ item.observed }}</dd>

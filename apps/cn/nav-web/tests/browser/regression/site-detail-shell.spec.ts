@@ -4,7 +4,7 @@ import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface, longTar
 const tab = (page: Page, key: string) => page.locator('[data-site-primary-tab="' + key + '"]')
 const trigger = (page: Page) => page.locator('[data-site-target-trigger]')
 const option = (page: Page, target: string) => page.locator('[data-site-target-option="' + target + '"]')
-async function openSite(page: Page, path = '/en/site/41') {
+async function openSite(page: Page, path = '/en/site/41?tab=overview') {
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   await openRuntime(page, path)
   await (await view).finished()
@@ -24,7 +24,7 @@ for (const width of [390, 768, 1440]) for (const theme of ['light', 'dark'] as c
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
     await context.addInitScript(theme => localStorage.setItem('theme', theme), theme)
     runtime.state.longTarget = true
-    await openSite(page, '/en/site/41?domain=' + longTarget)
+    await openSite(page, '/en/site/41?tab=overview&domain=' + longTarget)
     await assertRuntimeSurface(page, '[data-site-detail]', theme)
     await expect(page.locator('[data-site-hero] h1')).toHaveText('Site fixture 41')
     await expect(page.locator('[data-site-hero] [data-site-target-trigger]')).toHaveCount(0)
@@ -77,7 +77,8 @@ test('router tabs survive history/reload, clear foreign state and support roving
   await expect(page.locator('[data-site-insights-workspace] > header')).toContainText('Site-wide data')
   await tab(page, 'observation').click()
   await activeTab(page, 'observation')
-  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example', tab: 'observation' })
+  await expect(page.locator('[data-site-performance-history-state]')).toHaveAttribute('data-site-performance-history-state', 'ready')
+  expect(Object.fromEntries(new URL(page.url()).searchParams)).toEqual({ domain: 'alt.example' })
   await page.goBack()
   await activeTab(page, 'insights')
   expect(new URL(page.url()).searchParams.get('metric')).toBe('tls13')
@@ -92,7 +93,8 @@ test('router tabs survive history/reload, clear foreign state and support roving
   }
   await settleRuntime(page)
   await expect(page.locator('[data-site-insight-trend]')).toHaveAttribute('data-site-insight-trend-state', 'ready')
-  expect(runtime.calls).toHaveLength(5)
+  expect(runtime.calls).toHaveLength(6)
+  expect(runtime.count('/observations')).toBe(1)
   expect(runtime.count('/trend')).toBe(2)
   const view = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/sites/41/view'))
   expect((await page.reload({ waitUntil: 'domcontentloaded' }))?.status()).toBe(200)
