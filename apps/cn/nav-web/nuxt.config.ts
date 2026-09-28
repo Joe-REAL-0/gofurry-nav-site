@@ -67,7 +67,7 @@ export default defineNuxtConfig({
   },
   modules: ['@pinia/nuxt', '@nuxtjs/i18n'],
   css: [
-    '@fontsource-variable/inter/wght.css',
+    '@fontsource-variable/manrope/wght.css',
     '@fontsource-variable/noto-sans-sc/wght.css',
     '~/assets/css/main.css',
     '~/assets/styles/index.less',
