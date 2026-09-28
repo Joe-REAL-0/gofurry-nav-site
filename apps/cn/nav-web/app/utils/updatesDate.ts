@@ -22,3 +22,8 @@ export function formatUpdatesFullDate(value: string, localeCode: string, unavail
     timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).format(date) + ' UTC+8'
 }
+
+export function formatUpdatesDate(value: string, localeCode: string): string {
+  const date = parseUpdatesDate(value)
+  return date ? new Intl.DateTimeFormat(localeCode, { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(date) : '—'
+}

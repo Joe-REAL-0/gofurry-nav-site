@@ -9,14 +9,13 @@
 }
 
 .updates-title {
-  font-size: clamp(1.8rem, 3.1vw, 2.65rem);
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.025em;
   overflow-wrap: anywhere;
 }
 
-.updates-intro { font-size: 1.1rem; line-height: 1.65; }
 .updates-note, .updates-index-meta { color: var(--gf-text-muted); font-size: 0.875rem; line-height: 1.65; }
 .updates-index-meta { font-variant-numeric: tabular-nums; }
 .updates-eyebrow { color: var(--gf-accent); font-size: 0.8rem; font-weight: 700; }
@@ -27,17 +26,17 @@
   background: var(--updates-latest-plane);
   backdrop-filter: blur(var(--gf-blur-surface));
 }
-.updates-latest-title { font-size: clamp(1.5rem, 2.6vw, 2.05rem); font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
-.updates-summary { font-size: 1.05rem; line-height: 1.85; color: var(--gf-text-muted); overflow-wrap: anywhere; }
+.updates-latest-title { font-size: clamp(1.35rem, 2.2vw, 1.7rem); font-weight: 650; line-height: 1.4; overflow-wrap: anywhere; }
+.updates-summary { font-size: 0.95rem; line-height: 1.85; color: var(--gf-text-muted); overflow-wrap: anywhere; }
 .updates-metadata { color: var(--gf-text-muted); font-size: 0.78rem; line-height: 1.65; font-variant-numeric: tabular-nums; }
 .updates-commit { font-family: ui-monospace, monospace; }
 .updates-action { color: var(--gf-accent); font-size: 0.875rem; font-weight: 600; }
-.updates-month-title { color: var(--gf-text-muted); font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; padding-top: 1rem; }
-.updates-history-row { border-radius: var(--gf-radius-sm); }
-.updates-history-title { font-size: 1.1rem; font-weight: 600; line-height: 1.55; overflow-wrap: anywhere; }
+.updates-month-title { color: var(--gf-text-muted); font-size: 0.9rem; font-weight: 600; font-variant-numeric: tabular-nums; padding-top: 0.75rem; }
+.updates-history-row { border-radius: var(--gf-radius-sm); border-bottom: 1px solid var(--updates-line); }
+.updates-history-title { font-size: 1rem; font-weight: 600; line-height: 1.55; overflow-wrap: anywhere; }
 .updates-history-summary { color: var(--gf-text-muted); font-size: 0.9rem; line-height: 1.75; overflow-wrap: anywhere; }
 .updates-state { color: var(--gf-text-muted); padding-block: 3rem; }
-.updates-neighbor { background: var(--updates-reading-plane); border-radius: var(--gf-radius-sm); }
+.updates-neighbor { border-top: 1px solid var(--updates-line); border-radius: var(--gf-radius-sm); }
 .updates-neighbor-title { font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
 
 .updates-history-row, .updates-neighbor, .updates-action, .updates-commit, .updates-markdown a {
@@ -52,17 +51,17 @@
   font-size: 1rem;
   line-height: 1.85;
   overflow-wrap: anywhere;
-  h2, h3, h4, h5, h6 { margin: 2rem 0 0.85rem; font-weight: 650; line-height: 1.45; }
+  h2, h3, h4, h5, h6 { margin: 1.75rem 0 0.75rem; font-weight: 650; line-height: 1.45; }
   h2 { font-size: 1.65rem; }
   h3 { font-size: 1.3rem; }
   h4 { font-size: 1.15rem; }
   h5, h6 { font-size: 1rem; }
   > :first-child { margin-top: 0; }
-  p, ul, ol, blockquote, pre { margin-block: 1rem; }
+  p, ul, ol, blockquote, pre { margin-block: 1.15rem; }
   ul, ol { padding-inline-start: 1.5rem; }
   ul { list-style: disc; }
   ol { list-style: decimal; }
-  li { padding-inline-start: 0.2rem; margin-block: 0.3rem; }
+  li { padding-inline-start: 0.2rem; margin-block: 0.4rem; }
   li > ul, li > ol { margin-block: 0.4rem; }
   strong { font-weight: 650; }
   a { color: var(--gf-accent); text-decoration: underline; text-underline-offset: 0.2em; }
@@ -83,3 +82,9 @@
 @media (prefers-reduced-motion: reduce) {
   .updates-history-row, .updates-neighbor, .updates-action, .updates-commit, .updates-markdown a { transition: none; }
 }
+
+.updates-more { color: var(--gf-accent); background: var(--updates-reading-plane); border-radius: var(--gf-radius-sm); padding: 0.65rem 1.25rem; font-size: 0.875rem; transition: background-color 500ms ease; }
+.updates-more:hover { background: var(--updates-hover); }
+.updates-more:disabled { opacity: 0.6; cursor: wait; }
+.updates-more:focus-visible { outline: 2px solid var(--gf-focus-ring); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .updates-more { transition: none; } }

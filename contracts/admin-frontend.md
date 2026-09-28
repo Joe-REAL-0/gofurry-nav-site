@@ -80,6 +80,9 @@ confirmation. Browser unload and internal routing protect unsaved work.
 Status badges are display-only and interpret unzoned timestamps as Asia/Shanghai.
 Markdown preview follows [the shared contract](update-markdown.md); it stores
 source text, sanitizes all generated HTML and adds no upload or public-page owner.
+The P3.1 writing workspace combines metadata and localized content in one Section.
+It has no Markdown toolbar; Desktop editor/preview share equal panes, with a local
+Edit/Preview switch on narrow layouts. Publication and dirty guards stay unchanged.
 
 Collection, Metric, and Change reuse their existing business APIs and frozen Fact/Metric/Detector/Collection semantics. Operator-facing views require their read capabilities; schedule control, Metric technical contracts, and Change technical contracts additionally require their native capabilities.
 

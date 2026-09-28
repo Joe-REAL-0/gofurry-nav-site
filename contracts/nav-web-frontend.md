@@ -1649,7 +1649,11 @@ Playwright Test migration, production style cleanup or UI behavior change.
 The editorial `/updates` index and `/updates/:id` article, including `/en`, replace
 the historical Timeline. Index renders only metadata/summary and groups history
 by China-site month. Detail owns sanitized SSR body and API-provided older/newer
-neighbors. No year toggle, load-more, marker animation or Timeline owner remains.
+neighbors. No year toggle, marker animation or Timeline owner remains. P3.1 replaces
+P3's all-history index with bounded SSR: Latest plus 20 history items. Subsequent
+pages require an explicit More action, never a hidden all-data fetch or infinite
+scroll. Errors retain loaded content; retry repeats that page. Pending clicks are
+deduplicated, and locale change/unmount protects against stale append responses.
 
 Each direct SSR entry requests its own API exactly once; hydration reuses payload.
 Detail 404 is HTTP 404 and upstream failure is 503. Index retains explicit loading,
@@ -1663,7 +1667,9 @@ renderer output may enter `v-html`. Metadata never derives summaries from body.
 App-level locale head remains canonical/hreflang owner; detail supplies localized
 SEO, article OG metadata and its own OG URL. Sitemap includes both localized
 public release IDs and fails closed if any inventory fails, including Updates.
-The current endpoint's 100-release limit is documented, not bypassed.
+The sitemap's existing unpaged 100-release inventory remains unchanged. P3.1 index
+pagination defaults to page 1 / size 100 (max); the public UI explicitly uses 21.
+Detail labels are Previous/Next (上一篇/下一篇), while older/newer identity is unchanged.
 
 Functional `regression/updates.spec.ts` and `seo-recovery.spec.ts` own behavior;
 `visual/updates-page.spec.ts` owns exactly eight Index/Article × Light/Dark ×

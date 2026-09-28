@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPublicUpdateNotices = `-- name: CountPublicUpdateNotices :one
+SELECT count(*) FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= $1::timestamp
+`
+
+func (q *Queries) CountPublicUpdateNotices(ctx context.Context, asOf pgtype.Timestamp) (int64, error) {
+	row := q.db.QueryRow(ctx, countPublicUpdateNotices, asOf)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
 `
@@ -455,16 +468,17 @@ const listPublicUpdateNotices = `-- name: ListPublicUpdateNotices :many
 SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice
 WHERE deleted IS NOT TRUE AND publication_state = 'published'
   AND published_at IS NOT NULL AND published_at <= $1::timestamp
-ORDER BY published_at DESC, id DESC LIMIT $2
+ORDER BY published_at DESC, id DESC LIMIT $3 OFFSET $2::integer
 `
 
 type ListPublicUpdateNoticesParams struct {
-	AsOf     pgtype.Timestamp `json:"as_of"`
-	RowLimit int32            `json:"row_limit"`
+	AsOf      pgtype.Timestamp `json:"as_of"`
+	RowOffset int32            `json:"row_offset"`
+	RowLimit  int32            `json:"row_limit"`
 }
 
 func (q *Queries) ListPublicUpdateNotices(ctx context.Context, arg ListPublicUpdateNoticesParams) ([]GfnNavUpdateNotice, error) {
-	rows, err := q.db.Query(ctx, listPublicUpdateNotices, arg.AsOf, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listPublicUpdateNotices, arg.AsOf, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}

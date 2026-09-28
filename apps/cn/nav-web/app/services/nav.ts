@@ -81,8 +81,8 @@ export function getSearchSuggestion(
   return useApi('navV2')('/nav/search/suggestions', { query: { engine, q: keyword }, signal })
 }
 
-export function getNavUpdates(lang: 'zh' | 'en'): Promise<NavUpdatesResponse> {
-  return useApi('navV2')('/nav/updates', { query: { lang } })
+export function getNavUpdates(lang: 'zh' | 'en', page?: { page: number; page_size: number }, signal?: AbortSignal): Promise<NavUpdatesResponse> {
+  return useApi('navV2')('/nav/updates', { query: { lang, ...page }, signal })
 }
 
 export function getNavUpdateDetail(id: string, lang: 'zh' | 'en'): Promise<NavUpdateDetailResponse> {

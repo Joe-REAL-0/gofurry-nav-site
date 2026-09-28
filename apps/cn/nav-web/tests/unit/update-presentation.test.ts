@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { groupUpdatesByMonth, updateCommit, updateDetailSeo } from '../../app/utils/updatePresentation'
-import { formatUpdatesFullDate, updatesMonth } from '../../app/utils/updatesDate'
+import { formatUpdatesDate, formatUpdatesFullDate, updatesMonth } from '../../app/utils/updatesDate'
 import { authoritativePageStatus } from '../../app/utils/authoritativePageError'
 import { parseUpdateInventory } from '../../server/utils/sitemapInventory'
 
@@ -11,6 +11,8 @@ describe('public Release Notes projection', () => {
     expect(updatesMonth(item.published_at)).toBe('2026 / 09')
     expect(updatesMonth('2026-09-01 07:30:00')).toBe('2026 / 09')
     expect(formatUpdatesFullDate(item.published_at, 'en-US')).toContain('07:30')
+    expect(formatUpdatesDate(item.published_at, 'zh-CN')).toBe('2026/09/01')
+    expect(formatUpdatesDate('invalid', 'en-US')).toBe('—')
     const groups = groupUpdatesByMonth([item, { ...item, id: 2 }, { ...item, id: 3, published_at: '2025-12-20T06:00:00Z' }])
     expect(groups.map(group => [group.month, group.items.map(release => release.id)])).toEqual([['2026 / 09', [1, 2]], ['2025 / 12', [3]]])
     expect(updatesMonth('invalid')).toBe('—')

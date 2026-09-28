@@ -28,12 +28,22 @@ export function releaseItems(locale: 'zh' | 'en'): NavUpdateIndexItem[] {
 }
 
 export const test = runtimeTest(
-  () => ({ indexState: 'ready' as 'ready' | 'empty' | 'error', detailFailure: 0 }),
+  () => ({ indexState: 'ready' as 'ready' | 'empty' | 'error', detailFailure: 0, extraCount: 0, failedPage: 0 }),
   url => /^\/api\/v2\/nav\/updates(?:\/\d+)?$/.test(url.pathname) && ['zh', 'en'].includes(url.searchParams.get('lang') || ''),
   (url, _media, _body, state) => {
     const locale = url.searchParams.get('lang') === 'en' ? 'en' : 'zh'
     const items = releaseItems(locale)
-    if (url.pathname === indexPath) return { data: { schema_version: 1, state: state.indexState, generated_at: updatesNow, items: state.indexState === 'ready' ? items : [] } }
+    if (url.pathname === indexPath) {
+      const page = Number(url.searchParams.get('page') || 1), size = Number(url.searchParams.get('page_size') || 100)
+      const all = [...items, ...Array.from({ length: state.extraCount }, (_, i) => ({
+        id: 104 - i, title: `${locale === 'en' ? 'Archive release' : '历史更新'} ${i + 1}`, summary: '', version: null,
+        commit_sha: null, published_at: '2025-11-01T06:00:00Z',
+      }))]
+      const status = state.failedPage === page ? 'error' : state.indexState
+      const visible = status === 'ready' ? all.slice((page - 1) * size, page * size) : []
+      return { data: { schema_version: 1, state: status, generated_at: updatesNow, items: visible,
+        page, page_size: size, total: status === 'empty' ? 0 : all.length, has_more: status === 'ready' && page * size < all.length } }
+    }
     if (state.detailFailure) return { status: state.detailFailure }
     const index = items.findIndex(item => item.id === Number(url.pathname.split('/').at(-1)))
     if (index < 0) return { status: 404 }

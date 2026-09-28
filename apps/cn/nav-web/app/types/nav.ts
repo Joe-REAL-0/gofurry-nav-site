@@ -438,6 +438,10 @@ export interface NavUpdateIndexItem {
 }
 
 export interface NavUpdatesResponse {
+    page: number;
+    page_size: number;
+    total: number;
+    has_more: boolean;
     schema_version: number;
     generated_at: string;
     state: NavUpdatesState;

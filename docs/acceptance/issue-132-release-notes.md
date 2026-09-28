@@ -241,3 +241,63 @@ Maintainer final review is **pending**, intentionally combined across P1–P3:
 Implementation is ready for this combined review. #132 final closure still
 requires the selected current-code remote gates and explicit maintainer approval;
 no automatic closure or P4 is authorized by this record.
+
+## P3.1 — compact writing and reading refinement (2026-09-28)
+
+This final refinement supersedes P2's toolbar and P3's all-history index layout;
+the earlier phase records above remain historical evidence.
+
+- Admin combines shared metadata and zh/en content in one Section. The unused
+  toolbar implementation and its transform tests are deleted after consumer audit.
+  Equal Desktop editor/preview panes become a local Edit/Preview switch on narrow
+  screens. Markdown rendering, authorization, dirty guards and every publication
+  mutation are unchanged.
+- Public Index removes explanatory header copy, tightens Latest and month rows,
+  and SSR-renders only Latest plus 20 history items. `useUpdateIndex` owns explicit
+  page appends, pending-click protection, error/retry and locale/unmount races.
+- The smallest public index extension adds page/page_size and total/has_more.
+  SQL keeps publication visibility and descending date/ID ordering. The default
+  unpaged 100-item sitemap request remains intact. No new migration, lifecycle,
+  Admin API, permission or media integration is introduced. Deploy Nav Backend
+  together with this paginated Nav Web client; rebuild Admin for its embedded UI.
+- Detail removes the redundant release label, uses a 760px maximum body and
+  quieter Previous/Next links. Previous still means older; Next still means newer.
+  Markdown fixture/renderer, canonical/hreflang and authoritative 404 are unchanged.
+
+### Focused local evidence
+
+- Admin lint (existing unrelated warnings only), typecheck and embedded build pass.
+  Release Notes tests: 3 files / 58 cases, preserving lifecycle/security coverage.
+- Nav Web lint, typecheck, stylelint and style policy pass. The debt manifest is
+  unchanged: no Updates debt, ambient raw 75 and Insights important 5 retained;
+  deep selectors and legacy dark entries remain zero.
+- Focused Markdown/presentation/Nuxt tests: 4 files / 62 cases. New pagination
+  cases cover bounded first requests, explicit appends, overlap deduplication,
+  concurrent clicks, failed-page retry, locale race and unmount cancellation.
+- Production build passes. Updates Browser: 27 cases; focused sitemap Browser:
+  3 cases. New desktop/mobile cases prove first-page SSR contains exactly Latest
+  plus 20 history entries, no hidden all-data load, and one request per action.
+- Updates service/controller and router tests pass. SQL is regenerated; sqlc vet
+  and `go run ./check-sqlc` pass. `TestPostgresNavBackendPersistenceSemantics`
+  passes against disposable local PostgreSQL 18, including public-only totals,
+  page boundaries and stable timestamp-tie ordering. Shared/production data is
+  untouched; Goose ran only as part of that disposable test database setup.
+- Exactly the existing eight Updates goldens were regenerated in the digest-pinned
+  Linux runner, followed by two independent scoped compare passes (8 each).
+  Unrelated PNGs and the shared shell are unchanged.
+- Temporary Admin browser review uses mocked read-only API responses and the
+  production build. It verifies equal Desktop panes, narrow preview/language
+  switching, no overflow and no browser errors. At 390px it uses the existing
+  sidebar-collapse control; the shared Admin shell was not redesigned.
+
+### Final review gate
+
+Current-code Fast CI and one Manual Visual run are required after push; this
+record does not claim their completion. No additional Manual Full is dispatched
+for this focused refinement. Prior P3 runs are not P3.1 acceptance.
+
+Maintainer approval remains **pending**. Review Admin writing/preview and existing
+Save/Publish/Schedule/Unpublish controls; public compact Latest/month density and
+More loading; article typography, both themes/devices and Previous/Next wording.
+The eight scoped goldens plus temporary Admin review captures support that review.
+P3.1 proceeds directly to #132 final maintainer review; no P4 is planned or created.

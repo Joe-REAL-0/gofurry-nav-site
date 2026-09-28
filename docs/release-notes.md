@@ -40,7 +40,10 @@ Title, summary and body independently fall back to the other language; version
 and SHA are not localized.
 
 - `GET /api/v2/nav/updates`: existing schema-version-1 ready/empty/error envelope,
-  ordered by `published_at DESC, id DESC` (existing limit 100). Items contain only
+  ordered by `published_at DESC, id DESC`. P3.1 adds `page` (default 1) and
+  `page_size` (default/max 100), plus `page`, `page_size`, `total`, `has_more`
+  response metadata. Invalid or overflowing pagination returns 400. Count and
+  rows use the same publication predicate and captured database clock. Items contain only
   `id`, `title`, `summary`, `version`, `commit_sha`, `published_at`. P3 removes the
   P1 transitional `body`, `create_time` and `update_time` fields. Detail owns body.
 - `GET /api/v2/nav/updates/:id`: schema version 1, generated time, `state=ready`,
@@ -120,7 +123,8 @@ Delete is a separate confirmed soft-delete action and returns to the list.
 Dirty forms use the existing React Router blocker and a dirty-only beforeunload
 listener; ordinary Save requires no confirmation and never auto-saves.
 
-Markdown uses a selection-based textarea toolbar, side-by-side Desktop preview
+P3.1 removes the original P2 selection toolbar. Shared metadata and localized
+content occupy one writing workspace, with equal Desktop editor/preview panes
 and local Edit/Preview switching on narrow layouts. Only sanitized renderer
 output enters the preview. Dependencies, headings, links/images, allowlists and
 shared P3 fixtures are defined in [the Markdown contract](../contracts/update-markdown.md).
@@ -129,13 +133,20 @@ No P2 database, public-page, asset-picker or upload changes are required.
 ## Public experience (P3)
 
 `/updates` and `/en/updates` render the current locale's index once on SSR;
-hydration reuses that payload. Latest has its own reading surface. All remaining
-rows are grouped by calendar month in Asia/Shanghai, without pagination, accordion
-or load-more state. Missing summary/version/commit is omitted, never inferred from
+hydration reuses that payload. P3.1 supersedes P3's all-history rendering with one
+Latest plus twenty historical releases (`page_size=21`). Additional pages load
+only through the explicit More action. Failed loads retain visible content and
+retry the same page; concurrent clicks are ignored. Locale change/unmount cancels
+pending appends, and late responses cannot cross locale identity. Loaded rows are
+grouped by calendar month in Asia/Shanghai; there is no accordion or infinite scroll.
+Offset pages are current public reads, not a snapshot; overlapping IDs are
+deduplicated if releases change between clicks. Missing summary/version/commit is omitted, never inferred from
 body. Historical plain-text releases remain valid Markdown on their detail pages.
 
 `/updates/:id` and `/en/updates/:id` fetch only detail, SSR the sanitized article,
-and preserve `previous=older`, `next=newer`. Hidden/missing detail produces HTTP
+and preserve `previous=older`, `next=newer`, labeled Previous/Next (上一篇/下一篇).
+P3.1 removes the redundant article label and tightens the reading rhythm.
+Hidden/missing detail produces HTTP
 404; upstream failure produces 503. Locale changes preserve the ID. One commit
 helper abbreviates the displayed SHA but links the full SHA with safe external
 attributes. Publication metadata remains evidence, not a client-generated date.
@@ -153,8 +164,8 @@ metadata, its own OG URL and publication time; there is no JSON-LD.
 Sitemap fetches the public Chinese index alongside Sites, Site Groups and Games.
 The strict Release Notes inventory parser adds both localized detail URLs and
 fails closed with HTTP 503 for unavailable/malformed inventory. The existing
-100-release index limit also limits sitemap release coverage; exceeding that
-inventory requires future API work, not an additional endpoint in P3.
+default 100-release unpaged inventory still limits sitemap release coverage.
+P3.1 does not change that SEO contract or add inventory crawling.
 
 `tests/browser/regression/updates.spec.ts` owns Index/Article SSR, request accounting,
 locale, metadata/Markdown integration, navigation, failure states and responsive

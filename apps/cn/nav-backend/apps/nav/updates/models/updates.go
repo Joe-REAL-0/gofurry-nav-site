@@ -43,12 +43,18 @@ type UpdateNoticeItem struct {
 }
 
 type UpdatesResponse struct {
+	Page           int                `json:"page"`
+	PageSize       int                `json:"page_size"`
+	Total          int64              `json:"total"`
+	HasMore        bool               `json:"has_more"`
 	SchemaVersion  int                `json:"schema_version"`
 	GeneratedAt    time.Time          `json:"generated_at"`
 	State          string             `json:"state"`
 	ReasonMessages []string           `json:"reason_messages,omitempty"`
 	Items          []UpdateNoticeItem `json:"items"`
 }
+
+type UpdatePage struct{ Page, PageSize int }
 
 // Detail uses an explicit public projection; no lifecycle or audit fields escape.
 type ReleaseNote struct {

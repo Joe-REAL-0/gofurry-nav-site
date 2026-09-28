@@ -237,11 +237,18 @@ describe('Release editor content and lifecycle', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/nav/update-notices'))
     expect(sendJSON).not.toHaveBeenCalled()
   })
-  it('toolbar changes the selected textarea source and previews without saving', async () => {
+  it('unifies metadata/content, has no toolbar and previews direct Markdown edits without saving', async () => {
     const { user } = workspace(); await editor()
     const body = screen.getByRole('textbox', { name: '中文正文' }) as HTMLTextAreaElement
-    body.focus(); body.setSelectionRange(0, body.value.length)
-    await user.click(screen.getByRole('button', { name: 'Bold' }))
+    expect(screen.queryByLabelText('Markdown 工具栏')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Bold' })).not.toBeInTheDocument()
+    const content = screen.getByRole('heading', { name: '公告内容' }).closest('section')!
+    expect(within(content).getByRole('textbox', { name: 'Version' })).toBeInTheDocument()
+    expect(within(content).getByRole('textbox', { name: '中文标题' })).toBeInTheDocument()
+    fireEvent.change(body, { target: { value: '**中文正文**' } })
+    await user.click(screen.getByRole('button', { name: '预览' }))
+    expect(screen.getByRole('button', { name: '预览' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: '编辑' }))
     expect(body).toHaveValue('**中文正文**')
     expect(screen.getByRole('region', { name: '中文正文预览', hidden: true }).querySelector('strong')).toHaveTextContent('中文正文')
     expect(sendJSON).not.toHaveBeenCalled()

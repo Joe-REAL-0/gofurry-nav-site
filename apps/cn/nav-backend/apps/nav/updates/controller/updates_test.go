@@ -77,10 +77,40 @@ func TestGetUpdatesReturnsV2EnvelopeWithoutLegacyURL(t *testing.T) {
 type fakeUpdatesReader struct {
 	response models.UpdatesResponse
 	lastLang string
+	lastPage models.UpdatePage
 }
 
-func (reader *fakeUpdatesReader) GetUpdates(lang string) models.UpdatesResponse {
+func TestPublicIndexPaginationValidation(t *testing.T) {
+	for _, tc := range []struct {
+		query              string
+		status, page, size int
+	}{
+		{"", 200, 1, 100}, {"?page=2&page_size=21&lang=en", 200, 2, 21},
+		{"?page=0", 400, 0, 0}, {"?page=-1", 400, 0, 0}, {"?page=x", 400, 0, 0},
+		{"?page_size=101", 400, 0, 0}, {"?page_size=0", 400, 0, 0}, {"?page_size=x", 400, 0, 0},
+		{"?page=2147483647&page_size=100", 400, 0, 0},
+	} {
+		t.Run(tc.query, func(t *testing.T) {
+			reader := &fakeUpdatesReader{}
+			app := fiber.New()
+			app.Get("/updates", New(reader).GetUpdates)
+			resp, err := app.Test(httptest.NewRequest("GET", "/updates"+tc.query, nil))
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != tc.status || reader.lastPage != (models.UpdatePage{Page: tc.page, PageSize: tc.size}) {
+				t.Fatalf("status=%d page=%+v", resp.StatusCode, reader.lastPage)
+			}
+		})
+	}
+}
+
+func (reader *fakeUpdatesReader) GetUpdates(lang string, pages ...models.UpdatePage) models.UpdatesResponse {
 	reader.lastLang = lang
+	if len(pages) > 0 {
+		reader.lastPage = pages[0]
+	}
 	return reader.response
 }
 

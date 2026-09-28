@@ -127,7 +127,12 @@ SELECT date_trunc('second', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::tim
 SELECT * FROM gfn_nav_update_notice
 WHERE deleted IS NOT TRUE AND publication_state = 'published'
   AND published_at IS NOT NULL AND published_at <= sqlc.arg(as_of)::timestamp
-ORDER BY published_at DESC, id DESC LIMIT sqlc.arg(row_limit);
+ORDER BY published_at DESC, id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)::integer;
+
+-- name: CountPublicUpdateNotices :one
+SELECT count(*) FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= sqlc.arg(as_of)::timestamp;
 
 -- name: GetPublicUpdateNotice :one
 SELECT * FROM gfn_nav_update_notice

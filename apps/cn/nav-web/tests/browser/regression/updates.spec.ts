@@ -2,6 +2,43 @@ import { test, expect, openRuntime, settleRuntime, assertRuntimeSurface, release
 
 test.beforeEach(async ({ page }) => { await page.clock.setFixedTime(new Date(updatesNow)) })
 
+for (const width of [1440, 390]) test(`Bounded SSR history loads additional pages only on explicit action ${width}`, async ({ page, runtime }) => {
+  runtime.state.extraCount = 25
+  await page.setViewportSize({ width, height: 900 })
+  const html = await openRuntime(page, '/updates')
+  expect(html).toContain('历史更新 16')
+  expect(html).not.toContain('历史更新 17')
+  await expect(page.locator('[data-updates-index] header')).toContainText('30 篇')
+  await expect(page.locator('[data-updates-index] header')).not.toContainText('产品、导航与平台演进记录')
+  await expect(page.locator('[data-update-history]')).toHaveCount(20)
+  expect(runtime.calls).toHaveLength(1)
+  const gate = runtime.hold(url => url.pathname === indexPath && url.searchParams.get('page') === '2')
+  await page.locator('[data-updates-more]').click(); await gate.wait()
+  await expect(page.locator('[data-updates-more]')).toBeDisabled()
+  await expect(page.locator('[data-update-history]')).toHaveCount(20)
+  expect(runtime.calls).toHaveLength(2)
+  gate.release(); await gate.done()
+  await expect(page.locator('[data-update-history]')).toHaveCount(29)
+  await expect(page.locator('[data-updates-more]')).toHaveCount(0)
+  expect(runtime.calls.map(call => call.url.search)).toEqual(['?lang=zh&page=1&page_size=21', '?lang=zh&page=2&page_size=21'])
+  await assertRuntimeSurface(page, '[data-updates-index]', 'light')
+  runtime.assertQuiet()
+})
+
+test('More-page failure preserves the visible archive and retries only that page', async ({ page, runtime }) => {
+  runtime.state.extraCount = 25; runtime.state.failedPage = 2
+  await openRuntime(page, '/updates')
+  await page.locator('[data-updates-more]').click()
+  await expect(page.locator('[data-updates-index] [role="alert"]')).toBeVisible()
+  await expect(page.locator('[data-update-history]')).toHaveCount(20)
+  await expect(page.locator('[data-update-latest]')).toBeVisible()
+  runtime.state.failedPage = 0
+  await page.locator('[data-updates-more]').click()
+  await expect(page.locator('[data-update-history]')).toHaveCount(29)
+  expect(runtime.calls.map(call => call.url.searchParams.get('page'))).toEqual(['1', '2', '2'])
+  runtime.assertQuiet()
+})
+
 for (const locale of ['zh', 'en'] as const) for (const width of [1440, 390]) for (const theme of ['light', 'dark'] as const) {
   const prefix = locale === 'en' ? '/en' : ''
   test(`Release index SSR and hydration ${locale} ${width} ${theme}`, async ({ page, context, runtime }) => {
@@ -29,7 +66,7 @@ for (const locale of ['zh', 'en'] as const) for (const width of [1440, 390]) for
     expect(await link.evaluate(el => getComputedStyle(el).outlineStyle)).not.toBe('none')
     await assertRuntimeSurface(page, '[data-updates-index]', theme)
     expect(browserCalls).toEqual([])
-    expect(runtime.calls.map(call => call.url.pathname + call.url.search)).toEqual([indexPath + '?lang=' + locale])
+    expect(runtime.calls.map(call => call.url.pathname + call.url.search)).toEqual([indexPath + '?lang=' + locale + '&page=1&page_size=21'])
     runtime.assertQuiet()
   })
 
@@ -61,6 +98,9 @@ for (const locale of ['zh', 'en'] as const) for (const width of [1440, 390]) for
     await expect(page.locator('[data-update-commit]')).toHaveText('53f429a')
     await expect(page.locator('[data-update-older]')).toHaveAttribute('href', prefix + '/updates/107')
     await expect(page.locator('[data-update-newer]')).toHaveAttribute('href', prefix + '/updates/109')
+    await expect(page.locator('[data-update-older]')).toContainText(locale === 'zh' ? '上一篇' : 'Previous')
+    await expect(page.locator('[data-update-newer]')).toContainText(locale === 'zh' ? '下一篇' : 'Next')
+    await expect(page.locator('[data-update-detail] header')).not.toContainText(locale === 'zh' ? '发布记录' : 'RELEASE NOTE')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://go-furry.com' + prefix + '/updates/108')
     await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', 'https://go-furry.com' + prefix + '/updates/108')
     await expect(page.locator('meta[property="og:type"]')).toHaveAttribute('content', 'article')

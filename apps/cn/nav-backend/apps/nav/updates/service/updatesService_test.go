@@ -47,6 +47,34 @@ func TestGetUpdatesReturnsEmptyState(t *testing.T) {
 	}
 }
 
+func TestUpdatesBoundedPagesPreserveOrderAndDefaultInventory(t *testing.T) {
+	items := make([]models.UpdateNotice, 105)
+	for i := range items {
+		items[i] = models.UpdateNotice{ID: int64(105 - i), Title: "公告"}
+	}
+	svc := newUpdatesService(&fakeUpdateNoticeStore{items: items}, time.Now)
+	first := svc.GetUpdates("zh", models.UpdatePage{Page: 1, PageSize: 21})
+	second := svc.GetUpdates("zh", models.UpdatePage{Page: 2, PageSize: 21})
+	if first.Total != 105 || len(first.Items) != 21 || first.Page != 1 || first.PageSize != 21 || !first.HasMore || first.Items[20].ID != 85 {
+		t.Fatalf("first page: %+v", first)
+	}
+	if second.Total != 105 || len(second.Items) != 21 || second.Items[0].ID != 84 || !second.HasMore {
+		t.Fatalf("second page: %+v", second)
+	}
+	last := svc.GetUpdates("zh", models.UpdatePage{Page: 5, PageSize: 21})
+	if last.HasMore || len(last.Items) != 21 || last.Items[20].ID != 1 {
+		t.Fatalf("last page: %+v", last)
+	}
+	empty := svc.GetUpdates("zh", models.UpdatePage{Page: 6, PageSize: 21})
+	if empty.State != models.UpdatesStateEmpty || empty.HasMore || empty.Total != 105 {
+		t.Fatalf("past end: %+v", empty)
+	}
+	inventory := svc.GetUpdates("zh")
+	if inventory.Page != 1 || inventory.PageSize != 100 || len(inventory.Items) != 100 || !inventory.HasMore {
+		t.Fatalf("default inventory: %+v", inventory)
+	}
+}
+
 func TestGetUpdatesReturnsErrorState(t *testing.T) {
 	response := newUpdatesService(&fakeUpdateNoticeStore{err: errors.New("db unavailable")}, time.Now).GetUpdates("zh")
 
@@ -85,11 +113,15 @@ type fakeUpdateNoticeStore struct {
 	err   error
 }
 
-func (store *fakeUpdateNoticeStore) ListUpdateNotices(limit int) ([]models.UpdateNotice, error) {
+func (store *fakeUpdateNoticeStore) ListUpdateNotices(limit, offset int) ([]models.UpdateNotice, int64, error) {
 	if store.err != nil {
-		return nil, store.err
+		return nil, 0, store.err
 	}
-	return append([]models.UpdateNotice(nil), store.items...), nil
+	total := int64(len(store.items))
+	if offset >= len(store.items) {
+		return nil, total, nil
+	}
+	return append([]models.UpdateNotice(nil), store.items[offset:min(offset+limit, len(store.items))]...), total, nil
 }
 
 func (store *fakeUpdateNoticeStore) GetUpdateNotice(id int64) (models.UpdateNotice, *models.UpdateNotice, *models.UpdateNotice, error) {

@@ -98,20 +98,20 @@ export function ReleaseNoteEditor({ record }: { record: ReleaseNote | null }) {
     <Link className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary" to="/nav/update-notices"><ArrowLeft aria-hidden="true" className="size-4" />返回更新公告</Link>
     <PageHeader title={record ? '编辑 Release Note' : '新建 Release Note'} actions={<ReleaseStatus record={record ?? { publication_state: 'draft', published_at: null }} />} />
     {error && <Alert tone="danger">{error}</Alert>}
-    {!canWrite && <Alert tone="info">只读模式，可以切换语言和预览正文。</Alert>}
+    {!canWrite && <Alert tone="info">只读</Alert>}
     <form className="grid min-w-0 gap-4" onSubmit={event => { event.preventDefault(); submit('save') }}>
-      <Section title="Release Metadata" description="时间为 Asia/Shanghai（UTC+8）；版本与 Commit SHA 可留空。">
-        <fieldset disabled={busy || !canWrite} className="grid gap-4 border-0 p-0 md:grid-cols-3">
-          <FormField label="Version" error={errors.version?.message}><Input {...form.register('version')} /></FormField>
-          <FormField label="Commit SHA" error={errors.commit_sha?.message}><Input className="font-mono" {...form.register('commit_sha')} /></FormField>
-          <FormField label="发布时间" help="草稿可留空；立即发布由服务端确定时间。" error={errors.published_at?.message}><Controller name="published_at" control={form.control} render={({ field }) => <DateTimePicker value={field.value} onValueChange={field.onChange} ariaLabel="发布时间（Asia/Shanghai）" now={releasePickerNow} disabled={busy || !canWrite} />} /></FormField>
-        </fieldset>
-      </Section>
-      <Section title="公告内容" actions={<div className="flex gap-1" aria-label="编辑语言">{(['zh', 'en'] as const).map(locale => <Button type="button" key={locale} size="sm" variant={language === locale ? 'primary' : 'ghost'} aria-pressed={language === locale} disabled={busy} onClick={() => setLanguage(locale)}>{locale === 'zh' ? '中文' : 'English'}</Button>)}</div>}>
-        <div className="grid min-w-0 gap-4">
-          <FormField label={`${languageLabel}标题`} error={errors[titleField]?.message}><Input key={titleField} readOnly={!canWrite} disabled={busy} {...form.register(titleField)} /></FormField>
-          <FormField label={`${languageLabel}摘要`}><Textarea key={summaryField} readOnly={!canWrite} disabled={busy} {...form.register(summaryField)} /></FormField>
-          <Controller name={bodyField} control={form.control} render={({ field }) => <MarkdownEditor value={field.value} onChange={field.onChange} label={`${languageLabel}正文`} readOnly={!canWrite} busy={busy} />} />
+      <Section title="公告内容" className="release-content-workspace" actions={<div className="flex gap-1" aria-label="编辑语言">{(['zh', 'en'] as const).map(locale => <Button type="button" key={locale} size="sm" variant={language === locale ? 'primary' : 'ghost'} aria-pressed={language === locale} disabled={busy} onClick={() => setLanguage(locale)}>{locale === 'zh' ? '中文' : 'English'}</Button>)}</div>}>
+        <div className="grid min-w-0 gap-5">
+          <fieldset disabled={busy || !canWrite} className="grid gap-4 border-0 p-0 md:grid-cols-3">
+            <FormField label="Version" error={errors.version?.message}><Input {...form.register('version')} /></FormField>
+            <FormField label="Commit SHA" error={errors.commit_sha?.message}><Input className="font-mono" {...form.register('commit_sha')} /></FormField>
+            <FormField label="发布时间（UTC+8）" error={errors.published_at?.message}><Controller name="published_at" control={form.control} render={({ field }) => <DateTimePicker value={field.value} onValueChange={field.onChange} ariaLabel="发布时间（Asia/Shanghai）" now={releasePickerNow} disabled={busy || !canWrite} />} /></FormField>
+          </fieldset>
+          <div className="grid min-w-0 gap-4">
+            <FormField label={`${languageLabel}标题`} error={errors[titleField]?.message}><Input key={titleField} readOnly={!canWrite} disabled={busy} {...form.register(titleField)} /></FormField>
+            <FormField label={`${languageLabel}摘要`}><Textarea className="min-h-20" rows={2} key={summaryField} readOnly={!canWrite} disabled={busy} {...form.register(summaryField)} /></FormField>
+            <Controller name={bodyField} control={form.control} render={({ field }) => <MarkdownEditor value={field.value} onChange={field.onChange} label={`${languageLabel}正文`} readOnly={!canWrite} busy={busy} />} />
+          </div>
         </div>
       </Section>
       {canWrite && <div className="flex flex-wrap items-center justify-between gap-3">

@@ -15,7 +15,7 @@ import (
 const defaultUpdatesLimit = 100
 
 type updateNoticeStore interface {
-	ListUpdateNotices(limit int) ([]models.UpdateNotice, error)
+	ListUpdateNotices(limit, offset int) ([]models.UpdateNotice, int64, error)
 	GetUpdateNotice(id int64) (models.UpdateNotice, *models.UpdateNotice, *models.UpdateNotice, error)
 }
 
@@ -27,23 +27,27 @@ func newSQLCUpdateNoticeStore(queries *navsqlc.Queries) *sqlcUpdateNoticeStore {
 	return &sqlcUpdateNoticeStore{queries: queries}
 }
 
-func (store *sqlcUpdateNoticeStore) ListUpdateNotices(limit int) ([]models.UpdateNotice, error) {
+func (store *sqlcUpdateNoticeStore) ListUpdateNotices(limit, offset int) ([]models.UpdateNotice, int64, error) {
 	if limit <= 0 {
 		limit = defaultUpdatesLimit
 	}
 	asOf, err := store.queries.UpdateNoticeClock(context.Background())
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	rows, err := store.queries.ListPublicUpdateNotices(context.Background(), navsqlc.ListPublicUpdateNoticesParams{AsOf: asOf, RowLimit: int32(limit)})
+	total, err := store.queries.CountPublicUpdateNotices(context.Background(), asOf)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	rows, err := store.queries.ListPublicUpdateNotices(context.Background(), navsqlc.ListPublicUpdateNoticesParams{AsOf: asOf, RowLimit: int32(limit), RowOffset: int32(offset)})
+	if err != nil {
+		return nil, 0, err
 	}
 	notices := make([]models.UpdateNotice, 0, len(rows))
 	for _, row := range rows {
 		notices = append(notices, noticeModel(row))
 	}
-	return notices, nil
+	return notices, total, nil
 }
 
 type updatesService struct {
@@ -73,21 +77,35 @@ func New(queries *navsqlc.Queries) *updatesService {
 	return newUpdatesService(newSQLCUpdateNoticeStore(queries), time.Now)
 }
 
-func (svc *updatesService) GetUpdates(lang string) models.UpdatesResponse {
+func (svc *updatesService) GetUpdates(lang string, pages ...models.UpdatePage) models.UpdatesResponse {
 	lang = normalizeLang(lang)
+	page := models.UpdatePage{Page: 1, PageSize: defaultUpdatesLimit}
+	if len(pages) > 0 {
+		page = pages[0]
+	}
+	if page.Page <= 0 {
+		page.Page = 1
+	}
+	if page.PageSize <= 0 || page.PageSize > defaultUpdatesLimit {
+		page.PageSize = defaultUpdatesLimit
+	}
 	response := models.UpdatesResponse{
+		Page: page.Page, PageSize: page.PageSize,
 		SchemaVersion: models.UpdatesSchemaVersion,
 		GeneratedAt:   svc.clock()(),
 		State:         models.UpdatesStateEmpty,
 		Items:         []models.UpdateNoticeItem{},
 	}
 
-	notices, err := svc.source().ListUpdateNotices(defaultUpdatesLimit)
+	offset := (page.Page - 1) * page.PageSize
+	notices, total, err := svc.source().ListUpdateNotices(page.PageSize, offset)
 	if err != nil {
 		response.State = models.UpdatesStateError
 		response.ReasonMessages = []string{err.Error()}
 		return response
 	}
+	response.Total = total
+	response.HasMore = int64(offset+len(notices)) < total && len(notices) > 0
 
 	if len(notices) == 0 {
 		return response

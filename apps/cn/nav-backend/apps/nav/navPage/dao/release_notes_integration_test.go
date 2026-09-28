@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"errors"
+	updatesmodels "github.com/gofurry/gofurry-nav-backend/apps/nav/updates/models"
 	updatesservice "github.com/gofurry/gofurry-nav-backend/apps/nav/updates/service"
 	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,6 +44,12 @@ func testReleaseNoteVisibilityAndNeighbors(t *testing.T, ctx context.Context, po
 	}
 	if index.Items[3].Title != "最早" || index.Items[3].Summary != "Summary" {
 		t.Fatal("index locale metadata")
+	}
+	for page := 1; page <= 2; page++ {
+		got := svc.GetUpdates("en", updatesmodels.UpdatePage{Page: page, PageSize: 2})
+		if got.Total != 4 || len(got.Items) != 2 || got.HasMore != (page == 1) || got.Items[0].ID != int64(6-2*page) || got.Items[1].ID != int64(5-2*page) {
+			t.Fatalf("pagination must share publication visibility and stable tie order: %+v", got)
+		}
 	}
 	oldest, err := svc.GetUpdateDetail(1, "en")
 	if err != nil || oldest.Item.Body != "正文" {
