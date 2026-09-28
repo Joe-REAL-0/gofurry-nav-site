@@ -15,6 +15,8 @@ const HeroAssetsPage = lazy(() => import('../features/assets/asset-pages').then(
 const BackgroundPatternsPage = lazy(() => import('../features/assets/asset-pages').then((module) => ({ default: module.BackgroundPatternsPage })))
 const GameListPage = lazy(() => import('../features/games/game-pages').then((module) => ({ default: module.GameListPage })))
 const GameWorkspacePage = lazy(() => import('../features/games/game-pages').then((module) => ({ default: module.GameWorkspacePage })))
+const ReleaseNoteListPage = lazy(() => import('../features/release-notes/release-note-pages').then((module) => ({ default: module.ReleaseNoteListPage })))
+const ReleaseNoteEditorPage = lazy(() => import('../features/release-notes/release-note-pages').then((module) => ({ default: module.ReleaseNoteEditorPage })))
 const ResourceEngineBoundary = lazy(() => import('../features/resources/resource-page').then((module) => ({ default: module.ResourceEngineBoundary })))
 const CollectionPage = lazy(() => import('../features/operations/collection-page').then((module) => ({ default: module.CollectionPage })))
 const MetricsPage = lazy(() => import('../features/operations/metrics-page').then((module) => ({ default: module.MetricsPage })))
@@ -39,6 +41,9 @@ export const router = createBrowserRouter([
           { path: 'nav/site-groups/:id/curation', element: <GroupCurationPage /> },
           { path: 'nav/hero-assets', element: <HeroAssetsPage /> },
           { path: 'nav/background-patterns', element: <BackgroundPatternsPage /> },
+          { path: 'nav/update-notices', element: <ReleaseNoteListPage /> },
+          { path: 'nav/update-notices/new', element: <ReleaseNoteEditorPage /> },
+          { path: 'nav/update-notices/:id', element: <ReleaseNoteEditorPage /> },
           { path: 'nav/:resource', element: <ResourceEngineBoundary section="nav" /> },
           { path: 'game/games', element: <GameListPage /> },
           { path: 'game/games/:id', element: <GameWorkspacePage /> },

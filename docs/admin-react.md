@@ -31,7 +31,7 @@ pnpm run build
 
 The App Shell consumes the current principal from `/api/v1/auth/state`. Missing navigation or actions should first be checked against returned capabilities and backend authorization; never patch around the contract with role comparisons.
 
-Simple resources are defined in `src/features/resources/definitions.tsx`. Site and Game must remain dedicated workspaces. New server reads should be small, explicit sqlc-backed read models rather than a generic frontend BFF.
+Simple resources are defined in `src/features/resources/definitions.tsx`. Site, Game and Release Notes remain dedicated workspaces. `src/features/release-notes` owns list/new/detail routes, bilingual Markdown authoring and the P1 publication APIs; see [Release Notes](release-notes.md) and the [Markdown contract](../contracts/update-markdown.md). New server reads should be small, explicit sqlc-backed read models rather than a generic frontend BFF.
 
 Collection, Metrics, and Changes are under `src/features/operations`; Cloud Resources, DataOps, Audit, and Accounts are under `src/features/system`. `dataops.read` is the only valid Data Operations capability. Operator/Developer/Owner differences must be expressed through `auth.can(...)`, not client-side role matrices.
 

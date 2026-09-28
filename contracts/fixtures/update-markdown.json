@@ -1,0 +1,536 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "heading-levels",
+      "kind": "markdown",
+      "input": "# One\n\n## Two\n\n### Three\n\n#### Four\n\n##### Five\n\n###### Six",
+      "elements": [
+        {
+          "selector": "h2",
+          "text": "One"
+        },
+        {
+          "selector": "h3",
+          "text": "Two"
+        },
+        {
+          "selector": "h4",
+          "text": "Three"
+        },
+        {
+          "selector": "h5",
+          "text": "Four"
+        },
+        {
+          "selector": "h6",
+          "count": 2
+        }
+      ],
+      "absentSelectors": [
+        "h1"
+      ]
+    },
+    {
+      "id": "paragraph-breaks-emphasis",
+      "kind": "markdown",
+      "input": "First\nSecond\n\n**strong** *em* ~~del~~",
+      "elements": [
+        {
+          "selector": "p",
+          "count": 2
+        },
+        {
+          "selector": "br",
+          "count": 1
+        },
+        {
+          "selector": "strong",
+          "text": "strong"
+        },
+        {
+          "selector": "em",
+          "text": "em"
+        },
+        {
+          "selector": "del",
+          "text": "del"
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "lists-quote-code",
+      "kind": "markdown",
+      "input": "- one\n- two\n\n1. ordered\n\n> quote\n\n`inline`\n\n```go\nfmt.Println(\"hi\")\n```\n\n---",
+      "elements": [
+        {
+          "selector": "ul li",
+          "count": 2
+        },
+        {
+          "selector": "ol li",
+          "text": "ordered"
+        },
+        {
+          "selector": "blockquote p",
+          "text": "quote"
+        },
+        {
+          "selector": "p code",
+          "text": "inline"
+        },
+        {
+          "selector": "pre code",
+          "text": "fmt.Println(\"hi\")\n",
+          "attributes": {
+            "class": "language-go"
+          }
+        },
+        {
+          "selector": "hr",
+          "count": 1
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "link-https",
+      "kind": "markdown",
+      "input": "[Link](https://example.test/page)",
+      "elements": [
+        {
+          "selector": "a",
+          "text": "Link",
+          "attributes": {
+            "href": "https://example.test/page",
+            "target": "_blank",
+            "rel": "noopener noreferrer"
+          }
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "link-http",
+      "kind": "markdown",
+      "input": "[Link](http://example.test/page)",
+      "elements": [
+        {
+          "selector": "a",
+          "text": "Link",
+          "attributes": {
+            "href": "http://example.test/page",
+            "target": "_blank",
+            "rel": "noopener noreferrer"
+          }
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "link-site-root",
+      "kind": "markdown",
+      "input": "[Link](/updates/1)",
+      "elements": [
+        {
+          "selector": "a",
+          "text": "Link",
+          "attributes": {
+            "href": "/updates/1"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "a[target]",
+        "a[rel]"
+      ]
+    },
+    {
+      "id": "link-anchor",
+      "kind": "markdown",
+      "input": "[Link](#details)",
+      "elements": [
+        {
+          "selector": "a",
+          "text": "Link",
+          "attributes": {
+            "href": "#details"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "a[target]",
+        "a[rel]"
+      ]
+    },
+    {
+      "id": "link-mailto",
+      "kind": "markdown",
+      "input": "[Link](mailto:hello@example.test)",
+      "elements": [
+        {
+          "selector": "a",
+          "text": "Link",
+          "attributes": {
+            "href": "mailto:hello@example.test"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "a[target]",
+        "a[rel]"
+      ]
+    },
+    {
+      "id": "linkify",
+      "kind": "markdown",
+      "input": "https://example.test/page",
+      "elements": [
+        {
+          "selector": "a",
+          "attributes": {
+            "href": "https://example.test/page",
+            "target": "_blank",
+            "rel": "noopener noreferrer"
+          }
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "reject-link-0",
+      "kind": "markdown",
+      "input": "[bad](javascript:alert(1))",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-1",
+      "kind": "markdown",
+      "input": "[bad](vbscript:evil)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-2",
+      "kind": "markdown",
+      "input": "[bad](data:text/html,evil)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-3",
+      "kind": "markdown",
+      "input": "[bad](file:///etc/test)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-4",
+      "kind": "markdown",
+      "input": "[bad](blob:https://example.test/id)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-5",
+      "kind": "markdown",
+      "input": "[bad](./relative)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-6",
+      "kind": "markdown",
+      "input": "[bad](../relative)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-7",
+      "kind": "markdown",
+      "input": "[bad](relative)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "reject-link-8",
+      "kind": "markdown",
+      "input": "[bad](//example.test/path)",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]"
+      ]
+    },
+    {
+      "id": "image-https",
+      "kind": "markdown",
+      "input": "![alt](https://example.test/a.png \"Image title\")",
+      "elements": [
+        {
+          "selector": "img",
+          "attributes": {
+            "src": "https://example.test/a.png",
+            "alt": "alt",
+            "title": "Image title",
+            "loading": "lazy",
+            "decoding": "async",
+            "referrerpolicy": "no-referrer"
+          }
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "image-site-root",
+      "kind": "markdown",
+      "input": "![alt](/assets/a.png \"Image title\")",
+      "elements": [
+        {
+          "selector": "img",
+          "attributes": {
+            "src": "/assets/a.png",
+            "alt": "alt",
+            "title": "Image title",
+            "loading": "lazy",
+            "decoding": "async",
+            "referrerpolicy": "no-referrer"
+          }
+        }
+      ],
+      "absentSelectors": []
+    },
+    {
+      "id": "reject-image-0",
+      "kind": "markdown",
+      "input": "![bad](http://example.test/a.png)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-1",
+      "kind": "markdown",
+      "input": "![bad](javascript:alert(1))",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-2",
+      "kind": "markdown",
+      "input": "![bad](vbscript:evil)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-3",
+      "kind": "markdown",
+      "input": "![bad](data:image/png;base64,AAAA)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-4",
+      "kind": "markdown",
+      "input": "![bad](blob:https://example.test/id)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-5",
+      "kind": "markdown",
+      "input": "![bad](file:///etc/a.png)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-6",
+      "kind": "markdown",
+      "input": "![bad](./a.png)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-7",
+      "kind": "markdown",
+      "input": "![bad](../a.png)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-8",
+      "kind": "markdown",
+      "input": "![bad](a.png)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "reject-image-9",
+      "kind": "markdown",
+      "input": "![bad](//example.test/a.png)",
+      "elements": [],
+      "absentSelectors": [
+        "img"
+      ]
+    },
+    {
+      "id": "raw-html-is-text",
+      "kind": "markdown",
+      "input": "<script>alert(\"x\")</script>\n<img src=\"https://example.test/a.png\" onerror=\"alert(1)\">",
+      "elements": [],
+      "absentSelectors": [
+        "script",
+        "img"
+      ],
+      "textContains": "<script>"
+    },
+    {
+      "id": "no-table-mermaid-highlighting",
+      "kind": "markdown",
+      "input": "| a | b |\n|---|---|\n| c | d |\n\n```mermaid\ngraph TD; A-->B\n```",
+      "elements": [
+        {
+          "selector": "pre code",
+          "text": "graph TD; A-->B\n",
+          "attributes": {
+            "class": "language-mermaid"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "table",
+        "svg",
+        "pre span"
+      ]
+    },
+    {
+      "id": "sanitizer-strips-active-tags",
+      "kind": "html",
+      "input": "<p id=\"x\" style=\"color:red\" data-x=\"bad\" onclick=\"evil()\">ok</p><script>evil()</script><style>body{display:none}</style><iframe src=\"https://example.test\"></iframe><svg onload=\"evil()\"></svg><form><input></form><video src=\"x\"></video><audio src=\"x\"></audio>",
+      "elements": [
+        {
+          "selector": "p",
+          "text": "ok"
+        }
+      ],
+      "absentSelectors": [
+        "[id]",
+        "[style]",
+        "[data-x]",
+        "[onclick]",
+        "script",
+        "style",
+        "iframe",
+        "svg",
+        "form",
+        "input",
+        "video",
+        "audio"
+      ]
+    },
+    {
+      "id": "sanitizer-controls-link-attributes",
+      "kind": "html",
+      "input": "<a href=\"https://example.test\" target=\"_self\" rel=\"opener\" title=\"bad\" onclick=\"evil()\">link</a>",
+      "elements": [
+        {
+          "selector": "a",
+          "text": "link",
+          "attributes": {
+            "href": "https://example.test",
+            "target": "_blank",
+            "rel": "noopener noreferrer"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "a[title]",
+        "[onclick]"
+      ]
+    },
+    {
+      "id": "sanitizer-controls-images",
+      "kind": "html",
+      "input": "<img src=\"/asset.png\" style=\"width:10px\" onerror=\"evil()\" class=\"x\" loading=\"eager\" decoding=\"sync\" referrerpolicy=\"unsafe-url\">",
+      "elements": [
+        {
+          "selector": "img",
+          "attributes": {
+            "src": "/asset.png",
+            "loading": "lazy",
+            "decoding": "async",
+            "referrerpolicy": "no-referrer"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "[class]",
+        "[style]",
+        "[onerror]"
+      ]
+    },
+    {
+      "id": "safe-code-class",
+      "kind": "html",
+      "input": "<pre><code class=\"evil language-ts language-go\" onclick=\"evil()\" style=\"color:red\" data-test=\"x\">code</code></pre>",
+      "elements": [
+        {
+          "selector": "code",
+          "text": "code",
+          "attributes": {
+            "class": "language-ts language-go"
+          }
+        }
+      ],
+      "absentSelectors": [
+        "[onclick]",
+        "[style]",
+        "[data-test]"
+      ]
+    },
+    {
+      "id": "sanitizer-encoded-schemes",
+      "kind": "html",
+      "input": "<a href=\"jav&#x61;script:evil()\">bad</a><a href=\"java&#x09;script:evil()\">bad</a><a href=\"//example.test\">bad</a><a href=\"/\\example.test\">bad</a><img src=\"data:image/png;base64,AAAA\"><img src=\"/\\example.test/a.png\">",
+      "elements": [],
+      "absentSelectors": [
+        "a[href]",
+        "img"
+      ]
+    }
+  ]
+}

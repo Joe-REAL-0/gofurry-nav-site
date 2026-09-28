@@ -16,14 +16,6 @@ export const resourceDefinitions: ResourceDefinition<ResourceRecord>[] = [
     schema: z.object({ language: z.enum(['zh', 'en']), author: optionalText, saying: z.string().trim().min(1, '请输入金句内容').max(10_000) }),
   },
   {
-    key: 'update-notices', section: 'nav', title: '更新公告', description: '发布与维护站点更新公告。',
-    listEndpoint: '/api/v1/nav/update-notices', detailEndpoint: '/api/v1/nav/update-notices',
-    columns: [{ key: 'id', label: 'ID', hidden: true }, { key: 'title', label: '中文标题' }, { key: 'title_en', label: '英文标题' }, { key: 'published_at', label: '发布时间', format: formatDate }],
-    fields: [{ key: 'title', label: '中文标题', type: 'text', section: '标题与发布时间' }, { key: 'title_en', label: '英文标题', type: 'text' }, { key: 'published_at', label: '发布时间', type: 'datetime' }, { key: 'body', label: '中文正文', type: 'textarea', section: '公告正文' }, { key: 'body_en', label: '英文正文', type: 'textarea' }],
-    defaults: { title: '', title_en: '', published_at: '', body: '', body_en: '' },
-    schema: z.object({ title: z.string().trim().min(1, '请输入中文标题'), title_en: optionalText, published_at: z.string().min(1, '请选择发布时间'), body: optionalText, body_en: optionalText }),
-  },
-  {
     key: 'site-groups', section: 'nav', title: '网站分组', description: '维护用于内容组织的网站业务分组。',
     listEndpoint: '/api/v1/nav/site-groups', detailEndpoint: '/api/v1/nav/site-groups',
     columns: [{ key: 'id', label: 'ID', hidden: true }, { key: 'name', label: '名称' }, { key: 'name_en', label: '英文名称' }, { key: 'priority', label: '优先级' }, { key: 'update_time', label: '最近更新', format: formatDate }],

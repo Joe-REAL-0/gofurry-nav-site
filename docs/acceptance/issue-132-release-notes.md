@@ -63,3 +63,56 @@ be independently deployed as the completed Release Notes product.
 Tests use a disposable local PostgreSQL 18 container, not shared development data.
 Remote CI has not been run for this change; no remote acceptance is claimed.
 P1 establishes the APIs required by P2; it does not claim P2/P3 completion.
+
+## P2: Admin Release Workspace and Markdown authoring — 2026-09-28
+
+P2 replaces the generic `update-notices` resource with dedicated list/new/detail
+routes before `/nav/:resource`, using the existing AppShell navigation and
+ContentRead/ContentWrite capabilities. P1 storage, API and lifecycle semantics
+are unchanged; no Backend defect or database migration was required.
+
+The list supports API search/pagination, row/link navigation, release metadata and
+centralized Draft/Scheduled/Published presentation in China-site time. One RHF/Zod
+form retains both languages plus shared metadata. Create is deferred until Save
+or confirmed Publish. Dirty publication awaits persistence; failed saves never
+publish. Immediate publication omits the timestamp. Scheduling sends the chosen
+future China time. Unpublish is disabled while dirty; confirmed Delete is separate.
+Both browser unload and React Router navigation protect unsaved work, including
+when write capability is lost after editing. Successful saves clear the guard.
+
+Admin alone adds `markdown-it` 15.0.2, `sanitize-html` 2.17.7 and typings through
+pnpm. The [shared Markdown contract](../../contracts/update-markdown.md) and its
+37 semantic/security fixture cases govern headings, breaks, formatting, lists,
+code, URL policies, image attributes, literal HTML and the final sanitizer.
+The toolbar edits textarea selections without rewriting stored source; Desktop
+uses an editor/preview grid and narrow layouts use a local switch. Preview styling
+uses Admin tokens and has no public visual ownership.
+
+### Local verification — passed
+
+From `apps/cn/admin/react`:
+
+```text
+pnpm install --frozen-lockfile
+pnpm run lint
+pnpm run typecheck
+pnpm test
+pnpm run build
+```
+
+- **29 files / 219 tests passed** in the final full Admin run.
+- New feature coverage: 18 workspace/lifecycle/guard tests, 3 model/time tests,
+  and 48 Markdown/toolbar tests (including all 37 shared fixture cases).
+- Existing router/generic tests now prove dedicated Release Notes ownership;
+  all other Admin tests remain in the full run.
+- Frozen install preserved the generated pnpm lockfile; Nav Web dependencies and
+  lockfile were untouched. No build-script permission changes were needed.
+- Lint exits successfully with the existing shared/routing rule warning patterns;
+  the new feature files produce no lint warnings. The build retains the existing
+  large shared-chunk advisory and emits the normal embedded Admin frontend.
+- `git diff --check` passes. No Public Browser, Nav Web Visual, backend regression
+  or migration run was performed for this frontend-only phase.
+
+P2 is locally ready for P3. P3 was not started. This record does not claim remote
+CI or maintainer visual acceptance for P2; normal Admin page review can accompany
+the final #132 acceptance.

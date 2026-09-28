@@ -1,9 +1,10 @@
-# Release Notes — Issue #132 P1
+# Release Notes — Issue #132
 
-P1 establishes the GFN domain and public/Admin API contracts. It does not ship
-the P2 Admin Release Workspace or P3 public index/article UI. **Do not deploy P1
-independently as a finished Release Notes feature**: the current generic Admin
-editor can create/save drafts but has no publishing controls.
+P1 establishes the GFN domain and public/Admin API contracts. P2 adds the dedicated
+Admin Release Workspace and safe local Markdown authoring. The P3 public
+index/article UI is still pending; the existing public Timeline continues to
+consume transitional index bodies. P1 alone was not a deployable finished Release
+Notes feature; the dedicated P2 editor now supplies its publishing controls.
 
 ## Storage and publication
 
@@ -86,3 +87,38 @@ rewrite their dates or choose scheduling silently.
 Down refuses to proceed while any publication timestamp is null; it never invents
 dates. Rollback requires deliberate data resolution by an operator. No production
 migration was performed for P1. See [P1 acceptance](acceptance/issue-132-release-notes.md).
+
+## Admin workspace (P2)
+
+`/nav/update-notices`, `/nav/update-notices/new`, `/nav/update-notices/:id` are
+explicit routes before the generic Nav resource route. The existing 更新公告
+navigation and ContentRead/ContentWrite capabilities are reused. Readers can
+browse details, switch languages and preview; all mutation controls require write.
+
+The list retains API search/pagination and shows version, title, display status,
+China-site publication time, abbreviated SHA and last update. Status is an Admin
+aid only: draft, future published = Scheduled, otherwise Published. Timestamp
+parsing is centralized and independent of browser timezone.
+
+The editor uses one form for Chinese/English title, summary and Markdown body,
+plus common version/SHA/date. `/new` stays local until Save or confirmed Publish.
+First save POSTs a Draft; later saves PUT content without lifecycle fields. Save
+success updates only Release Notes caches and clears dirty state; failures retain
+input. A background query refresh never resets unsaved form values.
+
+Publish/Schedule first persists current dirty content and stops if saving fails.
+New publication POSTs the complete Draft once, then publishes without a redundant
+PUT. Publish Now sends no browser timestamp. Schedule requires an explicitly
+chosen future China-site time. If creation succeeds but publishing fails, the
+saved Draft remains accessible at its ID rather than being created again.
+
+Unpublish is confirmed, disabled while dirty, and preserves the date/editor.
+Delete is a separate confirmed soft-delete action and returns to the list.
+Dirty forms use the existing React Router blocker and a dirty-only beforeunload
+listener; ordinary Save requires no confirmation and never auto-saves.
+
+Markdown uses a selection-based textarea toolbar, side-by-side Desktop preview
+and local Edit/Preview switching on narrow layouts. Only sanitized renderer
+output enters the preview. Dependencies, headings, links/images, allowlists and
+shared P3 fixtures are defined in [the Markdown contract](../contracts/update-markdown.md).
+No P2 database, public-page, asset-picker or upload changes are required.

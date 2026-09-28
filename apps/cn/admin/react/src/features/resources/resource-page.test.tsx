@@ -66,7 +66,6 @@ describe('Resource Engine route definitions', () => {
 
   it.each([
     ['nav', 'site-groups', '网站分组'],
-    ['nav', 'update-notices', '更新公告'],
     ['nav', 'sayings', '金句'],
     ['game', 'tags', '标签'],
     ['game', 'comments', '评论'],

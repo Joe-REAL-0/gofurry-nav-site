@@ -22,7 +22,7 @@ describe('content workspace routing', () => {
   })
 
   it.each([
-    ['/nav/site-groups', 'nav'], ['/nav/update-notices', 'nav'], ['/nav/sayings', 'nav'],
+    ['/nav/site-groups', 'nav'], ['/nav/sayings', 'nav'],
     ['/game/tags', 'game'], ['/game/comments', 'game'], ['/game/prizes', 'game'],
   ])('binds generic resource route %s to its explicit domain', (pathname, section) => {
     const matches = matchRoutes(router.routes, pathname)
@@ -47,4 +47,18 @@ describe('content workspace routing', () => {
 it('guards Collaboration independently from content', () => {
  const matches = matchRoutes(router.routes, '/collaboration')
  expect(matches?.some(({ route }) => isValidElement<{ capability?: string }>(route.element) && route.element.props.capability === 'collaboration.read')).toBe(true)
+})
+
+
+it.each([
+  ['/nav/update-notices', 'nav/update-notices'],
+  ['/nav/update-notices/new', 'nav/update-notices/new'],
+  ['/nav/update-notices/17', 'nav/update-notices/:id'],
+])('routes %s to the dedicated Release Notes workspace', (pathname, path) => {
+  const matches = matchRoutes(router.routes, pathname)
+  expect(matches?.at(-1)?.route.path).toBe(path)
+  const parent = matches?.at(-2)?.route
+  const paths = parent?.children?.map(route => route.path) ?? []
+  expect(paths.indexOf(path)).toBeLessThan(paths.indexOf('nav/:resource'))
+  expect(matches?.some(({route}) => isValidElement<{ capability?: string }>(route.element) && route.element.props.capability === 'content.read')).toBe(true)
 })

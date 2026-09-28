@@ -10,6 +10,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
+- Add a dedicated Admin Release Notes workspace with bilingual Markdown authoring, sanitized local preview, China-time status display, confirmed publication controls, save-before-publish ordering and unsaved-change protection. Establish shared Markdown security fixtures for the later public UI phase (#132).
 - Establish the Release Notes domain and API foundation with draft/published state, optional version and commit metadata, localized summaries, authoritative scheduled visibility, public detail/previous/next navigation, and audited Admin publish/unpublish actions. Preserve legacy notices and transitional index bodies; the dedicated Admin/public UI follows in later phases (#132).
 
 ## v3.0.0-alpha.10 - 2026-09-28

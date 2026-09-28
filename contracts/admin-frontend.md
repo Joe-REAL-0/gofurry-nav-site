@@ -48,6 +48,8 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 /nav/hero-assets
 /nav/background-patterns
 /nav/update-notices
+/nav/update-notices/new
+/nav/update-notices/:id
 /nav/sayings
 /game/games
 /game/games/:id
@@ -66,7 +68,18 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 
 Site Group exposes a homepage curation page showing the first eight active sites and the remaining members. Operators move sites instead of entering weights. Group-oriented GET/PUT `/api/v1/nav/site-groups/:id/curation` uses `content.read`/`content.write`, a revision-checked complete member order, and the existing Nav transaction/audit/cache invalidation path. It persists only mapping weights; site-level bulk replacement preserves existing weights. Public derived caches refresh on the existing ten-minute schedule, so saving is not an immediate public-cache publication.
 
-Site and Game are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
+Site, Game and Release Notes are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
+
+Release Notes routes precede `/nav/:resource`; `update-notices` is not a generic
+resource. The existing navigation and `content.read/write` capabilities apply.
+One RHF form owns both languages and shared metadata. Opening `/new` creates no
+record. Publish/Schedule must await a successful save of dirty content; Publish
+Now omits the timestamp and Schedule sends the chosen future China-site time.
+Dirty Unpublish is disabled; Delete and all publication changes require explicit
+confirmation. Browser unload and internal routing protect unsaved work.
+Status badges are display-only and interpret unzoned timestamps as Asia/Shanghai.
+Markdown preview follows [the shared contract](update-markdown.md); it stores
+source text, sanitizes all generated HTML and adds no upload or public-page owner.
 
 Collection, Metric, and Change reuse their existing business APIs and frozen Fact/Metric/Detector/Collection semantics. Operator-facing views require their read capabilities; schedule control, Metric technical contracts, and Change technical contracts additionally require their native capabilities.
 

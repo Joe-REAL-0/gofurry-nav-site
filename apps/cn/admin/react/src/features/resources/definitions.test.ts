@@ -7,7 +7,9 @@ describe('Resource Engine definitions', () => {
   it('keeps simple resources schema-driven and excludes Site/Game workspaces', () => {
     const keys = resourceDefinitions.map((definition) => `${definition.section}/${definition.key}`)
     expect(new Set(keys).size).toBe(keys.length)
-    expect(keys).toEqual(expect.arrayContaining(['nav/sayings', 'nav/update-notices', 'nav/site-groups', 'game/tags', 'game/comments', 'game/prizes']))
+    expect(keys).toEqual(expect.arrayContaining(['nav/sayings', 'nav/site-groups', 'game/tags', 'game/comments', 'game/prizes']))
+    expect(keys).not.toContain('nav/update-notices')
+    expect(findResource('nav', 'update-notices')).toBeUndefined()
     expect(keys).not.toContain('nav/sites')
     expect(keys).not.toContain('game/games')
   })
