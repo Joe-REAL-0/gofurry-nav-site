@@ -99,3 +99,23 @@ Maintainer approval is pending. Review Chinese/English text, the appearance of
 existing high weights, mixed-script baselines, mobile labels/tabs and technical
 Mono values. This batch does not authorize weight convergence, a typography guard
 or a later batch. No remote CI or production rollout is claimed.
+
+## Gate A final family decision (2026-09-29)
+
+After manual comparison, the maintainer rejected Candidate B (static Lato 400/700)
+and selected Candidate A: **Manrope Variable + Noto Sans SC Variable**. This
+supersedes the initial Inter family choice above; the Batch A measurements remain
+historical Inter evidence, not Manrope delivery or Visual acceptance.
+
+The final runtime pins `@fontsource-variable/manrope` to `5.3.0` and loads only
+its normal `wght.css`. Noto Sans SC Variable remains at `5.3.0`. Lato's dependency
+and CSS imports are removed. Mono, Rating's Arial exception, authored weights,
+typography metrics, layout, style policy and Visual goldens remain unchanged.
+This decision freezes Gate A's family selection only; it does not authorize a
+later typography batch or approve/update Visual baselines.
+
+Restoration verification passed: frozen install, typecheck, lint, stylelint and
+production build. The rebuilt output contains five normal Manrope WOFF2 assets
+and no Lato font assets. Candidate B had not been committed; the restored runtime
+and lockfile exactly match the earlier Candidate A local commit. No Browser or
+Visual comparison was rerun for this focused restoration.
