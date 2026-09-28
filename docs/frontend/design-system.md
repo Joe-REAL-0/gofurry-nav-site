@@ -60,6 +60,42 @@ The layout-owned canvas defaults (`--gf-page-background` and
 keeps its existing behavior. [main.css](../../apps/cn/nav-web/app/assets/css/main.css)
 owns Tailwind bootstrap, browser reset and base helpers, not global theme tokens.
 
+## Typography roles (#126)
+
+Gate A's Primary Sans is Manrope Variable + Noto Sans SC Variable, selected through
+`--gf-font-sans`. Ordinary text inherits it, across both locales and themes.
+`--gf-font-mono` is the existing system Mono role for technical identities such as
+domains, URLs, IPs, DNS record values, raw headers, certificate fingerprints, code
+and commit SHAs. Normal metrics, percentages and latency values remain Sans;
+use `font-variant-numeric: tabular-nums` when numeric alignment is needed.
+Rating's Arial star glyph is an exact implementation exception, not a text role.
+
+| Weight | Role | Representative uses |
+| ---: | --- | --- |
+| 400 | Body | Body, descriptions, ordinary long copy |
+| 500 | Secondary | Metadata, labels, table column labels, review counts, helper feedback |
+| 600 | UI Emphasis | Buttons, chips, card/section titles, status values |
+| 700 | Strong Heading | Page/Hero/Modal titles, important result/news titles, primary scores |
+| 800 | Display only | Large Error code and Games rank display |
+
+Use literal values from this scale, without weight tokens, 650/750-style visual
+micro-adjustments or separate zh/en hierarchies. 800 is not an ordinary heading
+or small KPI weight. Datepicker headers/month selectors use 600; ordinary input
+and day values use 500. Rating's primary score uses 700 and its count uses 500.
+Existing standard weights outside the normalization scope retain their hierarchy.
+Do not alter size, line height, tracking or layout to imitate earlier screenshots.
+
+Stylelint owns the authored CSS/Less family, weight and shorthand guard. Preserve
+native controls' `font: inherit`; other font shorthand is prohibited. The only
+temporary legacy-weight boundary is #108's exact Insights appearance paths in the
+[contract](../../contracts/nav-web-frontend.md#typography-family-and-weight-contract-126).
+It does not relax family/shorthand or authorize Insights compensation. Tailwind's
+existing appearance policy remains the only utility-side guard.
+
+The phase-specific appearance notes below remain historical evidence. #126 Batch B
+supersedes their nonstandard weight values, without changing recorded font metrics
+or rewriting earlier acceptance results.
+
 ## Common directory semantic boundaries
 
 `app/components/common/` is a physical location, not a shared visual owner.

@@ -305,7 +305,7 @@ export async function assertSearchAppearance(scene: SearchScene, theme: 'light' 
   const card = page.locator('.search-result-page-slide:not([aria-hidden="true"]) .search-page-card').first()
   await expect(card).toHaveCSS('border-radius', '14.72px')
   await expect(card).toHaveCSS('background-color', theme === 'dark' ? 'rgba(226, 232, 240, 0.067)' : 'rgba(255, 250, 242, 0.42)')
-  await expect(card.locator('.search-page-title')).toHaveCSS('font-weight', '750')
+  await expect(card.locator('.search-page-title')).toHaveCSS('font-weight', '700')
   await expect(card.locator('.search-page-desc')).toHaveCSS('font-size', '12.48px')
   await expect(card.locator('.search-page-desc')).toHaveCSS('line-height', '16.848px')
   await expect(page.locator('.search-filter-button')).toHaveCSS('font-size', '14.4px')

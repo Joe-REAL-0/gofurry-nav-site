@@ -801,6 +801,41 @@ should explain its business role and why the global meaning does not fit.
 See the [design-system guide](../docs/frontend/design-system.md) for current
 repository examples; it is not a second token-value source.
 
+## Typography family and weight contract (#126)
+
+Gate A freezes Primary Sans as Manrope Variable + Noto Sans SC Variable through
+`--gf-font-sans`, and Technical Mono through `--gf-font-mono`, in the existing
+global token owner. Normal UI SHOULD inherit Sans. Explicit `font-family` values
+MUST use one of these tokens; raw business-owner family stacks are prohibited.
+`app/assets/styles/primitives/rating.less` alone MAY retain `Arial, sans-serif`
+for its star glyph implementation, not as a third text role.
+
+Normal authored `font-weight` MUST be 400 (Body), 500 (Secondary), 600 (UI
+Emphasis), 700 (Strong Heading) or 800 (Display only). Choose by actual UI role,
+not numeric proximity. 800 MUST NOT be used for ordinary controls, labels,
+section/card headings or small KPI values; retained Display owners are the large
+Error code and Games rank. Do not introduce weight tokens or locale-specific
+weight hierarchies. Tailwind does not own typography appearance; its existing
+appearance policy already covers `font-*`, `leading-*` and `tracking-*`.
+
+The existing Stylelint `declaration-property-value-allowed-list` enforces families,
+weights and `font: inherit` as the only allowed font shorthand. Do not introduce
+another typography scanner, plugin, debt manifest or Style Policy rule family.
+
+Issue #108 temporarily retains only its existing weight vocabulary:
+400/500/550/600/620/650/680/700/720/730/740/750/760/800. This override applies solely
+to `app/assets/styles/pages/insights.less` and
+`app/assets/styles/pages/insights/**/*.less`; it MUST be removed when #108 performs
+its semantic weight normalization. It grants no family or shorthand exception,
+no new intermediate values and no permission to compensate for shared primitive
+changes. Batch B does not directly edit those appearance files.
+
+Batch B changes weights only: the Gate A Fontsource packages/delivery, authored
+font size, line height, tracking, spacing/layout, style debt and Visual goldens
+remain unchanged. Historical migration pixel/weight notes below describe their
+original acceptance; this section supersedes their nonstandard weight values.
+Role examples belong in the [design system](../docs/frontend/design-system.md#typography-roles-126).
+
 ## Shared visual primitives and compound components
 
 Physical placement in `app/components/common/` MUST NOT imply shared visual

@@ -36,6 +36,14 @@ Accepted computed appearance takes priority over assumptions about utility class
 The layout/PublicPageBackground owns the canvas; Static/Legal roots are transparent.
 Never reintroduce `--gf-bg-page` or `gf-modal__toggle`.
 
+Typography families use `--gf-font-sans` / `--gf-font-mono`; the frozen Sans is
+Manrope Variable + Noto Sans SC Variable. Normal authored weights are only
+400/500/600/700/800, with 800 reserved for Display. Keep `font: inherit` for native
+controls; no other `font:` shorthand may bypass the family/weight guard.
+`primitives/rating.less` alone retains the Arial star-glyph exception. Stylelint's
+exact #108 Insights legacy-weight override is temporary and must not expand.
+See the contract and design system for role mapping; do not compensate with metrics.
+
 ## Preserve product boundaries
 
 P4 Stable/Common, P5 Nav and P6 Games appearance migrations are complete. Existing

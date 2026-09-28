@@ -354,7 +354,7 @@ export async function assertNewsAppearance(scene: GamesHomeScene) {
     'border-radius': '12.48px', 'box-shadow': shadow, 'backdrop-filter': 'blur(1px)',
     width: page.viewportSize()!.width < 640 ? '248px' : page.viewportSize()!.width < 1024 ? '312px' : '328px',
     'transition-property': 'background-color, border-color', 'transition-duration': '0.18s, 0.18s' })
-  await css(card.locator('.news-card__title'), { 'font-size': '16px', 'line-height': '21.12px', 'font-weight': '750',
+  await css(card.locator('.news-card__title'), { 'font-size': '16px', 'line-height': '21.12px', 'font-weight': '700',
     color: strong, '-webkit-line-clamp': '2', 'min-height': '40.8px' })
   await css(card.locator('.news-card__summary'), { 'font-size': '14px', 'line-height': '20.3px', color: muted,
     '-webkit-line-clamp': '3', 'min-height': '58.4px' })

@@ -2,6 +2,24 @@ import postcss from 'postcss'
 import postcssHtml from 'postcss-html'
 import postcssLess from 'postcss-less'
 
+const typographyValues = {
+  'font-family': ['var(--gf-font-sans)', 'var(--gf-font-mono)'],
+  'font-weight': ['400', '500', '600', '700', '800'],
+  font: ['inherit'],
+}
+
+const ratingTypographyValues = {
+  ...typographyValues,
+  'font-family': [...typographyValues['font-family'], 'Arial, sans-serif'],
+}
+
+// Temporary #108 typography exception. Freeze the existing Insights weight
+// vocabulary until its dedicated UI/UX work performs semantic normalization.
+const insightsTypographyValues = {
+  ...typographyValues,
+  'font-weight': ['400', '500', '550', '600', '620', '650', '680', '700', '720', '730', '740', '750', '760', '800'],
+}
+
 export default {
   extends: ['stylelint-config-recommended', 'stylelint-config-recommended-vue'],
   overrides: [
@@ -21,6 +39,18 @@ export default {
         // SFC styles support both Vue v-bind() and Less mixin variable references.
         'declaration-property-value-no-unknown': [true, { ignoreProperties: { '/.*/': '/v-bind\\(.+\\)|@/' } }],
       },
+    },
+    {
+      files: ['app/assets/styles/primitives/rating.less'],
+      // Arial is the star glyph implementation, not a business text family.
+      rules: { 'declaration-property-value-allowed-list': ratingTypographyValues },
+    },
+    {
+      files: [
+        'app/assets/styles/pages/insights.less',
+        'app/assets/styles/pages/insights/**/*.less',
+      ],
+      rules: { 'declaration-property-value-allowed-list': insightsTypographyValues },
     },
     {
       files: ['app/components/common/MobileBottomTabBar.vue'],
@@ -53,6 +83,7 @@ export default {
     },
   ],
   rules: {
+    'declaration-property-value-allowed-list': typographyValues,
     // Cascade ordering across nested domains is migration work, not P1 correctness.
     'no-descending-specificity': null,
     // Tailwind v4 directives are compiled by the existing Vite integration.
