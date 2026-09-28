@@ -66,7 +66,12 @@ export default defineNuxtConfig({
     appManifest: false
   },
   modules: ['@pinia/nuxt', '@nuxtjs/i18n'],
-  css: ['~/assets/css/main.css', '~/assets/styles/index.less'],
+  css: [
+    '@fontsource-variable/inter/wght.css',
+    '@fontsource-variable/noto-sans-sc/wght.css',
+    '~/assets/css/main.css',
+    '~/assets/styles/index.less',
+  ],
   vite: {
     ...(process.env.GOFURRY_FIXTURE_DEV === '1' ? { cacheDir: '.nuxt/fixture/vite' } : {}),
     plugins: [tailwindcss()],

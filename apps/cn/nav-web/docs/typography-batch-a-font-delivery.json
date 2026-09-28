@@ -1,0 +1,1372 @@
+{
+  "batch": "#126 Batch A",
+  "capturedOn": "2026-09-29",
+  "runtime": "Production Nitro, pinned Linux Playwright 1.60.0 / Chromium 148.0.7778.96 / Node 24",
+  "method": "Fresh context per sample; CDP Network.setCacheDisabled=true and setBypassServiceWorker=true before navigation. Font readiness uses document.fonts.ready and two RAFs. transferBytes is Resource Timing transferSize; encodedBytes is encodedBodySize. Each local fixture owns data and strict diagnostics. Loopback ports are ephemeral fixture origins, not a production host.",
+  "samples": [
+    {
+      "label": "games-zh",
+      "page": "http://127.0.0.1:38409/games",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 14,
+      "transferBytes": 820240,
+      "encodedBytes": 816040,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-105-wght-normal.BFoiJwz2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 62128,
+          "encodedBytes": 61828,
+          "decodedBytes": 61828
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-112-wght-normal.CiZxJMyY.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 57948,
+          "encodedBytes": 57648,
+          "decodedBytes": 57648
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-109-wght-normal.CnjNbNmw.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 60672,
+          "encodedBytes": 60372,
+          "decodedBytes": 60372
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-106-wght-normal.D6uUHw3w.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 62936,
+          "encodedBytes": 62636,
+          "decodedBytes": 62636
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "games-zh",
+      "page": "http://127.0.0.1:38409/games",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 13,
+      "transferBytes": 758112,
+      "encodedBytes": 754212,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-112-wght-normal.CiZxJMyY.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 57948,
+          "encodedBytes": 57648,
+          "decodedBytes": 57648
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-109-wght-normal.CnjNbNmw.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 60672,
+          "encodedBytes": 60372,
+          "decodedBytes": 60372
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-106-wght-normal.D6uUHw3w.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 62936,
+          "encodedBytes": 62636,
+          "decodedBytes": 62636
+        },
+        {
+          "url": "http://127.0.0.1:38409/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:38409",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "home-en",
+      "page": "http://127.0.0.1:37033/en",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 4,
+      "transferBytes": 224912,
+      "encodedBytes": 223712,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "home-en",
+      "page": "http://127.0.0.1:37033/en",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 4,
+      "transferBytes": 224912,
+      "encodedBytes": 223712,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "home-zh",
+      "page": "http://127.0.0.1:37033/",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 12,
+      "transferBytes": 696276,
+      "encodedBytes": 692676,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-112-wght-normal.CiZxJMyY.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 57948,
+          "encodedBytes": 57648,
+          "decodedBytes": 57648
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-110-wght-normal.D2JBr045.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 61772,
+          "encodedBytes": 61472,
+          "decodedBytes": 61472
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "home-zh",
+      "page": "http://127.0.0.1:37033/",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 12,
+      "transferBytes": 696276,
+      "encodedBytes": 692676,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-112-wght-normal.CiZxJMyY.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 57948,
+          "encodedBytes": 57648,
+          "decodedBytes": 57648
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-110-wght-normal.D2JBr045.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 61772,
+          "encodedBytes": 61472,
+          "decodedBytes": 61472
+        },
+        {
+          "url": "http://127.0.0.1:37033/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:37033",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "insights-zh",
+      "page": "http://127.0.0.1:36773/insights",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 13,
+      "transferBytes": 708644,
+      "encodedBytes": 704744,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-90-wght-normal.BWcrRNoG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 9644,
+          "encodedBytes": 9344,
+          "decodedBytes": 9344
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-109-wght-normal.CnjNbNmw.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 60672,
+          "encodedBytes": 60372,
+          "decodedBytes": 60372
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-110-wght-normal.D2JBr045.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 61772,
+          "encodedBytes": 61472,
+          "decodedBytes": 61472
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "insights-zh",
+      "page": "http://127.0.0.1:36773/insights",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 13,
+      "transferBytes": 708644,
+      "encodedBytes": 704744,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-90-wght-normal.BWcrRNoG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 9644,
+          "encodedBytes": 9344,
+          "decodedBytes": 9344
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-109-wght-normal.CnjNbNmw.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 60672,
+          "encodedBytes": 60372,
+          "decodedBytes": 60372
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-110-wght-normal.D2JBr045.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 61772,
+          "encodedBytes": 61472,
+          "decodedBytes": 61472
+        },
+        {
+          "url": "http://127.0.0.1:36773/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:36773",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "site-en",
+      "page": "http://127.0.0.1:33347/en/site/41",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 1,
+      "transferBytes": 48556,
+      "encodedBytes": 48256,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "site-en",
+      "page": "http://127.0.0.1:33347/en/site/41",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 1,
+      "transferBytes": 48556,
+      "encodedBytes": 48256,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "site-zh",
+      "page": "http://127.0.0.1:33347/site/41",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 14,
+      "transferBytes": 826788,
+      "encodedBytes": 822588,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-108-wght-normal.7aXvqIa2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 64852,
+          "encodedBytes": 64552,
+          "decodedBytes": 64552
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-106-wght-normal.D6uUHw3w.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 62936,
+          "encodedBytes": 62636,
+          "decodedBytes": 62636
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-109-wght-normal.CnjNbNmw.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 60672,
+          "encodedBytes": 60372,
+          "decodedBytes": 60372
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-110-wght-normal.D2JBr045.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 61772,
+          "encodedBytes": 61472,
+          "decodedBytes": 61472
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "site-zh",
+      "page": "http://127.0.0.1:33347/site/41",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 14,
+      "transferBytes": 826788,
+      "encodedBytes": 822588,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-108-wght-normal.7aXvqIa2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 64852,
+          "encodedBytes": 64552,
+          "decodedBytes": 64552
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-106-wght-normal.D6uUHw3w.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 62936,
+          "encodedBytes": 62636,
+          "decodedBytes": 62636
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-109-wght-normal.CnjNbNmw.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 60672,
+          "encodedBytes": 60372,
+          "decodedBytes": 60372
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-110-wght-normal.D2JBr045.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 61772,
+          "encodedBytes": 61472,
+          "decodedBytes": 61472
+        },
+        {
+          "url": "http://127.0.0.1:33347/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:33347",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "updates-zh",
+      "page": "http://127.0.0.1:35055/updates",
+      "width": 1440,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 12,
+      "transferBytes": 699356,
+      "encodedBytes": 695756,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-112-wght-normal.CiZxJMyY.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 57948,
+          "encodedBytes": 57648,
+          "decodedBytes": 57648
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-108-wght-normal.7aXvqIa2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 64852,
+          "encodedBytes": 64552,
+          "decodedBytes": 64552
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    },
+    {
+      "label": "updates-zh",
+      "page": "http://127.0.0.1:35055/updates",
+      "width": 390,
+      "cacheDisabled": true,
+      "serviceWorkerBypassed": true,
+      "count": 12,
+      "transferBytes": 699356,
+      "encodedBytes": 695756,
+      "externalFonts": 0,
+      "fonts": [
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/inter-latin-wght-normal.Dx4kXJAl.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 48556,
+          "encodedBytes": 48256,
+          "decodedBytes": 48256
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-119-wght-normal.BfzSEbFz.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 77100,
+          "encodedBytes": 76800,
+          "decodedBytes": 76800
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-118-wght-normal.BPEb0gM9.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 46492,
+          "encodedBytes": 46192,
+          "decodedBytes": 46192
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-117-wght-normal.Dsz3vkzU.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 52764,
+          "encodedBytes": 52464,
+          "decodedBytes": 52464
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-116-wght-normal.vdFVzbO2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 53284,
+          "encodedBytes": 52984,
+          "decodedBytes": 52984
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-111-wght-normal.ClFr5QXM.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 62964,
+          "encodedBytes": 62664,
+          "decodedBytes": 62664
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-115-wght-normal.BN__2iBG.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 56808,
+          "encodedBytes": 56508,
+          "decodedBytes": 56508
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-113-wght-normal.OgQXOX6x.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 58948,
+          "encodedBytes": 58648,
+          "decodedBytes": 58648
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-114-wght-normal.CRH9SDZu.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 58264,
+          "encodedBytes": 57964,
+          "decodedBytes": 57964
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-112-wght-normal.CiZxJMyY.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 57948,
+          "encodedBytes": 57648,
+          "decodedBytes": 57648
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-108-wght-normal.7aXvqIa2.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 64852,
+          "encodedBytes": 64552,
+          "decodedBytes": 64552
+        },
+        {
+          "url": "http://127.0.0.1:35055/_nuxt/noto-sans-sc-107-wght-normal.kFQzJDLH.woff2",
+          "resourceType": "font",
+          "host": "127.0.0.1:35055",
+          "transferBytes": 61376,
+          "encodedBytes": 61076,
+          "decodedBytes": 61076
+        }
+      ],
+      "htmlFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "bodyFont": "\"Inter Variable\", \"Noto Sans SC Variable\", system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+      "overflow": 0,
+      "preloads": [],
+      "clippedControls": []
+    }
+  ]
+}
