@@ -5,7 +5,7 @@ import { authoritativePageStatus } from '../app/utils/authoritativePageError.ts'
 import { parsePositiveEntityRouteId } from '../app/utils/routeIdentity.ts'
 import { siteEntityPath, siteTargetPath } from '../app/utils/siteRoutes.ts'
 import { buildSiteGroupSeo, MAX_DESCRIPTION_LENGTH } from '../app/utils/seo.ts'
-import { parseGameInventory, parseSiteGroupInventory, parseSiteInventory } from '../server/utils/sitemapInventory.ts'
+import { parseGameInventory, parseSiteGroupInventory, parseSiteInventory, parseUpdateInventory } from '../server/utils/sitemapInventory.ts'
 
 for (const value of ['1', '110', '999999']) {
   assert(parsePositiveEntityRouteId(value) === value, `valid entity ID ${value} was rejected`)
@@ -48,12 +48,16 @@ for (const locale of ['zh', 'en']) {
 assert(parseSiteInventory({ code: 1, data: { items: [{ id: 1, domains: ['example.com'] }] } })[0].id === '1', 'Nav Sites inventory rejected valid data')
 assert(parseSiteGroupInventory({ code: 1, data: [{ id: '2' }] })[0].id === '2', 'Site Groups inventory rejected valid data')
 assert(parseGameInventory({ code: 1, data: [{ game_id: '3' }] })[0].id === '3', 'Games inventory rejected valid data')
+assert(parseUpdateInventory({ code: 1, data: { schema_version: 1, state: 'ready', items: [{ id: 109 }] } })[0].id === '109', 'Release inventory rejected valid data')
+assert(authoritativePageStatus({ statusCode: 404 }, 'update') === 404, 'Release HTTP 404 was not preserved')
 
 for (const invalid of [
   () => parseSiteInventory({ code: 0, data: { items: [] } }),
   () => parseSiteInventory({ code: 1, data: [] }),
   () => parseSiteGroupInventory({ code: 1, data: {} }),
   () => parseGameInventory({ code: 1, data: [{ name: 'missing id' }] }),
+  () => parseUpdateInventory({ code: 1, data: { schema_version: 1, state: 'error', items: [] } }),
+  () => parseUpdateInventory({ code: 1, data: { schema_version: 1, state: 'ready', items: [{ id: '../bad' }] } }),
 ]) {
   assertThrows(invalid, 'invalid sitemap inventory did not fail closed')
 }

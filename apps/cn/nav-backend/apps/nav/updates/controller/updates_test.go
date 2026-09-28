@@ -23,10 +23,8 @@ func TestGetUpdatesReturnsV2EnvelopeWithoutLegacyURL(t *testing.T) {
 		Items: []models.UpdateNoticeItem{{
 			ID:          1,
 			Title:       "公告重构",
-			Body:        "告别 CDN markdown",
+			Summary:     "发布摘要",
 			PublishedAt: now,
-			CreateTime:  now,
-			UpdateTime:  now,
 		}},
 	}}
 	restore := setUpdatesReaderForTest(reader)
@@ -51,11 +49,25 @@ func TestGetUpdatesReturnsV2EnvelopeWithoutLegacyURL(t *testing.T) {
 		t.Fatalf("unexpected code: %d", body.Code)
 	}
 	raw := string(body.Data)
-	if !strings.Contains(raw, `"state":"ready"`) || !strings.Contains(raw, `"body":"告别 CDN markdown"`) {
+	if !strings.Contains(raw, `"state":"ready"`) || !strings.Contains(raw, `"summary":"发布摘要"`) {
 		t.Fatalf("unexpected data: %s", raw)
 	}
 	if strings.Contains(raw, `"url"`) {
 		t.Fatalf("legacy url leaked into updates response: %s", raw)
+	}
+	var projection struct {
+		Items []map[string]json.RawMessage `json:"items"`
+	}
+	if err := json.Unmarshal(body.Data, &projection); err != nil {
+		t.Fatal(err)
+	}
+	if len(projection.Items) != 1 || len(projection.Items[0]) != 6 {
+		t.Fatalf("index projection: %s", raw)
+	}
+	for _, field := range []string{"id", "title", "summary", "version", "commit_sha", "published_at"} {
+		if _, ok := projection.Items[0][field]; !ok {
+			t.Fatalf("missing index field %s", field)
+		}
 	}
 	if reader.lastLang != "zh" {
 		t.Fatalf("expected default zh lang, got %q", reader.lastLang)

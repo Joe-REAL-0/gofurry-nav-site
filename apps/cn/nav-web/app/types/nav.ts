@@ -428,13 +428,13 @@ export interface NavSiteIndexResponse {
 
 export type NavUpdatesState = 'ready' | 'empty' | 'error';
 
-export interface NavUpdateNotice {
+export interface NavUpdateIndexItem {
     id: number;
     title: string;
-    body: string;
+    summary: string;
+    version: string | null;
+    commit_sha: string | null;
     published_at: string;
-    create_time: string;
-    update_time: string;
 }
 
 export interface NavUpdatesResponse {
@@ -442,7 +442,22 @@ export interface NavUpdatesResponse {
     generated_at: string;
     state: NavUpdatesState;
     reason_messages?: string[];
-    items: NavUpdateNotice[];
+    items: NavUpdateIndexItem[];
+}
+
+export interface NavUpdateDetail extends NavUpdateIndexItem {
+    body: string;
+}
+
+export type NavUpdateNeighbor = Pick<NavUpdateIndexItem, 'id' | 'title' | 'version' | 'published_at'>;
+
+export interface NavUpdateDetailResponse {
+    schema_version: number;
+    generated_at: string;
+    state: 'ready';
+    item: NavUpdateDetail;
+    previous: NavUpdateNeighbor | null;
+    next: NavUpdateNeighbor | null;
 }
 
 export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili' | 'duckduckgo';

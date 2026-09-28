@@ -41,8 +41,12 @@ func testReleaseNoteVisibilityAndNeighbors(t *testing.T, ctx context.Context, po
 			t.Fatalf("order: %+v", index.Items)
 		}
 	}
-	if index.Items[3].Title != "最早" || index.Items[3].Summary != "Summary" || index.Items[3].Body != "正文" {
-		t.Fatal("locale/body compatibility")
+	if index.Items[3].Title != "最早" || index.Items[3].Summary != "Summary" {
+		t.Fatal("index locale metadata")
+	}
+	oldest, err := svc.GetUpdateDetail(1, "en")
+	if err != nil || oldest.Item.Body != "正文" {
+		t.Fatalf("detail localized body: %+v, %v", oldest, err)
 	}
 	for _, id := range []int64{5, 6, 7, 8, 9, 404} {
 		if _, err := svc.GetUpdateDetail(id, "zh"); !errors.Is(err, updatesservice.ErrNotFound) {

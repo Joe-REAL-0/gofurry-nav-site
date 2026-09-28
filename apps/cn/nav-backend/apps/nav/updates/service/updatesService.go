@@ -96,15 +96,12 @@ func (svc *updatesService) GetUpdates(lang string) models.UpdatesResponse {
 	response.State = models.UpdatesStateReady
 	response.Items = make([]models.UpdateNoticeItem, 0, len(notices))
 	for _, notice := range notices {
-		title, body := localizeNotice(notice, lang)
+		title, _ := localizeNotice(notice, lang)
 		response.Items = append(response.Items, models.UpdateNoticeItem{
 			Summary: localizeSummary(notice, lang), Version: notice.Version, CommitSHA: notice.CommitSHA,
 			ID:          notice.ID,
 			Title:       title,
-			Body:        body,
 			PublishedAt: notice.PublishedAt,
-			CreateTime:  notice.CreateTime,
-			UpdateTime:  notice.UpdateTime,
 		})
 	}
 	return response
@@ -149,7 +146,18 @@ var ErrNotFound = errors.New("release note not found")
 func noticeModel(row navsqlc.GfnNavUpdateNotice) models.UpdateNotice {
 	return models.UpdateNotice{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Body: row.Body, BodyEn: row.BodyEn,
 		Summary: row.Summary, SummaryEn: row.SummaryEn, Version: row.Version, CommitSHA: row.CommitSha,
-		PublishedAt: row.PublishedAt.Time, CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time, Deleted: row.Deleted}
+		PublishedAt: releasePublicationTime(row.PublishedAt.Time), CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time, Deleted: row.Deleted}
+}
+
+// Release dates are contemporary China-site wall timestamps, not UTC instants.
+// Attach their UTC+8 offset before JSON serialization; never shift stored fields.
+var releasePublicationZone = time.FixedZone("Asia/Shanghai", 8*60*60)
+
+func releasePublicationTime(wall time.Time) time.Time {
+	if wall.IsZero() {
+		return wall
+	}
+	return time.Date(wall.Year(), wall.Month(), wall.Day(), wall.Hour(), wall.Minute(), wall.Second(), wall.Nanosecond(), releasePublicationZone)
 }
 
 func (store *sqlcUpdateNoticeStore) GetUpdateNotice(id int64) (models.UpdateNotice, *models.UpdateNotice, *models.UpdateNotice, error) {

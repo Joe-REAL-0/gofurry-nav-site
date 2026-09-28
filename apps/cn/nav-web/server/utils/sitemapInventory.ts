@@ -2,6 +2,22 @@ export interface SitemapEntity {
   id: string
 }
 
+export function parseUpdateInventory(response: unknown): SitemapEntity[] {
+  const data = asRecord(successData(response, 'Release Notes'))
+  if (data.schema_version !== 1 || !['ready', 'empty'].includes(data.state)
+    || !Array.isArray(data.items) || (data.state === 'empty' && data.items.length > 0)
+    || (data.state === 'ready' && data.items.length === 0)) {
+    throw new Error('Release Notes inventory has an invalid data shape')
+  }
+  return parseEntities(data.items, 'Release Notes', item => {
+    const id = asRecord(item).id
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) {
+      throw new Error('Release Notes inventory has an invalid identity')
+    }
+    return id
+  })
+}
+
 export function parseSiteInventory(response: unknown): SitemapEntity[] {
   const data = successData(response, 'Nav Sites')
   const record = asRecord(data)

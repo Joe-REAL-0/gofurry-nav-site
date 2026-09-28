@@ -1,6 +1,8 @@
-export type AuthoritativeEntity = 'game' | 'site'
+export type AuthoritativeEntity = 'game' | 'site' | 'update'
 
 const notFoundMessages: Record<AuthoritativeEntity, string[]> = {
+  // Release Notes use authoritative HTTP status, with no legacy message matching.
+  update: [],
   game: [
     '查询站内游戏主档案失败: game not found',
     '目标游戏不存在或缺少 v2 详情',

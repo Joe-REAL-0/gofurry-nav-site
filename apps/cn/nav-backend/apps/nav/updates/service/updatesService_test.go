@@ -15,8 +15,9 @@ func TestGetUpdatesReturnsReadyItems(t *testing.T) {
 	svc := newUpdatesService(&fakeUpdateNoticeStore{
 		items: []models.UpdateNotice{{
 			ID:          7,
-			Title:       "新时间线",
-			TitleEn:     "Timeline refresh",
+			Title:       "发布记录",
+			Summary:     "发布摘要",
+			TitleEn:     "Release notes",
 			Body:        "更新公告改为轻量正文",
 			BodyEn:      "The updates page now uses plain text notices.",
 			PublishedAt: publishedAt,
@@ -33,7 +34,7 @@ func TestGetUpdatesReturnsReadyItems(t *testing.T) {
 	if response.State != models.UpdatesStateReady || len(response.Items) != 1 {
 		t.Fatalf("expected ready item, got %#v", response)
 	}
-	if response.Items[0].Title != "新时间线" || response.Items[0].Body == "" {
+	if response.Items[0].Title != "发布记录" || response.Items[0].Summary != "发布摘要" {
 		t.Fatalf("unexpected item: %#v", response.Items[0])
 	}
 }
@@ -68,12 +69,13 @@ func TestGetUpdatesReturnsEnglishCopy(t *testing.T) {
 			TitleEn:     "English title",
 			Body:        "中文正文",
 			BodyEn:      "English body",
+			SummaryEn:   "English summary",
 			PublishedAt: time.Now(),
 		}},
 	}, time.Now)
 
 	response := svc.GetUpdates("en")
-	if response.Items[0].Title != "English title" || response.Items[0].Body != "English body" {
+	if response.Items[0].Title != "English title" || response.Items[0].Summary != "English summary" {
 		t.Fatalf("unexpected localized item: %#v", response.Items[0])
 	}
 }
@@ -115,8 +117,8 @@ func TestReleaseNoteIndependentLocaleFallbackAndDetailProjection(t *testing.T) {
 		if item.Title != "标题" || item.Summary != "Summary" || item.Body != "正文" || *item.Version != version || *item.CommitSHA != sha {
 			t.Fatalf("independent fallback failed: %+v", item)
 		}
-		if index.Items[0].Body != item.Body || index.Items[0].Summary != item.Summary {
-			t.Fatal("P1 index body compatibility lost")
+		if index.Items[0].Title != item.Title || index.Items[0].Summary != item.Summary {
+			t.Fatal("index/detail localized metadata differ")
 		}
 		if detail.Previous != nil || detail.Next != nil {
 			t.Fatal("empty neighbors must be null")

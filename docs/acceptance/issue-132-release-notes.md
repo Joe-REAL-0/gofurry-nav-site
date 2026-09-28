@@ -116,3 +116,128 @@ pnpm run build
 P2 is locally ready for P3. P3 was not started. This record does not claim remote
 CI or maintainer visual acceptance for P2; normal Admin page review can accompany
 the final #132 acceptance.
+
+## P3: Public Release Notes and final closure — 2026-09-28
+
+This final phase supersedes P1's transitional index body and the historical Updates
+Timeline contract. P1/P2 stage records above retain their original evidence. There
+is no P4, new lifecycle, schema migration, permission, media library or upload.
+
+### Final ownership
+
+- `/updates` and `/en/updates`: editorial Latest emphasis, optional metadata,
+  complete returned history grouped by China-site month; no body-derived summary,
+  accordion, client pagination or load more.
+- `/updates/:id` and `/en/updates/:id`: SSR sanitized Markdown, optional release
+  metadata, full-SHA GitHub link, older `previous` / newer `next` links, locale
+  identity preservation and authoritative HTTP 404/503.
+- Public list contains exactly six fields: `id/title/summary/version/commit_sha/
+  published_at`. Detail continues to own body. SQL/sqlc/lifecycle are unchanged.
+- `updateMarkdown.ts` and `UpdateMarkdown.vue` own the sole safe HTML boundary;
+  all 37 shared P2 Markdown/security cases pass using exactly markdown-it 15.0.2
+  and sanitize-html 2.17.7. Admin implementation/dependencies remain unchanged.
+- Existing `useLocaleHead` owns canonical/hreflang. Detail uses localized title,
+  summary/fallback description, article OG URL/type and publication metadata.
+  No JSON-LD or body-derived SEO is added.
+- Sitemap adds both locales from the public Chinese Release Notes inventory;
+  unavailable/malformed inventory fails closed. The existing 100-item endpoint
+  cap remains a documented future inventory boundary.
+
+### Proven P1 defect corrected
+
+A focused regression first reproduced an eight-hour publication display shift:
+pgx's zone-less timestamp fields were serialized with UTC `Z`, despite the domain
+using China wall time. The shared public projection now attaches UTC+8 without
+shifting calendar fields. Index/detail/neighbors return the same correct instant.
+The regression passed after the fix. No stored date, SQL predicate, ordering,
+Admin publication behavior or migration changed.
+
+### Retirement / style audit
+
+Consumer-audited Timeline Summary/Entry/YearGroup components, both divider SVGs,
+year/load-more runtime, obsolete date helpers, unused service re-export, Timeline
+CSS and Browser/Visual assumptions are deleted. No hidden Timeline clone remains.
+Unrelated Insight timelines and the global NavBar/Footer/background stay intact.
+`frontend-style-debt.json` and ESLint suppressions are unchanged: new Updates debt
+is zero; only existing ambient raw 75 and #108 important 5 remain.
+
+### Visual inventory
+
+`tests/browser/visual/updates-page.spec.ts`, using the shared deterministic
+`fixtures/updates.ts`, owns exactly these eight root captures:
+
+- `updates-light-desktop.png`
+- `updates-dark-desktop.png`
+- `updates-light-mobile.png`
+- `updates-dark-mobile.png`
+- `update-detail-light-desktop.png`
+- `update-detail-dark-desktop.png`
+- `update-detail-light-mobile.png`
+- `update-detail-dark-mobile.png`
+
+Viewports are 1440×900 and 390×900. The complete root capture includes the article's
+Markdown, local image and fixed neighbors. Local time/data/media, fresh CDN
+routing diagnostics, production Nitro SSR/hydration, semantic request accounting,
+fonts/images/finite-animation readiness, focus blur and no-overflow checks are
+shared across the test owner. No external service, arbitrary sleep or retry is
+used. Only unrelated fixed tools are hidden as in the prior Visual owner.
+
+Generation was scoped to this spec in the digest-pinned Linux/Node 24/Playwright
+1.60.0 image. Two subsequent independent scoped compare runs passed (8 each).
+Only these four replaced Index PNGs and four new Article PNGs change; no unrelated
+golden is updated. Automated comparison is not maintainer visual approval.
+
+### Local verification
+
+Passed from Nav Web:
+
+```text
+pnpm install --frozen-lockfile
+pnpm run lint
+pnpm run stylelint
+pnpm run style:policy:test
+pnpm run style:policy
+pnpm run typecheck
+pnpm run test:unit
+pnpm run test:nuxt
+pnpm run insights:semantics
+pnpm run seo:recovery:test
+pnpm run build
+```
+
+- Unit: 16 files / 357 tests, including 37 shared Markdown cases plus metadata,
+  calendar grouping, SEO/status and fail-closed inventory coverage.
+- Nuxt: 6 files / 21 tests, including the real sanitized component boundary and
+  reactive Markdown replacement.
+- Policy tooling: 75 tests; measured debt unchanged.
+- Focused Updates Browser: 24 cases covering locale/theme/device, single SSR API
+  calls without hydration duplication, navigation, legacy optional metadata,
+  local error recovery, 404/503 and real locale switching.
+- Focused SEO Browser: three sitemap cases cover canonical release inventory and
+  failures of existing/Updates inventory; all pass.
+- Backend: `go test ./apps/nav/updates/... ./routers -count=1` passes, including
+  exact public projection and the reproduced publication-time defect. The Nav
+  persistence test owner also compiles (`go test ./apps/nav/navPage/dao -run '^$'`);
+  its body assertion now correctly belongs to detail, not the retired list body.
+  No claim of a new local PostgreSQL integration run is made. No SQL/sqlc changed.
+
+No complete repository Browser suite or unrelated Visual update was run locally.
+Build retains existing third-party chunk/circular dependency advisories.
+
+### Remote and maintainer gates
+
+Fast, Manual Full Regression and Manual Visual are separate #134 gates. Local
+results do not establish remote acceptance. Dispatch/current-code status must be
+checked in Actions; this committed record does not predeclare remote success.
+
+Maintainer final review is **pending**, intentionally combined across P1–P3:
+
+- Admin: Draft, zh/en, toolbar/preview, Save, Publish Now, Schedule, Unpublish.
+- Index: Timeline absent, Latest hierarchy, history density/months, both themes
+  and Desktop/Mobile.
+- Detail: reading width, Markdown typography/code/quote/image, metadata/commit,
+  older/newer and locale navigation.
+
+Implementation is ready for this combined review. #132 final closure still
+requires the selected current-code remote gates and explicit maintainer approval;
+no automatic closure or P4 is authorized by this record.

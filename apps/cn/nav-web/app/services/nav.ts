@@ -10,6 +10,7 @@ import type {
   NavSiteGroupPageResponse,
   NavSiteIndexResponse,
   NavUpdatesResponse,
+  NavUpdateDetailResponse,
   SayingModel,
   Site,
   SiteViewResponse,
@@ -82,6 +83,10 @@ export function getSearchSuggestion(
 
 export function getNavUpdates(lang: 'zh' | 'en'): Promise<NavUpdatesResponse> {
   return useApi('navV2')('/nav/updates', { query: { lang } })
+}
+
+export function getNavUpdateDetail(id: string, lang: 'zh' | 'en'): Promise<NavUpdateDetailResponse> {
+  return useApi('navV2')(`/nav/updates/${encodeURIComponent(id)}`, { query: { lang } })
 }
 
 export function getNavInsightsOverview(): Promise<InsightOverview> {

@@ -1,10 +1,10 @@
 # Release Notes — Issue #132
 
-P1 establishes the GFN domain and public/Admin API contracts. P2 adds the dedicated
-Admin Release Workspace and safe local Markdown authoring. The P3 public
-index/article UI is still pending; the existing public Timeline continues to
-consume transitional index bodies. P1 alone was not a deployable finished Release
-Notes feature; the dedicated P2 editor now supplies its publishing controls.
+P1 establishes the GFN domain and public/Admin API contracts. P2 provides the
+Admin Release Workspace and safe Markdown authoring. P3 completes the editorial
+public index and SSR articles, retires the Timeline and transitional list body,
+and owns SEO/sitemap plus Functional/Visual acceptance. Final remote and maintainer
+review status is recorded separately in the [acceptance ledger](acceptance/issue-132-release-notes.md).
 
 ## Storage and publication
 
@@ -25,6 +25,10 @@ needed. Public SQL captures one database clock per request using
 `CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai'`. Admin parses unzoned values in
 the same zone and converts offset-bearing values to it. This avoids dependence
 on the PostgreSQL session timezone without a repository-wide timestamp change.
+P3 corrects one P1 serialization defect: pgx returns zone-less calendar fields;
+the public projection now attaches their China-site UTC+8 offset instead of
+mislabeling them `Z`. Index, detail and neighbors share that projection. Stored
+values, SQL visibility and publication ordering are unchanged.
 
 Only non-deleted, published records with a non-null timestamp at or before that
 clock are public. Draft/scheduled/deleted/missing detail requests all return 404.
@@ -36,10 +40,9 @@ Title, summary and body independently fall back to the other language; version
 and SHA are not localized.
 
 - `GET /api/v2/nav/updates`: existing schema-version-1 ready/empty/error envelope,
-  ordered by `published_at DESC, id DESC` (existing limit 100). Adds `summary`,
-  `version`, `commit_sha`. **Body and the existing index timestamps remain P1
-  compatibility fields** because today's Timeline still consumes the index body.
-  P3 owns removal of transitional index fields with its UI migration.
+  ordered by `published_at DESC, id DESC` (existing limit 100). Items contain only
+  `id`, `title`, `summary`, `version`, `commit_sha`, `published_at`. P3 removes the
+  P1 transitional `body`, `create_time` and `update_time` fields. Detail owns body.
 - `GET /api/v2/nav/updates/:id`: schema version 1, generated time, `state=ready`,
   `item`, `previous`, `next`. Item contains only ID, localized title/summary/body,
   version, SHA and publication time. Neighbors contain ID/title/version/time or
@@ -122,3 +125,41 @@ and local Edit/Preview switching on narrow layouts. Only sanitized renderer
 output enters the preview. Dependencies, headings, links/images, allowlists and
 shared P3 fixtures are defined in [the Markdown contract](../contracts/update-markdown.md).
 No P2 database, public-page, asset-picker or upload changes are required.
+
+## Public experience (P3)
+
+`/updates` and `/en/updates` render the current locale's index once on SSR;
+hydration reuses that payload. Latest has its own reading surface. All remaining
+rows are grouped by calendar month in Asia/Shanghai, without pagination, accordion
+or load-more state. Missing summary/version/commit is omitted, never inferred from
+body. Historical plain-text releases remain valid Markdown on their detail pages.
+
+`/updates/:id` and `/en/updates/:id` fetch only detail, SSR the sanitized article,
+and preserve `previous=older`, `next=newer`. Hidden/missing detail produces HTTP
+404; upstream failure produces 503. Locale changes preserve the ID. One commit
+helper abbreviates the displayed SHA but links the full SHA with safe external
+attributes. Publication metadata remains evidence, not a client-generated date.
+
+Public Markdown installs the exact P2 parser/sanitizer versions and consumes every
+shared semantic/security fixture. Its single `updateMarkdown.ts` renderer is the
+only source for `UpdateMarkdown.vue` HTML. No media service, syntax highlighting,
+new lifecycle, schema migration or permission is introduced.
+
+Existing app-level `useLocaleHead({ seo: true })` owns canonical/hreflang. Index
+copy is localized. Detail title uses optional version plus title; description is
+summary or a localized fixed fallback, never parsed body. Detail uses article OG
+metadata, its own OG URL and publication time; there is no JSON-LD.
+
+Sitemap fetches the public Chinese index alongside Sites, Site Groups and Games.
+The strict Release Notes inventory parser adds both localized detail URLs and
+fails closed with HTTP 503 for unavailable/malformed inventory. The existing
+100-release index limit also limits sitemap release coverage; exceeding that
+inventory requires future API work, not an additional endpoint in P3.
+
+`tests/browser/regression/updates.spec.ts` owns Index/Article SSR, request accounting,
+locale, metadata/Markdown integration, navigation, failure states and responsive
+containment. `visual/updates-page.spec.ts` owns exactly eight pinned Linux goldens:
+`updates-{light,dark}-{desktop,mobile}.png` and
+`update-detail-{light,dark}-{desktop,mobile}.png`. Old Timeline components, SVGs,
+runtime state and selectors are retired. Full remote/manual acceptance is a
+separate gate from focused local verification; see the ledger.

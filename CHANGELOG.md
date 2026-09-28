@@ -10,8 +10,13 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
-- Add a dedicated Admin Release Notes workspace with bilingual Markdown authoring, sanitized local preview, China-time status display, confirmed publication controls, save-before-publish ordering and unsaved-change protection. Establish shared Markdown security fixtures for the later public UI phase (#132).
-- Establish the Release Notes domain and API foundation with draft/published state, optional version and commit metadata, localized summaries, authoritative scheduled visibility, public detail/previous/next navigation, and audited Admin publish/unpublish actions. Preserve legacy notices and transitional index bodies; the dedicated Admin/public UI follows in later phases (#132).
+- Complete the public Release Notes experience with an editorial latest/monthly index, bilingual SSR Markdown articles, safe commit links and older/newer navigation. Share Admin Markdown security fixtures, add release URLs to the fail-closed sitemap, and replace Timeline contracts with focused Browser coverage and eight representative Visual baselines (#132).
+- Add a dedicated Admin Release Notes workspace with bilingual Markdown authoring, sanitized local preview, China-time status display, confirmed publication controls, save-before-publish ordering and unsaved-change protection. Establish shared Markdown security fixtures shared with public article rendering (#132).
+- Establish the Release Notes domain and API foundation with draft/published state, optional version and commit metadata, localized summaries, authoritative scheduled visibility, public detail/previous/next navigation, and audited Admin publish/unpublish actions. Preserve legacy notices; P3 retires transitional index bodies now that dedicated Admin and public workspaces own authoring and reading (#132).
+
+### Fixed
+
+- Serialize public Release Notes publication dates with their China-site UTC+8 offset, preserving stored wall-clock values instead of labeling them UTC and displaying an eight-hour shift (#132).
 
 ## v3.0.0-alpha.10 - 2026-09-28
 

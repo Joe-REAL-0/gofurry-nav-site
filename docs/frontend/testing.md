@@ -696,7 +696,13 @@ top veil, desktop columns/mobile stack, loaded avatar/actions and Legal wrapping
 P4.3.2 starts only after that approval and must pass the accepted images without
 updating them. P4.3.1 changes no production source or style debt.
 
-### Updates runtime and appearance (P4.4.1)
+### Updates runtime and appearance (P4.4.1 — historical)
+
+Superseded by #132 P3: the Timeline, its helpers and four viewport assumptions
+are retired. Current `regression/updates.spec.ts` checks the editorial index and
+SSR article; `visual/updates-page.spec.ts` owns eight complete root captures at
+1440×900 and 390×900. See [Release Notes](../release-notes.md) and its acceptance
+ledger. The following record preserves the original migration evidence.
 
 `tests/browser/fixtures/updates.ts` serves both `regression/updates.spec.ts` and
 `visual/updates-page.spec.ts`. It reuses `startInsightsFixtureApp` for production

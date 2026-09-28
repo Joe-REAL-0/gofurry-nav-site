@@ -767,11 +767,9 @@ color-transition property set, its 500ms duration and existing easing.
 Updates global selectors MUST use the `updates-*` domain namespace. State
 modifiers MAY use `is-*` only when attached to an Updates-owned base selector.
 Updates-owned custom properties MUST use `--updates-*`; domain styles MAY consume
-`--gf-*` global semantics. P4.4.2 normalizes Timeline/Year/Entry names without
-ancestor scoping or specificity changes; declarations and accepted visual behavior
-MUST remain equivalent. Stylelint enforces names only: Style Policy token owners
+`--gf-*` global semantics. P4.4.2's Timeline selector normalization is historical. #132 P3 retires that
+Timeline and its dynamic delay property; the same exact token declaration owners
 remain `.updates-page` / `html.dark .updates-page` with the `--updates-` prefix.
-`--updates-timeline-delay` is a dynamic runtime property, not a global design token.
 
 P2.1 MUST NOT prebuild typography, spacing, control-height, z-index or container
 scales. Later promotion requires repeated real needs and a scoped migration.
@@ -1645,3 +1643,32 @@ outcomes, update safety, fail-closed CLI behavior and current per-file parity.
 The existing Nav Web CI job runs each guard separately before the preserved
 typecheck, Insights semantics, SEO recovery and build steps. P1 adds no Vitest,
 Playwright Test migration, production style cleanup or UI behavior change.
+
+## Release Notes final public contract (#132 P3)
+
+The editorial `/updates` index and `/updates/:id` article, including `/en`, replace
+the historical Timeline. Index renders only metadata/summary and groups history
+by China-site month. Detail owns sanitized SSR body and API-provided older/newer
+neighbors. No year toggle, load-more, marker animation or Timeline owner remains.
+
+Each direct SSR entry requests its own API exactly once; hydration reuses payload.
+Detail 404 is HTTP 404 and upstream failure is 503. Index retains explicit loading,
+ready, empty and unavailable states with local retry. Locale preserves release ID.
+The public index projection is metadata-only; P1 lifecycle and visibility remain
+backend-authoritative. No new schema, permission or media integration is involved.
+
+Public rendering MUST satisfy every shared `contracts/fixtures/update-markdown.json`
+case and `contracts/update-markdown.md` using the exact P2 versions. Only sanitized
+renderer output may enter `v-html`. Metadata never derives summaries from body.
+App-level locale head remains canonical/hreflang owner; detail supplies localized
+SEO, article OG metadata and its own OG URL. Sitemap includes both localized
+public release IDs and fails closed if any inventory fails, including Updates.
+The current endpoint's 100-release limit is documented, not bypassed.
+
+Functional `regression/updates.spec.ts` and `seo-recovery.spec.ts` own behavior;
+`visual/updates-page.spec.ts` owns exactly eight Index/Article × Light/Dark ×
+Desktop/Mobile goldens. This expressly supersedes the four Timeline goldens and
+historical viewport/marker assumptions above. Generate only this authorized spec
+in the pinned runner, then compare separately. No unrelated golden may change.
+Remote acceptance uses #134 Fast, Manual Full and Manual Visual independently;
+maintainer Admin/Index/Article review remains explicit, not inferred from pixels.

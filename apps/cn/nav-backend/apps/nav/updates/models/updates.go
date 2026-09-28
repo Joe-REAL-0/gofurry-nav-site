@@ -32,17 +32,14 @@ func (*UpdateNotice) TableName() string {
 	return TableNameGfnNavUpdateNotice
 }
 
-// Body and legacy timestamps remain index compatibility fields until the P3 UI migration.
+// Index is metadata only; full Markdown belongs to the detail projection.
 type UpdateNoticeItem struct {
 	Summary     string    `json:"summary"`
 	Version     *string   `json:"version"`
 	CommitSHA   *string   `json:"commit_sha"`
 	ID          int64     `json:"id"`
 	Title       string    `json:"title"`
-	Body        string    `json:"body"`
 	PublishedAt time.Time `json:"published_at"`
-	CreateTime  time.Time `json:"create_time"`
-	UpdateTime  time.Time `json:"update_time"`
 }
 
 type UpdatesResponse struct {
