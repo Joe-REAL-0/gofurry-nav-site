@@ -8,6 +8,10 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ## Unreleased
 
+### Added
+
+- Establish the Release Notes domain and API foundation with draft/published state, optional version and commit metadata, localized summaries, authoritative scheduled visibility, public detail/previous/next navigation, and audited Admin publish/unpublish actions. Preserve legacy notices and transitional index bodies; the dedicated Admin/public UI follows in later phases (#132).
+
 ## v3.0.0-alpha.10 - 2026-09-28
 
 ### Added

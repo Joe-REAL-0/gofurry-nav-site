@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/updates/models"
+	"github.com/jackc/pgx/v5"
 )
 
 func TestGetUpdatesReturnsReadyItems(t *testing.T) {
@@ -87,4 +88,44 @@ func (store *fakeUpdateNoticeStore) ListUpdateNotices(limit int) ([]models.Updat
 		return nil, store.err
 	}
 	return append([]models.UpdateNotice(nil), store.items...), nil
+}
+
+func (store *fakeUpdateNoticeStore) GetUpdateNotice(id int64) (models.UpdateNotice, *models.UpdateNotice, *models.UpdateNotice, error) {
+	if store.err != nil {
+		return models.UpdateNotice{}, nil, nil, store.err
+	}
+	for _, item := range store.items {
+		if item.ID == id {
+			return item, nil, nil, nil
+		}
+	}
+	return models.UpdateNotice{}, nil, nil, pgx.ErrNoRows
+}
+func TestReleaseNoteIndependentLocaleFallbackAndDetailProjection(t *testing.T) {
+	version, sha := "September notes", "abcdef0"
+	notice := models.UpdateNotice{ID: 1, Title: "标题", SummaryEn: "Summary", Body: "正文", Version: &version, CommitSHA: &sha}
+	svc := newUpdatesService(&fakeUpdateNoticeStore{items: []models.UpdateNotice{notice}}, time.Now)
+	for _, lang := range []string{"zh", " EN "} {
+		index := svc.GetUpdates(lang)
+		detail, err := svc.GetUpdateDetail(1, lang)
+		if err != nil {
+			t.Fatal(err)
+		}
+		item := detail.Item
+		if item.Title != "标题" || item.Summary != "Summary" || item.Body != "正文" || *item.Version != version || *item.CommitSHA != sha {
+			t.Fatalf("independent fallback failed: %+v", item)
+		}
+		if index.Items[0].Body != item.Body || index.Items[0].Summary != item.Summary {
+			t.Fatal("P1 index body compatibility lost")
+		}
+		if detail.Previous != nil || detail.Next != nil {
+			t.Fatal("empty neighbors must be null")
+		}
+	}
+	if _, err := svc.GetUpdateDetail(404, "en"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("missing: %v", err)
+	}
+	if _, err := newUpdatesService(&fakeUpdateNoticeStore{err: errors.New("offline")}, time.Now).GetUpdateDetail(1, "zh"); err == nil || errors.Is(err, ErrNotFound) {
+		t.Fatalf("failure masked as missing: %v", err)
+	}
 }

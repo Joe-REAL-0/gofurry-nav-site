@@ -402,7 +402,12 @@ type GfnNavUpdateNotice struct {
 	// 更新时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 	// 软删除
-	Deleted bool `json:"deleted"`
+	Deleted          bool    `json:"deleted"`
+	Version          *string `json:"version"`
+	CommitSha        *string `json:"commit_sha"`
+	Summary          string  `json:"summary"`
+	SummaryEn        string  `json:"summary_en"`
+	PublicationState string  `json:"publication_state"`
 }
 
 // 金句表

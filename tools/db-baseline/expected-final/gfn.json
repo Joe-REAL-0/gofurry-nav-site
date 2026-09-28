@@ -3342,7 +3342,7 @@
         {
           "name": "published_at",
           "data_type": "timestamp(0) without time zone",
-          "not_null": true,
+          "not_null": false,
           "has_default": false,
           "comment": "发布时间"
         },
@@ -3369,6 +3369,39 @@
           "has_default": true,
           "default": "false",
           "comment": "软删除"
+        },
+        {
+          "name": "version",
+          "data_type": "character varying(64)",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "commit_sha",
+          "data_type": "character varying(64)",
+          "not_null": false,
+          "has_default": false
+        },
+        {
+          "name": "summary",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "summary_en",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
+        },
+        {
+          "name": "publication_state",
+          "data_type": "character varying(16)",
+          "not_null": true,
+          "has_default": true,
+          "default": "'draft'::character varying"
         }
       ],
       "constraints": [
@@ -3379,6 +3412,10 @@
         {
           "name": "gfn_nav_update_notice_body_not_null",
           "definition": "NOT NULL body"
+        },
+        {
+          "name": "gfn_nav_update_notice_commit_sha_check",
+          "definition": "CHECK (commit_sha IS NULL OR commit_sha::text ~ '^[0-9a-f]{7,64}$'::text)"
         },
         {
           "name": "gfn_nav_update_notice_create_time_not_null",
@@ -3397,8 +3434,20 @@
           "definition": "PRIMARY KEY (id)"
         },
         {
-          "name": "gfn_nav_update_notice_published_at_not_null",
-          "definition": "NOT NULL published_at"
+          "name": "gfn_nav_update_notice_publication_state_check",
+          "definition": "CHECK (publication_state::text = ANY (ARRAY['draft'::character varying, 'published'::character varying]::text[]))"
+        },
+        {
+          "name": "gfn_nav_update_notice_publication_state_not_null",
+          "definition": "NOT NULL publication_state"
+        },
+        {
+          "name": "gfn_nav_update_notice_summary_en_not_null",
+          "definition": "NOT NULL summary_en"
+        },
+        {
+          "name": "gfn_nav_update_notice_summary_not_null",
+          "definition": "NOT NULL summary"
         },
         {
           "name": "gfn_nav_update_notice_title_en_not_null",
@@ -3411,6 +3460,10 @@
         {
           "name": "gfn_nav_update_notice_update_time_not_null",
           "definition": "NOT NULL update_time"
+        },
+        {
+          "name": "gfn_nav_update_notice_version_check",
+          "definition": "CHECK (version IS NULL OR version::text = btrim(version::text) AND version::text \u003c\u003e ''::text)"
         }
       ],
       "indexes": [

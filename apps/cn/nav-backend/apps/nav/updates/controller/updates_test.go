@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/updates/models"
+	"github.com/gofurry/gofurry-nav-backend/apps/nav/updates/service"
 	"github.com/gofurry/gofurry-nav-backend/common"
 )
 
@@ -68,4 +70,50 @@ type fakeUpdatesReader struct {
 func (reader *fakeUpdatesReader) GetUpdates(lang string) models.UpdatesResponse {
 	reader.lastLang = lang
 	return reader.response
+}
+
+func (reader *fakeUpdatesReader) GetUpdateDetail(id int64, lang string) (models.UpdateDetailResponse, error) {
+	reader.lastLang = lang
+	if id == 404 {
+		return models.UpdateDetailResponse{}, service.ErrNotFound
+	}
+	if id == 503 {
+		return models.UpdateDetailResponse{}, errors.New("private database error")
+	}
+	return models.UpdateDetailResponse{SchemaVersion: 1, State: "ready", Item: models.ReleaseNote{ID: id, Title: "Release", Body: "Markdown source"}}, nil
+}
+func TestReleaseDetailStatusAndPublicFields(t *testing.T) {
+	reader := &fakeUpdatesReader{}
+	app := fiber.New()
+	app.Get("/updates/:id", New(reader).GetUpdateDetail)
+	for _, tc := range []struct {
+		path   string
+		status int
+	}{{"1?lang=en", 200}, {"404", 404}, {"-1", 404}, {"bad", 404}, {"503", 503}} {
+		resp, err := app.Test(httptest.NewRequest("GET", "/updates/"+tc.path, nil))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var body map[string]any
+		err = json.NewDecoder(resp.Body).Decode(&body)
+		resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.StatusCode != tc.status {
+			t.Fatalf("%s: status=%d", tc.path, resp.StatusCode)
+		}
+		encoded, _ := json.Marshal(body)
+		for _, field := range []string{"publication_state", "deleted", "create_time", "update_time", "private database error"} {
+			if strings.Contains(string(encoded), field) {
+				t.Fatalf("leaked %s", field)
+			}
+		}
+		if tc.status == 200 {
+			data := body["data"].(map[string]any)
+			if data["previous"] != nil || data["next"] != nil || reader.lastLang != "en" {
+				t.Fatal("detail envelope/locale")
+			}
+		}
+	}
 }

@@ -119,13 +119,34 @@ WHERE site_id = sqlc.arg(site_id)
 ORDER BY observed_at DESC, id DESC
 LIMIT sqlc.arg(row_limit);
 
+-- name: UpdateNoticeClock :one
+-- Existing China-site wall timestamps; do not depend on the DB session timezone.
+SELECT date_trunc('second', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::timestamp AS as_of;
+
 -- name: ListPublicUpdateNotices :many
-SELECT id, title, title_en, body, body_en, published_at,
-       create_time, update_time, deleted
-FROM gfn_nav_update_notice
-WHERE deleted IS NOT TRUE
-ORDER BY published_at DESC, id DESC
-LIMIT sqlc.arg(row_limit);
+SELECT * FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= sqlc.arg(as_of)::timestamp
+ORDER BY published_at DESC, id DESC LIMIT sqlc.arg(row_limit);
+
+-- name: GetPublicUpdateNotice :one
+SELECT * FROM gfn_nav_update_notice
+WHERE id = sqlc.arg(id) AND deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= sqlc.arg(as_of)::timestamp;
+
+-- name: GetPreviousPublicUpdateNotice :one
+SELECT * FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= sqlc.arg(as_of)::timestamp
+  AND (published_at, id) < (sqlc.arg(published_at)::timestamp, sqlc.arg(id)::bigint)
+ORDER BY published_at DESC, id DESC LIMIT 1;
+
+-- name: GetNextPublicUpdateNotice :one
+SELECT * FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= sqlc.arg(as_of)::timestamp
+  AND (published_at, id) > (sqlc.arg(published_at)::timestamp, sqlc.arg(id)::bigint)
+ORDER BY published_at ASC, id ASC LIMIT 1;
 
 -- name: UpdateSiteViewCount :exec
 UPDATE gfn_site

@@ -18,15 +18,20 @@ type Saying struct {
 func (*Saying) TableName() string { return "gfn_saying" }
 
 type UpdateNotice struct {
-	ID          int64               `json:"id"`
-	Title       string              `json:"title"`
-	TitleEn     string              `json:"title_en"`
-	Body        string              `json:"body"`
-	BodyEn      string              `json:"body_en"`
-	PublishedAt pkgmodels.LocalTime `json:"published_at"`
-	CreateTime  pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime  pkgmodels.LocalTime `json:"update_time"`
-	Deleted     bool                `json:"deleted"`
+	Version          *string             `json:"version"`
+	CommitSHA        *string             `json:"commit_sha"`
+	Summary          string              `json:"summary"`
+	SummaryEn        string              `json:"summary_en"`
+	PublicationState string              `json:"publication_state"`
+	ID               int64               `json:"id"`
+	Title            string              `json:"title"`
+	TitleEn          string              `json:"title_en"`
+	Body             string              `json:"body"`
+	BodyEn           string              `json:"body_en"`
+	PublishedAt      pkgmodels.LocalTime `json:"published_at"`
+	CreateTime       pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime       pkgmodels.LocalTime `json:"update_time"`
+	Deleted          bool                `json:"deleted"`
 }
 
 func (*UpdateNotice) TableName() string { return "gfn_nav_update_notice" }
@@ -111,12 +116,17 @@ type SayingPayload struct {
 	Saying   string  `json:"saying"`
 }
 
+// Publication state is read-only: content writes never publish a release.
 type UpdateNoticePayload struct {
-	Title       string `json:"title"`
-	TitleEn     string `json:"title_en"`
-	Body        string `json:"body"`
-	BodyEn      string `json:"body_en"`
-	PublishedAt string `json:"published_at"`
+	Version     *string `json:"version"`
+	CommitSHA   *string `json:"commit_sha"`
+	Summary     string  `json:"summary"`
+	SummaryEn   string  `json:"summary_en"`
+	Title       string  `json:"title"`
+	TitleEn     string  `json:"title_en"`
+	Body        string  `json:"body"`
+	BodyEn      string  `json:"body_en"`
+	PublishedAt string  `json:"published_at"`
 }
 
 type CollectorDomainPayload struct {

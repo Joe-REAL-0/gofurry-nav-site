@@ -48,32 +48,42 @@ SELECT COUNT(*)::bigint FROM gfn_nav_update_notice WHERE deleted IS NOT TRUE AND
     OR body ILIKE '%'||sqlc.arg(keyword)||'%' OR body_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%');
 
 -- name: ListUpdateNotices :many
-SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice
+SELECT * FROM gfn_nav_update_notice
 WHERE deleted IS NOT TRUE AND (
     sqlc.arg(keyword)::text = '' OR title ILIKE '%'||sqlc.arg(keyword)||'%' OR title_en ILIKE '%'||sqlc.arg(keyword)||'%'
     OR body ILIKE '%'||sqlc.arg(keyword)||'%' OR body_en ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%')
-ORDER BY published_at DESC,id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+ORDER BY published_at DESC NULLS LAST,id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetUpdateNotice :one
-SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice
-WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE;
+SELECT * FROM gfn_nav_update_notice WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE;
 
--- name: GetUpdateNoticeAny :one
-SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice WHERE id=sqlc.arg(id);
+-- name: LockUpdateNotice :one
+SELECT * FROM gfn_nav_update_notice WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE FOR UPDATE;
 
 -- name: InsertUpdateNotice :one
-INSERT INTO gfn_nav_update_notice (id,title,title_en,body,body_en,published_at,create_time,update_time,deleted)
-VALUES (sqlc.arg(id),sqlc.arg(title),sqlc.arg(title_en),sqlc.arg(body),sqlc.arg(body_en),sqlc.arg(published_at),NOW()::timestamp(0),NOW()::timestamp(0),false)
-RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted;
+INSERT INTO gfn_nav_update_notice (id,title,title_en,body,body_en,version,commit_sha,summary,summary_en,publication_state,published_at,create_time,update_time,deleted)
+VALUES (sqlc.arg(id),sqlc.arg(title),sqlc.arg(title_en),sqlc.arg(body),sqlc.arg(body_en),sqlc.narg(version),sqlc.narg(commit_sha),sqlc.arg(summary),sqlc.arg(summary_en),'draft',sqlc.narg(published_at),NOW()::timestamp(0),NOW()::timestamp(0),false)
+RETURNING *;
 
 -- name: UpdateUpdateNotice :one
-UPDATE gfn_nav_update_notice SET title=sqlc.arg(title),title_en=sqlc.arg(title_en),body=sqlc.arg(body),body_en=sqlc.arg(body_en),published_at=sqlc.arg(published_at),update_time=NOW()::timestamp(0)
-WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE
-RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted;
+UPDATE gfn_nav_update_notice SET title=sqlc.arg(title),title_en=sqlc.arg(title_en),body=sqlc.arg(body),body_en=sqlc.arg(body_en),
+version=sqlc.narg(version),commit_sha=sqlc.narg(commit_sha),summary=sqlc.arg(summary),summary_en=sqlc.arg(summary_en),
+published_at=sqlc.narg(published_at),update_time=NOW()::timestamp(0)
+WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE RETURNING *;
+
+-- name: PublishUpdateNotice :one
+UPDATE gfn_nav_update_notice SET publication_state='published',
+published_at=COALESCE(sqlc.narg(published_at)::timestamp, date_trunc('second', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')),
+update_time=NOW()::timestamp(0)
+WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE RETURNING *;
+
+-- name: UnpublishUpdateNotice :one
+UPDATE gfn_nav_update_notice SET publication_state='draft',update_time=NOW()::timestamp(0)
+WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE RETURNING *;
 
 -- name: SoftDeleteUpdateNotice :one
-UPDATE gfn_nav_update_notice SET deleted=true,update_time=NOW()::timestamp(0) WHERE id=sqlc.arg(id)
-RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted;
+UPDATE gfn_nav_update_notice SET deleted=true,update_time=NOW()::timestamp(0)
+WHERE id=sqlc.arg(id) AND deleted IS NOT TRUE RETURNING *;
 
 -- name: NextCollectorDomainID :one
 WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfn_collector_domain')::bigint))

@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"errors"
+	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/gofiber/fiber/v3"
@@ -21,6 +24,7 @@ func New(reader updatesReader) *updatesApi { return &updatesApi{reader: reader} 
 
 type updatesReader interface {
 	GetUpdates(lang string) models.UpdatesResponse
+	GetUpdateDetail(id int64, lang string) (models.UpdateDetailResponse, error)
 }
 
 var (
@@ -57,4 +61,23 @@ func setUpdatesReaderForTest(reader updatesReader) func() {
 		updatesReaderForTest = previous
 		updatesReaderMu.Unlock()
 	}
+}
+
+func (api updatesApi) GetUpdateDetail(c fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil || id <= 0 {
+		return common.NewResponse(c).ErrorWithCode(service.ErrNotFound.Error(), http.StatusNotFound)
+	}
+	reader := api.reader
+	if reader == nil {
+		reader = currentUpdatesReader()
+	}
+	data, err := reader.GetUpdateDetail(id, c.Query("lang", "zh"))
+	if errors.Is(err, service.ErrNotFound) {
+		return common.NewResponse(c).ErrorWithCode(service.ErrNotFound.Error(), http.StatusNotFound)
+	}
+	if err != nil {
+		return common.NewResponse(c).ErrorWithCode("release notes unavailable", http.StatusServiceUnavailable)
+	}
+	return common.NewResponse(c).SuccessWithData(data)
 }

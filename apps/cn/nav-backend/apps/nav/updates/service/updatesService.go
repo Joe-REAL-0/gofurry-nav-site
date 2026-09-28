@@ -2,18 +2,21 @@ package service
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/updates/models"
 	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
+	"github.com/jackc/pgx/v5"
 )
 
 const defaultUpdatesLimit = 100
 
 type updateNoticeStore interface {
 	ListUpdateNotices(limit int) ([]models.UpdateNotice, error)
+	GetUpdateNotice(id int64) (models.UpdateNotice, *models.UpdateNotice, *models.UpdateNotice, error)
 }
 
 type sqlcUpdateNoticeStore struct {
@@ -28,17 +31,17 @@ func (store *sqlcUpdateNoticeStore) ListUpdateNotices(limit int) ([]models.Updat
 	if limit <= 0 {
 		limit = defaultUpdatesLimit
 	}
-	rows, err := store.queries.ListPublicUpdateNotices(context.Background(), int32(limit))
+	asOf, err := store.queries.UpdateNoticeClock(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	rows, err := store.queries.ListPublicUpdateNotices(context.Background(), navsqlc.ListPublicUpdateNoticesParams{AsOf: asOf, RowLimit: int32(limit)})
 	if err != nil {
 		return nil, err
 	}
 	notices := make([]models.UpdateNotice, 0, len(rows))
 	for _, row := range rows {
-		notices = append(notices, models.UpdateNotice{
-			ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Body: row.Body, BodyEn: row.BodyEn,
-			PublishedAt: row.PublishedAt.Time, CreateTime: row.CreateTime.Time,
-			UpdateTime: row.UpdateTime.Time, Deleted: row.Deleted,
-		})
+		notices = append(notices, noticeModel(row))
 	}
 	return notices, nil
 }
@@ -95,6 +98,7 @@ func (svc *updatesService) GetUpdates(lang string) models.UpdatesResponse {
 	for _, notice := range notices {
 		title, body := localizeNotice(notice, lang)
 		response.Items = append(response.Items, models.UpdateNoticeItem{
+			Summary: localizeSummary(notice, lang), Version: notice.Version, CommitSHA: notice.CommitSHA,
 			ID:          notice.ID,
 			Title:       title,
 			Body:        body,
@@ -138,4 +142,77 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+var ErrNotFound = errors.New("release note not found")
+
+func noticeModel(row navsqlc.GfnNavUpdateNotice) models.UpdateNotice {
+	return models.UpdateNotice{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Body: row.Body, BodyEn: row.BodyEn,
+		Summary: row.Summary, SummaryEn: row.SummaryEn, Version: row.Version, CommitSHA: row.CommitSha,
+		PublishedAt: row.PublishedAt.Time, CreateTime: row.CreateTime.Time, UpdateTime: row.UpdateTime.Time, Deleted: row.Deleted}
+}
+
+func (store *sqlcUpdateNoticeStore) GetUpdateNotice(id int64) (models.UpdateNotice, *models.UpdateNotice, *models.UpdateNotice, error) {
+	ctx := context.Background()
+	asOf, err := store.queries.UpdateNoticeClock(ctx)
+	if err != nil {
+		return models.UpdateNotice{}, nil, nil, err
+	}
+	row, err := store.queries.GetPublicUpdateNotice(ctx, navsqlc.GetPublicUpdateNoticeParams{ID: id, AsOf: asOf})
+	if err != nil {
+		return models.UpdateNotice{}, nil, nil, err
+	}
+	// Both bounded neighbors use the same database clock as the selected release.
+	previous, err := store.queries.GetPreviousPublicUpdateNotice(ctx, navsqlc.GetPreviousPublicUpdateNoticeParams{ID: id, PublishedAt: row.PublishedAt, AsOf: asOf})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return models.UpdateNotice{}, nil, nil, err
+	}
+	var older, newer *models.UpdateNotice
+	if err == nil {
+		notice := noticeModel(previous)
+		older = &notice
+	}
+	next, err := store.queries.GetNextPublicUpdateNotice(ctx, navsqlc.GetNextPublicUpdateNoticeParams{ID: id, PublishedAt: row.PublishedAt, AsOf: asOf})
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return models.UpdateNotice{}, nil, nil, err
+	}
+	if err == nil {
+		notice := noticeModel(next)
+		newer = &notice
+	}
+	return noticeModel(row), older, newer, nil
+}
+
+func localizeSummary(notice models.UpdateNotice, lang string) string {
+	if lang == "en" {
+		return firstNonEmpty(notice.SummaryEn, notice.Summary)
+	}
+	return firstNonEmpty(notice.Summary, notice.SummaryEn)
+}
+
+func (svc *updatesService) GetUpdateDetail(id int64, lang string) (models.UpdateDetailResponse, error) {
+	response := models.UpdateDetailResponse{SchemaVersion: models.UpdatesSchemaVersion, GeneratedAt: svc.clock()(), State: models.UpdatesStateReady}
+	if id <= 0 {
+		return response, ErrNotFound
+	}
+	notice, previous, next, err := svc.source().GetUpdateNotice(id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return response, ErrNotFound
+	}
+	if err != nil {
+		return response, err
+	}
+	lang = normalizeLang(lang)
+	title, body := localizeNotice(notice, lang)
+	response.Item = models.ReleaseNote{ID: notice.ID, Title: title, Summary: localizeSummary(notice, lang), Body: body, Version: notice.Version, CommitSHA: notice.CommitSHA, PublishedAt: notice.PublishedAt}
+	response.Previous, response.Next = localizeNeighbor(previous, lang), localizeNeighbor(next, lang)
+	return response, nil
+}
+
+func localizeNeighbor(notice *models.UpdateNotice, lang string) *models.ReleaseNoteNeighbor {
+	if notice == nil {
+		return nil
+	}
+	title, _ := localizeNotice(*notice, lang)
+	return &models.ReleaseNoteNeighbor{ID: notice.ID, Title: title, Version: notice.Version, PublishedAt: notice.PublishedAt}
 }

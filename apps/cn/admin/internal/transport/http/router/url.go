@@ -150,6 +150,8 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Post("/update-notices", authmw.Require(authorization.ContentWrite), api.CreateUpdateNotice)
 	root.Get("/update-notices/:id", authmw.Require(authorization.ContentRead), api.GetUpdateNotice)
 	root.Put("/update-notices/:id", authmw.Require(authorization.ContentWrite), api.UpdateUpdateNotice)
+	root.Post("/update-notices/:id/publish", authmw.Require(authorization.ContentWrite), api.PublishUpdateNotice)
+	root.Post("/update-notices/:id/unpublish", authmw.Require(authorization.ContentWrite), api.UnpublishUpdateNotice)
 	root.Delete("/update-notices/:id", authmw.Require(authorization.ContentWrite), api.DeleteUpdateNotice)
 
 	root.Get("/collector-domains", authmw.Require(authorization.ContentRead), api.ListCollectorDomains)

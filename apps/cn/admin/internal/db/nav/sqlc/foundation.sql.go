@@ -472,8 +472,7 @@ func (q *Queries) GetSiteWorkspaceFeatured(ctx context.Context, siteID int64) (G
 }
 
 const getUpdateNotice = `-- name: GetUpdateNotice :one
-SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice
-WHERE id=$1 AND deleted IS NOT TRUE
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice WHERE id=$1 AND deleted IS NOT TRUE
 `
 
 func (q *Queries) GetUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
@@ -489,27 +488,11 @@ func (q *Queries) GetUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNo
 		&i.CreateTime,
 		&i.UpdateTime,
 		&i.Deleted,
-	)
-	return i, err
-}
-
-const getUpdateNoticeAny = `-- name: GetUpdateNoticeAny :one
-SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice WHERE id=$1
-`
-
-func (q *Queries) GetUpdateNoticeAny(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
-	row := q.db.QueryRow(ctx, getUpdateNoticeAny, id)
-	var i GfnNavUpdateNotice
-	err := row.Scan(
-		&i.ID,
-		&i.Title,
-		&i.TitleEn,
-		&i.Body,
-		&i.BodyEn,
-		&i.PublishedAt,
-		&i.CreateTime,
-		&i.UpdateTime,
-		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
 	)
 	return i, err
 }
@@ -727,9 +710,9 @@ func (q *Queries) InsertSiteGroupMap(ctx context.Context, arg InsertSiteGroupMap
 }
 
 const insertUpdateNotice = `-- name: InsertUpdateNotice :one
-INSERT INTO gfn_nav_update_notice (id,title,title_en,body,body_en,published_at,create_time,update_time,deleted)
-VALUES ($1,$2,$3,$4,$5,$6,NOW()::timestamp(0),NOW()::timestamp(0),false)
-RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted
+INSERT INTO gfn_nav_update_notice (id,title,title_en,body,body_en,version,commit_sha,summary,summary_en,publication_state,published_at,create_time,update_time,deleted)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'draft',$10,NOW()::timestamp(0),NOW()::timestamp(0),false)
+RETURNING id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state
 `
 
 type InsertUpdateNoticeParams struct {
@@ -738,6 +721,10 @@ type InsertUpdateNoticeParams struct {
 	TitleEn     string           `json:"title_en"`
 	Body        string           `json:"body"`
 	BodyEn      string           `json:"body_en"`
+	Version     *string          `json:"version"`
+	CommitSha   *string          `json:"commit_sha"`
+	Summary     string           `json:"summary"`
+	SummaryEn   string           `json:"summary_en"`
 	PublishedAt pgtype.Timestamp `json:"published_at"`
 }
 
@@ -748,6 +735,10 @@ func (q *Queries) InsertUpdateNotice(ctx context.Context, arg InsertUpdateNotice
 		arg.TitleEn,
 		arg.Body,
 		arg.BodyEn,
+		arg.Version,
+		arg.CommitSha,
+		arg.Summary,
+		arg.SummaryEn,
 		arg.PublishedAt,
 	)
 	var i GfnNavUpdateNotice
@@ -761,6 +752,11 @@ func (q *Queries) InsertUpdateNotice(ctx context.Context, arg InsertUpdateNotice
 		&i.CreateTime,
 		&i.UpdateTime,
 		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
 	)
 	return i, err
 }
@@ -1378,11 +1374,11 @@ func (q *Queries) ListSites(ctx context.Context, arg ListSitesParams) ([]GfnSite
 }
 
 const listUpdateNotices = `-- name: ListUpdateNotices :many
-SELECT id,title,title_en,body,body_en,published_at,create_time,update_time,deleted FROM gfn_nav_update_notice
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice
 WHERE deleted IS NOT TRUE AND (
     $1::text = '' OR title ILIKE '%'||$1||'%' OR title_en ILIKE '%'||$1||'%'
     OR body ILIKE '%'||$1||'%' OR body_en ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%')
-ORDER BY published_at DESC,id DESC LIMIT $3 OFFSET $2
+ORDER BY published_at DESC NULLS LAST,id DESC LIMIT $3 OFFSET $2
 `
 
 type ListUpdateNoticesParams struct {
@@ -1410,6 +1406,11 @@ func (q *Queries) ListUpdateNotices(ctx context.Context, arg ListUpdateNoticesPa
 			&i.CreateTime,
 			&i.UpdateTime,
 			&i.Deleted,
+			&i.Version,
+			&i.CommitSha,
+			&i.Summary,
+			&i.SummaryEn,
+			&i.PublicationState,
 		); err != nil {
 			return nil, err
 		}
@@ -1419,6 +1420,32 @@ func (q *Queries) ListUpdateNotices(ctx context.Context, arg ListUpdateNoticesPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockUpdateNotice = `-- name: LockUpdateNotice :one
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice WHERE id=$1 AND deleted IS NOT TRUE FOR UPDATE
+`
+
+func (q *Queries) LockUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, lockUpdateNotice, id)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
+	)
+	return i, err
 }
 
 const nextCollectorDomainID = `-- name: NextCollectorDomainID :one
@@ -1505,6 +1532,40 @@ func (q *Queries) NextUpdateNoticeID(ctx context.Context) (int64, error) {
 	return column_1, err
 }
 
+const publishUpdateNotice = `-- name: PublishUpdateNotice :one
+UPDATE gfn_nav_update_notice SET publication_state='published',
+published_at=COALESCE($1::timestamp, date_trunc('second', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')),
+update_time=NOW()::timestamp(0)
+WHERE id=$2 AND deleted IS NOT TRUE RETURNING id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state
+`
+
+type PublishUpdateNoticeParams struct {
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+	ID          int64            `json:"id"`
+}
+
+func (q *Queries) PublishUpdateNotice(ctx context.Context, arg PublishUpdateNoticeParams) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, publishUpdateNotice, arg.PublishedAt, arg.ID)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
+	)
+	return i, err
+}
+
 const softDeleteCollectorDomain = `-- name: SoftDeleteCollectorDomain :one
 UPDATE gfn_collector_domain SET deleted=true WHERE id=$1 RETURNING id,name,proxy,prefix,tls,site_id,deleted
 `
@@ -1554,8 +1615,8 @@ func (q *Queries) SoftDeleteSite(ctx context.Context, id int64) (GfnSite, error)
 }
 
 const softDeleteUpdateNotice = `-- name: SoftDeleteUpdateNotice :one
-UPDATE gfn_nav_update_notice SET deleted=true,update_time=NOW()::timestamp(0) WHERE id=$1
-RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted
+UPDATE gfn_nav_update_notice SET deleted=true,update_time=NOW()::timestamp(0)
+WHERE id=$1 AND deleted IS NOT TRUE RETURNING id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state
 `
 
 func (q *Queries) SoftDeleteUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
@@ -1571,6 +1632,38 @@ func (q *Queries) SoftDeleteUpdateNotice(ctx context.Context, id int64) (GfnNavU
 		&i.CreateTime,
 		&i.UpdateTime,
 		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
+	)
+	return i, err
+}
+
+const unpublishUpdateNotice = `-- name: UnpublishUpdateNotice :one
+UPDATE gfn_nav_update_notice SET publication_state='draft',update_time=NOW()::timestamp(0)
+WHERE id=$1 AND deleted IS NOT TRUE RETURNING id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state
+`
+
+func (q *Queries) UnpublishUpdateNotice(ctx context.Context, id int64) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, unpublishUpdateNotice, id)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
 	)
 	return i, err
 }
@@ -1784,9 +1877,10 @@ func (q *Queries) UpdateSiteGroupMap(ctx context.Context, arg UpdateSiteGroupMap
 }
 
 const updateUpdateNotice = `-- name: UpdateUpdateNotice :one
-UPDATE gfn_nav_update_notice SET title=$1,title_en=$2,body=$3,body_en=$4,published_at=$5,update_time=NOW()::timestamp(0)
-WHERE id=$6 AND deleted IS NOT TRUE
-RETURNING id,title,title_en,body,body_en,published_at,create_time,update_time,deleted
+UPDATE gfn_nav_update_notice SET title=$1,title_en=$2,body=$3,body_en=$4,
+version=$5,commit_sha=$6,summary=$7,summary_en=$8,
+published_at=$9,update_time=NOW()::timestamp(0)
+WHERE id=$10 AND deleted IS NOT TRUE RETURNING id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state
 `
 
 type UpdateUpdateNoticeParams struct {
@@ -1794,6 +1888,10 @@ type UpdateUpdateNoticeParams struct {
 	TitleEn     string           `json:"title_en"`
 	Body        string           `json:"body"`
 	BodyEn      string           `json:"body_en"`
+	Version     *string          `json:"version"`
+	CommitSha   *string          `json:"commit_sha"`
+	Summary     string           `json:"summary"`
+	SummaryEn   string           `json:"summary_en"`
 	PublishedAt pgtype.Timestamp `json:"published_at"`
 	ID          int64            `json:"id"`
 }
@@ -1804,6 +1902,10 @@ func (q *Queries) UpdateUpdateNotice(ctx context.Context, arg UpdateUpdateNotice
 		arg.TitleEn,
 		arg.Body,
 		arg.BodyEn,
+		arg.Version,
+		arg.CommitSha,
+		arg.Summary,
+		arg.SummaryEn,
 		arg.PublishedAt,
 		arg.ID,
 	)
@@ -1818,6 +1920,11 @@ func (q *Queries) UpdateUpdateNotice(ctx context.Context, arg UpdateUpdateNotice
 		&i.CreateTime,
 		&i.UpdateTime,
 		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
 	)
 	return i, err
 }

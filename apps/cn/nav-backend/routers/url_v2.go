@@ -18,7 +18,10 @@ type HomeAPI interface {
 	GetHeroes(fiber.Ctx) error
 }
 
-type UpdatesAPI interface{ GetUpdates(fiber.Ctx) error }
+type UpdatesAPI interface {
+	GetUpdates(fiber.Ctx) error
+	GetUpdateDetail(fiber.Ctx) error
+}
 type SearchAPI interface{ GetSearchSuggestions(fiber.Ctx) error }
 type SiteIndexAPI interface{ GetSiteIndex(fiber.Ctx) error }
 type NavPageAPI interface{ GetGroupList(fiber.Ctx) error }
@@ -61,6 +64,7 @@ func navV2Api(g fiber.Router, cfg env.NavV2Config, dependencies NavDependencies)
 	g.Get("/appearance/patterns", dependencies.Home.GetPatterns)
 	g.Get("/appearance/heroes", dependencies.Home.GetHeroes)
 	g.Get("/updates", dependencies.Updates.GetUpdates)
+	g.Get("/updates/:id", dependencies.Updates.GetUpdateDetail)
 	g.Get("/search/suggestions", dependencies.Search.GetSearchSuggestions)
 	g.Get("/sites/index", dependencies.SiteIndex.GetSiteIndex)
 	g.Get("/sites/directory", sitedirectory.SiteDirectoryApi.GetSiteDirectory)
