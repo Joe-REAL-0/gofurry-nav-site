@@ -10,7 +10,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
-- Refine Release Notes into one toolbar-free Admin writing workspace, a compact public index with SSR Latest plus 20 historical entries and explicit paginated loading, and a quieter article layout with Previous/Next navigation. Preserve publication, Markdown security and SEO contracts (#132).
+- Refine Release Notes into one toolbar-free Admin writing workspace, a compact public index with SSR Latest plus 20 historical entries and explicit paginated loading, and a quieter article layout with translucent Previous/Next navigation cards. Preserve publication, Markdown security and SEO contracts (#132).
 
 ### Added
 
