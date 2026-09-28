@@ -66,6 +66,14 @@ func TestExpectedRepositoryMigrationVersions(t *testing.T) {
 			actual = append(actual, version)
 		}
 		sort.Slice(actual, func(i, j int) bool { return actual[i] < actual[j] })
+		if len(actual) == 0 {
+			t.Fatalf("%s has no repository migrations", key)
+		}
+		latest := actual[len(actual)-1]
+		expected := unavailableDatabase(key).Migration.Expected
+		if got := migrationStatus(latest, expected, 0); got != "current" {
+			t.Errorf("%s fully migrated repository version %d: status=%q, expected=%d", key, latest, got, expected)
+		}
 		if !reflect.DeepEqual(expectedRepoMigrations[key], actual) {
 			t.Fatalf("%s compiled migrations=%v, repository=%v", key, expectedRepoMigrations[key], actual)
 		}
