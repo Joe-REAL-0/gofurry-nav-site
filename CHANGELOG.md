@@ -10,6 +10,9 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
+- Standardize Nav Web typography on Manrope Variable + Noto Sans SC Variable, with both Fontsource packages pinned to 5.3.0 and normal variable fonts bundled locally. Share Sans/Mono tokens while preserving the system Mono stack and Rating's Arial glyph exception (#126).
+- Normalize non-Insights font weights to the semantic 400/500/600/700/800 scale and enforce family, weight and font-shorthand constraints through Stylelint. Keep #108's existing Insights weights behind a precise temporary exception; preserve authored font sizes, line heights, tracking, layout and style-debt budgets (#126).
+- Refresh 126 approved Typography Visual baselines without changing the 19-spec, 130-PNG inventory. Complete two full comparisons in the pinned Linux environment after maintainer typography approval (#126).
 - Refine Release Notes into one toolbar-free Admin writing workspace, a compact public index with SSR Latest plus 20 historical entries and explicit paginated loading, and a quieter article layout with translucent Previous/Next navigation cards. Preserve publication, Markdown security and SEO contracts (#132).
 
 ### Added
@@ -21,6 +24,10 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 ### Fixed
 
 - Serialize public Release Notes publication dates with their China-site UTC+8 offset, preserving stored wall-clock values instead of labeling them UTC and displaying an eight-hour shift (#132).
+
+### Upgrade notes
+
+- For #126 alone, rebuild and redeploy Nav Web using the existing `apps/cn/nav-web` / `./update.sh` flow. Font dependencies and assets are included in the Docker build; no backend, Collector or Admin update, database/Redis migration, runtime configuration change or separate font upload is required.
 
 ## v3.0.0-alpha.10 - 2026-09-28
 
