@@ -463,7 +463,7 @@ func (api *GameAPI) CreatePrize(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(valErr)
 	}
 	created, err := api.store.createPrize(c.Context(), audit.MetaFromFiber(c), gamesqlc.InsertPrizeParams{
-		Title: strings.TrimSpace(req.Title), Description: strings.TrimSpace(req.Desc), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
+		Title: strings.TrimSpace(req.Title), TitleEn: strings.TrimSpace(req.TitleEn), Description: strings.TrimSpace(req.Desc), DescEn: strings.TrimSpace(req.DescEn), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
 		Key: strings.TrimSpace(req.Key), StartTime: gameTimestamp(startTime), EndTime: gameTimestamp(endTime), Status: req.Status,
 	})
 	if err != nil {
@@ -498,7 +498,7 @@ func (api *GameAPI) UpdatePrize(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(valErr)
 	}
 	txErr := api.store.updatePrize(c.Context(), audit.MetaFromFiber(c), gamesqlc.UpdatePrizeParams{
-		ID: id, Title: strings.TrimSpace(req.Title), Description: strings.TrimSpace(req.Desc), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
+		ID: id, Title: strings.TrimSpace(req.Title), TitleEn: strings.TrimSpace(req.TitleEn), Description: strings.TrimSpace(req.Desc), DescEn: strings.TrimSpace(req.DescEn), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
 		Key: strings.TrimSpace(req.Key), StartTime: gameTimestamp(startTime), EndTime: gameTimestamp(endTime), Status: req.Status,
 	})
 	if txErr != nil {
@@ -575,7 +575,9 @@ func prizeDTO(row models.Prize) models.PrizeDTO {
 	return models.PrizeDTO{
 		ID:         row.ID,
 		Title:      row.Title,
+		TitleEn:    row.TitleEn,
 		Desc:       row.Desc,
+		DescEn:     row.DescEn,
 		Prize:      prize,
 		Key:        row.Key,
 		StartTime:  row.StartTime,
@@ -687,7 +689,9 @@ func steamAssetKinds(kind string) []steamassets.Kind {
 func normalizePrizeBody(body models.PrizeBody) models.PrizeBody {
 	body.Keys = normalizeStringArray(body.Keys)
 	body.Title = strings.TrimSpace(body.Title)
+	body.TitleEn = strings.TrimSpace(body.TitleEn)
 	body.Platform = strings.TrimSpace(body.Platform)
+	body.PlatformEn = strings.TrimSpace(body.PlatformEn)
 	return body
 }
 

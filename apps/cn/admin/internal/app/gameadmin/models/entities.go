@@ -100,7 +100,9 @@ type GameCommentPayload struct {
 type Prize struct {
 	ID         int64               `json:"id"`
 	Title      string              `json:"title"`
+	TitleEn    string              `json:"title_en"`
 	Desc       string              `json:"desc"`
+	DescEn     string              `json:"desc_en"`
 	Prize      string              `json:"-"`
 	Key        string              `json:"key"`
 	StartTime  pkgmodels.LocalTime `json:"start_time"`
@@ -112,15 +114,19 @@ type Prize struct {
 func (*Prize) TableName() string { return "gfg_prize" }
 
 type PrizeBody struct {
-	Keys     []string `json:"keys"`
-	Title    string   `json:"title"`
-	Platform string   `json:"platform"`
+	Keys       []string `json:"keys"`
+	Title      string   `json:"title"`
+	TitleEn    string   `json:"title_en"`
+	Platform   string   `json:"platform"`
+	PlatformEn string   `json:"platform_en"`
 }
 
 type PrizeDTO struct {
 	ID         int64               `json:"id"`
 	Title      string              `json:"title"`
+	TitleEn    string              `json:"title_en"`
 	Desc       string              `json:"desc"`
+	DescEn     string              `json:"desc_en"`
 	Prize      PrizeBody           `json:"prize"`
 	Key        string              `json:"key"`
 	StartTime  pkgmodels.LocalTime `json:"start_time"`
@@ -131,7 +137,9 @@ type PrizeDTO struct {
 
 type PrizePayload struct {
 	Title     string    `json:"title"`
+	TitleEn   string    `json:"title_en"`
 	Desc      string    `json:"desc"`
+	DescEn    string    `json:"desc_en"`
 	Prize     PrizeBody `json:"prize"`
 	Key       string    `json:"key"`
 	StartTime string    `json:"start_time"`

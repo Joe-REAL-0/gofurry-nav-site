@@ -1,5 +1,37 @@
 import { test, expect, lotteryDraft, lotteryRejection, assertLotteryAppearance, assertLotteryModal, settleLottery } from '../fixtures/lottery'
 
+test('Lottery localizes all business text across list, dialog and history with legacy fallback', async ({ lottery }) => {
+  await lottery.open({ locale: 'en', translations: true })
+  await expect(lottery.page.locator('.lottery-pool__title').first()).toHaveText('Community Giveaway')
+  await expect(lottery.page.locator('.lottery-pool__desc').first()).toHaveText('Join the community giveaway.')
+  await expect(lottery.page.locator('.lottery-pool').first()).toContainText('Gift Card · Steam Store')
+  await expect(lottery.page.locator('.lottery-history__title').first()).toHaveText('Autumn Giveaway')
+  await expect(lottery.page.locator('.lottery-history__desc').first()).toHaveText('Previous community giveaway.')
+  await expect(lottery.page.locator('.lottery-pool__title').nth(1)).toHaveText('周末特别奖池')
+  await lottery.openModal()
+  await expect(lottery.dialog.locator('.lottery-modal__title')).toHaveText('Community Giveaway')
+  await expect(lottery.dialog.locator('.lottery-modal__summary')).toContainText('Gift Card (Steam Store)')
+  await lottery.page.keyboard.press('Escape')
+  await lottery.page.getByRole('button', { name: 'CN', exact: true }).click()
+  await expect(lottery.page).toHaveURL(/\/games\/prize$/)
+  await expect(lottery.page.locator('.lottery-pool__title').first()).toHaveText('社区游戏奖池')
+  await expect(lottery.page.locator('.lottery-history__title').first()).toHaveText('秋日游戏活动')
+  lottery.assertQuiet({ gets: 2, upstream: 2 })
+})
+
+test('Lottery language navigation cancels a pending previous-language response', async ({ lottery }) => {
+  const gate = lottery.holdRead()
+  await lottery.open({ locale: 'en', translations: true, ready: false })
+  await gate.waitReceived()
+  lottery.expectAbort(gate)
+  await lottery.page.getByRole('button', { name: 'CN', exact: true }).click()
+  await lottery.waitAborted(gate)
+  await expect(lottery.page.locator('.lottery-pool__title').first()).toHaveText('社区游戏奖池')
+  gate.release(); await gate.waitCompleted()
+  await expect(lottery.page.locator('.lottery-pool__title').first()).toHaveText('社区游戏奖池')
+  lottery.assertQuiet({ gets: 2, upstream: 2 })
+})
+
 for (const locale of ['zh', 'en'] as const) test(`Lottery CSR data and computed contract (${locale})`, async ({ lottery }) => {
   await lottery.open({ locale, theme: locale === 'en' ? 'dark' : 'light', elapsed: locale === 'en' })
   await settleLottery(lottery, lottery.root)

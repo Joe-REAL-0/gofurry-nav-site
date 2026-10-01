@@ -415,5 +415,5 @@ func commentModel(row gamesqlc.GfgGameComment) models.GameComment {
 }
 
 func prizeModel(row gamesqlc.GfgPrize) models.Prize {
-	return models.Prize{ID: row.ID, Title: row.Title, Desc: row.Desc, Prize: string(row.Prize), Key: row.Key, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), CreateTime: localTime(row.CreateTime), Status: row.Status}
+	return models.Prize{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Desc: row.Desc, DescEn: row.DescEn, Prize: string(row.Prize), Key: row.Key, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), CreateTime: localTime(row.CreateTime), Status: row.Status}
 }

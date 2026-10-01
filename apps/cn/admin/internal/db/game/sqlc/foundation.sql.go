@@ -49,7 +49,7 @@ func (q *Queries) CountGames(ctx context.Context, keyword string) (int64, error)
 }
 
 const countPrizes = `-- name: CountPrizes :one
-SELECT COUNT(*)::bigint FROM gfg_prize WHERE $1::text='' OR title ILIKE '%'||$1||'%'
+SELECT COUNT(*)::bigint FROM gfg_prize WHERE $1::text='' OR title ILIKE '%'||$1||'%' OR title_en ILIKE '%'||$1||'%'
  OR "desc" ILIKE '%'||$1||'%' OR id::text ILIKE '%'||$1||'%'
 `
 
@@ -216,7 +216,7 @@ func (q *Queries) GetGameComment(ctx context.Context, id int64) (GfgGameComment,
 }
 
 const getPrize = `-- name: GetPrize :one
-SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status FROM gfg_prize WHERE id=$1
+SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en FROM gfg_prize WHERE id=$1
 `
 
 func (q *Queries) GetPrize(ctx context.Context, id int64) (GfgPrize, error) {
@@ -232,6 +232,8 @@ func (q *Queries) GetPrize(ctx context.Context, id int64) (GfgPrize, error) {
 		&i.EndTime,
 		&i.CreateTime,
 		&i.Status,
+		&i.TitleEn,
+		&i.DescEn,
 	)
 	return i, err
 }
@@ -362,15 +364,17 @@ func (q *Queries) InsertGameComment(ctx context.Context, arg InsertGameCommentPa
 }
 
 const insertPrize = `-- name: InsertPrize :one
-INSERT INTO gfg_prize (id,title,"desc",prize,"key",start_time,end_time,create_time,status)
-VALUES ($1,$2,$3,$4,$5,$6,$7,NOW()::timestamp(0),$8)
-RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status
+INSERT INTO gfg_prize (id,title,title_en,"desc",desc_en,prize,"key",start_time,end_time,create_time,status)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW()::timestamp(0),$10)
+RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en
 `
 
 type InsertPrizeParams struct {
 	ID          int64            `json:"id"`
 	Title       string           `json:"title"`
+	TitleEn     string           `json:"title_en"`
 	Description string           `json:"description"`
+	DescEn      string           `json:"desc_en"`
 	Prize       []byte           `json:"prize"`
 	Key         string           `json:"key"`
 	StartTime   pgtype.Timestamp `json:"start_time"`
@@ -382,7 +386,9 @@ func (q *Queries) InsertPrize(ctx context.Context, arg InsertPrizeParams) (GfgPr
 	row := q.db.QueryRow(ctx, insertPrize,
 		arg.ID,
 		arg.Title,
+		arg.TitleEn,
 		arg.Description,
+		arg.DescEn,
 		arg.Prize,
 		arg.Key,
 		arg.StartTime,
@@ -400,6 +406,8 @@ func (q *Queries) InsertPrize(ctx context.Context, arg InsertPrizeParams) (GfgPr
 		&i.EndTime,
 		&i.CreateTime,
 		&i.Status,
+		&i.TitleEn,
+		&i.DescEn,
 	)
 	return i, err
 }
@@ -607,8 +615,8 @@ func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGam
 }
 
 const listPrizes = `-- name: ListPrizes :many
-SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status FROM gfg_prize
-WHERE $1::text='' OR title ILIKE '%'||$1||'%' OR "desc" ILIKE '%'||$1||'%'
+SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en FROM gfg_prize
+WHERE $1::text='' OR title ILIKE '%'||$1||'%' OR title_en ILIKE '%'||$1||'%' OR "desc" ILIKE '%'||$1||'%'
  OR id::text ILIKE '%'||$1||'%' ORDER BY id DESC LIMIT $3 OFFSET $2
 `
 
@@ -637,6 +645,8 @@ func (q *Queries) ListPrizes(ctx context.Context, arg ListPrizesParams) ([]GfgPr
 			&i.EndTime,
 			&i.CreateTime,
 			&i.Status,
+			&i.TitleEn,
+			&i.DescEn,
 		); err != nil {
 			return nil, err
 		}
@@ -833,13 +843,15 @@ func (q *Queries) UpdateGameComment(ctx context.Context, arg UpdateGameCommentPa
 }
 
 const updatePrize = `-- name: UpdatePrize :one
-UPDATE gfg_prize SET title=$1,"desc"=$2,prize=$3,"key"=$4,start_time=$5,end_time=$6,status=$7
-WHERE id=$8 RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status
+UPDATE gfg_prize SET title=$1,title_en=$2,"desc"=$3,desc_en=$4,prize=$5,"key"=$6,start_time=$7,end_time=$8,status=$9
+WHERE id=$10 RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en
 `
 
 type UpdatePrizeParams struct {
 	Title       string           `json:"title"`
+	TitleEn     string           `json:"title_en"`
 	Description string           `json:"description"`
+	DescEn      string           `json:"desc_en"`
 	Prize       []byte           `json:"prize"`
 	Key         string           `json:"key"`
 	StartTime   pgtype.Timestamp `json:"start_time"`
@@ -851,7 +863,9 @@ type UpdatePrizeParams struct {
 func (q *Queries) UpdatePrize(ctx context.Context, arg UpdatePrizeParams) (GfgPrize, error) {
 	row := q.db.QueryRow(ctx, updatePrize,
 		arg.Title,
+		arg.TitleEn,
 		arg.Description,
+		arg.DescEn,
 		arg.Prize,
 		arg.Key,
 		arg.StartTime,
@@ -870,6 +884,8 @@ func (q *Queries) UpdatePrize(ctx context.Context, arg UpdatePrizeParams) (GfgPr
 		&i.EndTime,
 		&i.CreateTime,
 		&i.Status,
+		&i.TitleEn,
+		&i.DescEn,
 	)
 	return i, err
 }

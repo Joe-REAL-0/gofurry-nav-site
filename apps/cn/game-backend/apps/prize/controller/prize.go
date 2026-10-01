@@ -94,7 +94,7 @@ func (api *PrizeAPI) ActiveParticipation(c fiber.Ctx) error {
 // @Schemes
 // @Description 抽奖详情
 func (api *PrizeAPI) LotteryInfo(c fiber.Ctx) error {
-	data, err := api.service.LotteryInfo()
+	data, err := api.service.LotteryInfo(c.Query("lang", "zh"))
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}

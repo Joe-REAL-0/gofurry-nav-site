@@ -135,7 +135,7 @@ func (q *Queries) GetHotGames(ctx context.Context, limitCount int32) ([]GetHotGa
 }
 
 const getPrizeByID = `-- name: GetPrizeByID :one
-SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status
+SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status, title_en, desc_en
 FROM gfg_prize WHERE id = $1
 `
 
@@ -152,6 +152,8 @@ func (q *Queries) GetPrizeByID(ctx context.Context, id int64) (GfgPrize, error) 
 		&i.EndTime,
 		&i.CreateTime,
 		&i.Status,
+		&i.TitleEn,
+		&i.DescEn,
 	)
 	return i, err
 }
@@ -281,14 +283,16 @@ func (q *Queries) InsertReview(ctx context.Context, arg InsertReviewParams) erro
 }
 
 const listActiveLotteries = `-- name: ListActiveLotteries :many
-SELECT id, title, "desc", start_time, end_time, prize
+SELECT id, title, title_en, "desc", desc_en, start_time, end_time, prize
 FROM gfg_prize WHERE status IS TRUE ORDER BY end_time DESC
 `
 
 type ListActiveLotteriesRow struct {
 	ID        int64            `json:"id"`
 	Title     string           `json:"title"`
+	TitleEn   string           `json:"title_en"`
 	Desc      string           `json:"desc"`
+	DescEn    string           `json:"desc_en"`
 	StartTime pgtype.Timestamp `json:"start_time"`
 	EndTime   pgtype.Timestamp `json:"end_time"`
 	Prize     []byte           `json:"prize"`
@@ -306,7 +310,9 @@ func (q *Queries) ListActiveLotteries(ctx context.Context) ([]ListActiveLotterie
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
+			&i.TitleEn,
 			&i.Desc,
+			&i.DescEn,
 			&i.StartTime,
 			&i.EndTime,
 			&i.Prize,
@@ -322,7 +328,7 @@ func (q *Queries) ListActiveLotteries(ctx context.Context) ([]ListActiveLotterie
 }
 
 const listActivePrizes = `-- name: ListActivePrizes :many
-SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status
+SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status, title_en, desc_en
 FROM gfg_prize WHERE status IS TRUE
 `
 
@@ -345,6 +351,8 @@ func (q *Queries) ListActivePrizes(ctx context.Context) ([]GfgPrize, error) {
 			&i.EndTime,
 			&i.CreateTime,
 			&i.Status,
+			&i.TitleEn,
+			&i.DescEn,
 		); err != nil {
 			return nil, err
 		}
@@ -410,14 +418,16 @@ func (q *Queries) ListAnonymousReviews(ctx context.Context, arg ListAnonymousRev
 }
 
 const listPrizeHistory = `-- name: ListPrizeHistory :many
-SELECT id, title, "desc", end_time, prize
+SELECT id, title, title_en, "desc", desc_en, end_time, prize
 FROM gfg_prize WHERE status IS FALSE ORDER BY end_time DESC
 `
 
 type ListPrizeHistoryRow struct {
 	ID      int64            `json:"id"`
 	Title   string           `json:"title"`
+	TitleEn string           `json:"title_en"`
 	Desc    string           `json:"desc"`
+	DescEn  string           `json:"desc_en"`
 	EndTime pgtype.Timestamp `json:"end_time"`
 	Prize   []byte           `json:"prize"`
 }
@@ -434,7 +444,9 @@ func (q *Queries) ListPrizeHistory(ctx context.Context) ([]ListPrizeHistoryRow, 
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
+			&i.TitleEn,
 			&i.Desc,
+			&i.DescEn,
 			&i.EndTime,
 			&i.Prize,
 		); err != nil {
@@ -521,15 +533,17 @@ func (q *Queries) ListPrizeWinners(ctx context.Context, prizeID int64) ([]GfgPri
 
 const savePrize = `-- name: SavePrize :execrows
 UPDATE gfg_prize
-SET title = $1, "desc" = $2, prize = $3::jsonb,
-    "key" = $4, start_time = $5,
-    end_time = $6, status = $7
-WHERE id = $8
+SET title = $1, title_en = $2, "desc" = $3, desc_en = $4, prize = $5::jsonb,
+    "key" = $6, start_time = $7,
+    end_time = $8, status = $9
+WHERE id = $10
 `
 
 type SavePrizeParams struct {
 	Title       string           `json:"title"`
+	TitleEn     string           `json:"title_en"`
 	Description string           `json:"description"`
+	DescEn      string           `json:"desc_en"`
 	Prize       []byte           `json:"prize"`
 	Key         string           `json:"key"`
 	StartTime   pgtype.Timestamp `json:"start_time"`
@@ -541,7 +555,9 @@ type SavePrizeParams struct {
 func (q *Queries) SavePrize(ctx context.Context, arg SavePrizeParams) (int64, error) {
 	result, err := q.db.Exec(ctx, savePrize,
 		arg.Title,
+		arg.TitleEn,
 		arg.Description,
+		arg.DescEn,
 		arg.Prize,
 		arg.Key,
 		arg.StartTime,

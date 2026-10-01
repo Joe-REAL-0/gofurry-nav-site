@@ -88,7 +88,7 @@ func (dao *PrizeDAO) GetLotteryHistory() ([]models.PrizeCacheModel, common.GFErr
 	}
 	result := make([]models.PrizeCacheModel, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, models.PrizeCacheModel{ID: row.ID, Title: row.Title, Desc: row.Desc, EndTime: localTime(row.EndTime), Prize: string(row.Prize)})
+		result = append(result, models.PrizeCacheModel{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Desc: row.Desc, DescEn: row.DescEn, EndTime: localTime(row.EndTime), Prize: string(row.Prize)})
 	}
 	return result, nil
 }
@@ -113,7 +113,7 @@ func (dao *PrizeDAO) GetLotteryActive() ([]models.ActiveLotteryVo, common.GFErro
 	}
 	result := make([]models.ActiveLotteryVo, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, models.ActiveLotteryVo{ID: row.ID, Title: row.Title, Desc: row.Desc, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), Prize: string(row.Prize)})
+		result = append(result, models.ActiveLotteryVo{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Desc: row.Desc, DescEn: row.DescEn, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), Prize: string(row.Prize)})
 	}
 	return result, nil
 }
@@ -126,14 +126,14 @@ func (dao *PrizeDAO) Update(id int64, record models.GfgPrizeMember) (int64, comm
 // Save intentionally persists false status values; this preserves the old full-update lottery close behavior.
 func (dao *PrizeDAO) Save(id int64, record models.GfgPrize) (int64, common.GFError) {
 	count, err := dao.queries.SavePrize(context.Background(), gamesqlc.SavePrizeParams{
-		ID: id, Title: record.Title, Description: record.Desc, Prize: []byte(record.Prize), Key: record.Key,
+		ID: id, Title: record.Title, TitleEn: record.TitleEn, Description: record.Desc, DescEn: record.DescEn, Prize: []byte(record.Prize), Key: record.Key,
 		StartTime: timestamp(record.StartTime), EndTime: timestamp(record.EndTime), Status: record.Status,
 	})
 	return count, daoError(err)
 }
 
 func mapPrize(row gamesqlc.GfgPrize) models.GfgPrize {
-	return models.GfgPrize{ID: row.ID, Title: row.Title, Desc: row.Desc, Prize: string(row.Prize), Key: row.Key, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), CreateTime: localTime(row.CreateTime), Status: row.Status}
+	return models.GfgPrize{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Desc: row.Desc, DescEn: row.DescEn, Prize: string(row.Prize), Key: row.Key, StartTime: localTime(row.StartTime), EndTime: localTime(row.EndTime), CreateTime: localTime(row.CreateTime), Status: row.Status}
 }
 
 func mapMember(row gamesqlc.GfgPrizeMember) models.GfgPrizeMember {

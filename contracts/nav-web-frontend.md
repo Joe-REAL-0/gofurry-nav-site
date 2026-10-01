@@ -1542,6 +1542,13 @@ Lottery Prize and Activation remain CSR/noindex surfaces. The mounted Prize GET
 MUST distinguish loading, ready-empty and unavailable data; Retry is local,
 single-flight and canceled on unmount. The live request owner is
 `app/utils/api/game.ts`, not the unused duplicate in `app/services/game.ts`.
+Prize reads pass `lang=zh|en`. Game Backend selects activity title/description and
+prize title/platform independently, falling back to Chinese for missing English.
+The same contract applies to active pools, Join and winner history. Locale changes
+cancel previous-language reads and retain stale-response protection; participation
+payloads, redemption-key privacy, CSR/noindex and the existing retry contract do
+not change. The shared history cache retains both languages without redemption
+keys, including compatibility with older single-language cache entries.
 The local body-mounted Lottery dialog owns focus trapping/restoration, background
 inertness and scroll cleanup. Validate a trimmed input snapshot before POST;
 pending Close/Cancel remains available, and late responses cannot affect a new

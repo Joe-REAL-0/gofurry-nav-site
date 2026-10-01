@@ -8,9 +8,11 @@ const TableNameGfgPrize = "gfg_prize"
 
 // GfgPrize mapped from table <gfg_prize>
 type GfgPrize struct {
-	ID         int64        `db:"id" json:"id"`                  // 抽奖活动表id
-	Title      string       `db:"title" json:"title"`            // 标题
-	Desc       string       `db:"desc" json:"desc"`              // 描述
+	ID         int64        `db:"id" json:"id"`       // 抽奖活动表id
+	Title      string       `db:"title" json:"title"` // 标题
+	TitleEn    string       `db:"title_en" json:"title_en,omitempty"`
+	Desc       string       `db:"desc" json:"desc"` // 描述
+	DescEn     string       `db:"desc_en" json:"desc_en,omitempty"`
 	Prize      string       `db:"prize" json:"prize"`            // 奖品
 	Key        string       `db:"key" json:"key"`                // 参与密钥
 	StartTime  cm.LocalTime `db:"start_time" json:"startTime"`   // 开始时间
@@ -60,15 +62,19 @@ type ParticipationCacheSaveModel struct {
 }
 
 type PrizeModel struct {
-	Keys     []string `json:"keys"`
-	Title    string   `json:"title"`    // 奖品名称
-	Platform string   `json:"platform"` // 奖品兑换平台
+	Keys       []string `json:"keys"`
+	Title      string   `json:"title"` // 奖品名称
+	TitleEn    string   `json:"title_en,omitempty"`
+	Platform   string   `json:"platform"` // 奖品兑换平台
+	PlatformEn string   `json:"platform_en,omitempty"`
 }
 
 type PrizeCacheModel struct {
 	ID      int64        `json:"id"`
 	Title   string       `json:"title"`
+	TitleEn string       `json:"title_en,omitempty"`
 	Desc    string       `json:"desc"`
+	DescEn  string       `json:"desc_en,omitempty"`
 	EndTime cm.LocalTime `json:"end_time"`
 	Prize   string       `json:"prize"`
 }
@@ -79,16 +85,14 @@ type WinnerCacheModel struct {
 }
 
 type PrizeCacheSaveModel struct {
-	Name    string       `json:"name"`
-	Desc    string       `json:"desc"`
-	EndTime cm.LocalTime `json:"end_time"`
-	Prize   struct {
-		Title    string `json:"title"`
-		Platform string `json:"platform"`
-		Count    int    `json:"count"`
-	} `json:"prize"`
-	Winner []WinnerCacheModel `json:"winner"`
-	Count  int                `json:"count"`
+	Name    string             `json:"name"`
+	NameEn  string             `json:"name_en,omitempty"`
+	Desc    string             `json:"desc"`
+	DescEn  string             `json:"desc_en,omitempty"`
+	EndTime cm.LocalTime       `json:"end_time"`
+	Prize   PrizeDisplay       `json:"prize"`
+	Winner  []WinnerCacheModel `json:"winner"`
+	Count   int                `json:"count"`
 }
 
 type PrizeWinnerCacheSaveModel struct {
@@ -104,7 +108,9 @@ type LotteryResp struct {
 type ActiveLotteryVo struct {
 	ID        int64        `json:"id"`
 	Title     string       `json:"title"`
+	TitleEn   string       `json:"title_en,omitempty"`
 	Desc      string       `json:"desc"`
+	DescEn    string       `json:"desc_en,omitempty"`
 	StartTime cm.LocalTime `json:"start_time"`
 	EndTime   cm.LocalTime `json:"end_time"`
 	Prize     string       `json:"prize"`
@@ -122,9 +128,13 @@ type LotteryVo struct {
 	Desc      string       `json:"desc"`
 	StartTime cm.LocalTime `json:"start_time"`
 	EndTime   cm.LocalTime `json:"end_time"`
-	Prize     struct {
-		Title    string `json:"title"`
-		Platform string `json:"platform"`
-		Count    int    `json:"count"`
-	} `json:"prize"`
+	Prize     PrizeDisplay `json:"prize"`
+}
+
+type PrizeDisplay struct {
+	Title      string `json:"title"`
+	TitleEn    string `json:"title_en,omitempty"`
+	Platform   string `json:"platform"`
+	PlatformEn string `json:"platform_en,omitempty"`
+	Count      int    `json:"count"`
 }

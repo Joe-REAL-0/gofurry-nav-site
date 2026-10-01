@@ -169,7 +169,7 @@ func (s *PrizeService) ActiveParticipation(id string, key string) (prizeRes mode
 	return prize, memberRecord, nil
 }
 
-func (s *PrizeService) LotteryInfo() (res models.LotteryResp, err common.GFError) {
+func (s *PrizeService) LotteryInfo(lang string) (res models.LotteryResp, err common.GFError) {
 	// 往期
 	data, err := cs.GetString("prize:history")
 	if err != nil {
@@ -179,6 +179,8 @@ func (s *PrizeService) LotteryInfo() (res models.LotteryResp, err common.GFError
 	if jsonErr != nil {
 		return res, common.NewServiceError("json err:" + jsonErr.Error())
 	}
+
+	res.History = res.History.Localized(lang)
 
 	// 本期
 	active, err := s.dao.GetLotteryActive()
@@ -208,15 +210,11 @@ func (s *PrizeService) LotteryInfo() (res models.LotteryResp, err common.GFError
 
 		newLottery := models.LotteryVo{
 			ID:        active[idx].ID,
-			Title:     active[idx].Title,
-			Desc:      active[idx].Desc,
+			Title:     models.PrizeText(active[idx].Title, active[idx].TitleEn, lang),
+			Desc:      models.PrizeText(active[idx].Desc, active[idx].DescEn, lang),
 			StartTime: active[idx].StartTime,
 			EndTime:   active[idx].EndTime,
-			Prize: struct {
-				Title    string `json:"title"`
-				Platform string `json:"platform"`
-				Count    int    `json:"count"`
-			}{Title: prizeModels.Title, Platform: prizeModels.Platform, Count: len(prizeModels.Keys)},
+			Prize:     prizeModels.Display().Localized(lang),
 		}
 
 		res.Active = append(res.Active, models.ActiveVo{

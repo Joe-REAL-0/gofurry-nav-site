@@ -312,6 +312,7 @@ export interface CommentReq {
 
 // 抽奖
 
+// Business text is localized by Game Backend's lang query, with per-field zh fallback.
 export interface LotteryResp {
     history: LotteryHistoryModel
     active: LotteryActiveModel[]

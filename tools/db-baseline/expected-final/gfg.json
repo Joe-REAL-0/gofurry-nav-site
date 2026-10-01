@@ -6513,12 +6513,30 @@
           "not_null": true,
           "has_default": false,
           "comment": "状态"
+        },
+        {
+          "name": "title_en",
+          "data_type": "character varying(100)",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::character varying"
+        },
+        {
+          "name": "desc_en",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::text"
         }
       ],
       "constraints": [
         {
           "name": "gfg_prize_create_time_not_null",
           "definition": "NOT NULL create_time"
+        },
+        {
+          "name": "gfg_prize_desc_en_not_null",
+          "definition": "NOT NULL desc_en"
         },
         {
           "name": "gfg_prize_desc_not_null",
@@ -6551,6 +6569,10 @@
         {
           "name": "gfg_prize_status_not_null",
           "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_prize_title_en_not_null",
+          "definition": "NOT NULL title_en"
         },
         {
           "name": "gfg_prize_title_not_null",

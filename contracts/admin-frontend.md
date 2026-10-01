@@ -70,6 +70,13 @@ Site Group exposes a homepage curation page showing the first eight active sites
 
 Site, Game and Release Notes are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
 
+Lottery remains a simple Resource Engine resource. Activity title/description and
+prize title/platform each have Chinese and English fields; participation passwords
+and redemption keys are language-independent. String-array controls MUST retain
+blank lines and whitespace during editing. Submit validation trims/removes empty
+key lines and requires at least one usable key; backend normalization remains
+authoritative. Do not normalize a controlled textarea on each keystroke.
+
 Release Notes routes precede `/nav/:resource`; `update-notices` is not a generic
 resource. The existing navigation and `content.read/write` capabilities apply.
 One RHF form owns both languages and shared metadata. Opening `/new` creates no

@@ -30,3 +30,9 @@ for status checks, coordinated shutdown, migration and recommendation rebuild.
 Use `gofurry_migrator` only for Goose; applications keep `gofurry_app`.
 Already-applied migrations are not executed again. Never rerun baseline adoption
 or edit Goose history to replay an applied migration.
+
+Migration `20261001010000` adds `gfg_prize.title_en` and `desc_en` with empty-string
+defaults. Prize `title_en`/`platform_en` remain additive fields in the existing
+`prize` JSON. Original activity/prize/participation data is unchanged; English
+display falls back to Chinese per field. Deploy Game Backend and Admin after
+migration, then Nav Web. Down refuses to drop nonempty activity translations.

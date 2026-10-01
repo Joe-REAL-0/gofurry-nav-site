@@ -31,7 +31,8 @@ function FieldControl({ field, value, onChange, disabled }: { field: ResourceFie
   if (field.type === 'select') return <Select value={String(value ?? '')} onValueChange={onChange} options={field.options ?? []} disabled={disabled} />
   if (field.type === 'remote-select' && field.optionEndpoint) return <RemoteSelect endpoint={field.optionEndpoint} value={value} onChange={onChange} disabled={disabled} />
   if (field.type === 'boolean') return <label className="flex h-9 items-center gap-2"><input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)} disabled={disabled} className="size-4 accent-primary" /><span className="text-sm text-muted-foreground">{value ? '已启用' : '未启用'}</span></label>
-  if (field.type === 'string-array') return <Textarea value={Array.isArray(value) ? value.join('\n') : ''} onChange={(event) => onChange(event.target.value.split('\n').map((item) => item.trim()).filter(Boolean))} disabled={disabled} placeholder={field.placeholder} />
+  // Keep blank lines and whitespace while editing; the submit schema owns normalization.
+  if (field.type === 'string-array') return <Textarea value={Array.isArray(value) ? value.join('\n') : ''} onChange={(event) => onChange(event.target.value.split('\n'))} disabled={disabled} placeholder={field.placeholder} />
   if (field.type === 'datetime') return <DateTimePicker value={String(value ?? '')} onValueChange={onChange} disabled={disabled} ariaLabel={field.label} />
   return <Input type={field.type === 'number' ? 'number' : 'text'} value={String(value ?? '')} onChange={(event) => onChange(event.target.value)} disabled={disabled} placeholder={field.placeholder} />
 }

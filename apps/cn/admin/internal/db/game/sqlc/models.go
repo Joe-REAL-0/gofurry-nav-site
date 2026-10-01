@@ -713,7 +713,9 @@ type GfgPrize struct {
 	// 创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
 	// 状态
-	Status bool `json:"status"`
+	Status  bool   `json:"status"`
+	TitleEn string `json:"title_en"`
+	DescEn  string `json:"desc_en"`
 }
 
 // 抽奖活动参与表

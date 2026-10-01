@@ -240,7 +240,7 @@ async function loadLottery() {
   controller = request
   status.value = 'loading'
   try {
-    const res = await getLottery({ signal: request.signal })
+    const res = await getLottery(isZh.value ? 'zh' : 'en', { signal: request.signal })
     if (disposed || request.signal.aborted || controller !== request) return
     const history = res.history.prize || []
     const count = res.history.prize_count
@@ -258,6 +258,7 @@ async function loadLottery() {
   }
 }
 
+// Locale navigation remounts this page; a locale watcher would duplicate its GET.
 onMounted(loadLottery)
 onBeforeUnmount(() => {
   disposed = true
