@@ -17,6 +17,7 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	gamesqlc "github.com/gofurry/gofurry-admin/internal/db/game/sqlc"
+	"github.com/gofurry/gofurry-admin/internal/infra/assets"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	pkgmodels "github.com/gofurry/gofurry-admin/pkg/models"
 	"github.com/gofurry/gofurry-admin/pkg/util"
@@ -26,7 +27,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type GameAPI struct{ store *gameStore }
+type GameAPI struct {
+	store          *gameStore
+	showcaseAssets *assets.Service
+}
+
+func (api *GameAPI) WithShowcaseAssets(s *assets.Service) *GameAPI {
+	api.showcaseAssets = s
+	return api
+}
 
 func New(pool *pgxpool.Pool, auditLogger *audit.Logger) *GameAPI {
 	return &GameAPI{store: newGameStore(pool, auditLogger)}
@@ -549,23 +558,24 @@ func gameUpdateParams(req models.GamePayload) gamesqlc.UpdateGameParams {
 
 func gameDTO(row models.Game) models.GameDTO {
 	return models.GameDTO{
-		ID:           row.ID,
-		Name:         row.Name,
-		NameEn:       row.NameEn,
-		Info:         row.Info,
-		InfoEn:       row.InfoEn,
-		CreateTime:   row.CreateTime,
-		UpdateTime:   row.UpdateTime,
-		Resources:    adminutil.ParseKVArray(row.Resources),
-		Groups:       adminutil.ParseKVArray(row.Groups),
-		Developers:   adminutil.ParseStringArray(row.Developers),
-		Publishers:   adminutil.ParseStringArray(row.Publishers),
-		Appid:        row.Appid,
-		Header:       row.Header,
-		Links:        adminutil.ParseKVArray(row.Links),
-		Weight:       row.Weight,
-		PrimaryTag:   row.PrimaryTag,
-		SecondaryTag: row.SecondaryTag,
+		ShowcaseEligible: row.ShowcaseEligible,
+		ID:               row.ID,
+		Name:             row.Name,
+		NameEn:           row.NameEn,
+		Info:             row.Info,
+		InfoEn:           row.InfoEn,
+		CreateTime:       row.CreateTime,
+		UpdateTime:       row.UpdateTime,
+		Resources:        adminutil.ParseKVArray(row.Resources),
+		Groups:           adminutil.ParseKVArray(row.Groups),
+		Developers:       adminutil.ParseStringArray(row.Developers),
+		Publishers:       adminutil.ParseStringArray(row.Publishers),
+		Appid:            row.Appid,
+		Header:           row.Header,
+		Links:            adminutil.ParseKVArray(row.Links),
+		Weight:           row.Weight,
+		PrimaryTag:       row.PrimaryTag,
+		SecondaryTag:     row.SecondaryTag,
 	}
 }
 

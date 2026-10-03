@@ -5,45 +5,47 @@ import (
 )
 
 type Game struct {
-	ID           int64               `json:"id"`
-	Name         string              `json:"name"`
-	NameEn       string              `json:"name_en"`
-	Info         string              `json:"info"`
-	InfoEn       string              `json:"info_en"`
-	CreateTime   pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime   pkgmodels.LocalTime `json:"update_time"`
-	Resources    *string             `json:"-"`
-	Groups       *string             `json:"-"`
-	Developers   string              `json:"-"`
-	Publishers   string              `json:"-"`
-	Appid        int64               `json:"appid"`
-	Header       string              `json:"header"`
-	Links        *string             `json:"-"`
-	Weight       int64               `json:"weight"`
-	PrimaryTag   int64               `json:"primary_tag"`
-	SecondaryTag int64               `json:"secondary_tag"`
+	ShowcaseEligible bool                `json:"showcase_eligible"`
+	ID               int64               `json:"id"`
+	Name             string              `json:"name"`
+	NameEn           string              `json:"name_en"`
+	Info             string              `json:"info"`
+	InfoEn           string              `json:"info_en"`
+	CreateTime       pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime       pkgmodels.LocalTime `json:"update_time"`
+	Resources        *string             `json:"-"`
+	Groups           *string             `json:"-"`
+	Developers       string              `json:"-"`
+	Publishers       string              `json:"-"`
+	Appid            int64               `json:"appid"`
+	Header           string              `json:"header"`
+	Links            *string             `json:"-"`
+	Weight           int64               `json:"weight"`
+	PrimaryTag       int64               `json:"primary_tag"`
+	SecondaryTag     int64               `json:"secondary_tag"`
 }
 
 func (*Game) TableName() string { return "gfg_game" }
 
 type GameDTO struct {
-	ID           int64               `json:"id"`
-	Name         string              `json:"name"`
-	NameEn       string              `json:"name_en"`
-	Info         string              `json:"info"`
-	InfoEn       string              `json:"info_en"`
-	CreateTime   pkgmodels.LocalTime `json:"create_time"`
-	UpdateTime   pkgmodels.LocalTime `json:"update_time"`
-	Resources    []pkgmodels.KvModel `json:"resources"`
-	Groups       []pkgmodels.KvModel `json:"groups"`
-	Developers   []string            `json:"developers"`
-	Publishers   []string            `json:"publishers"`
-	Appid        int64               `json:"appid"`
-	Header       string              `json:"header"`
-	Links        []pkgmodels.KvModel `json:"links"`
-	Weight       int64               `json:"weight"`
-	PrimaryTag   int64               `json:"primary_tag"`
-	SecondaryTag int64               `json:"secondary_tag"`
+	ShowcaseEligible bool                `json:"showcase_eligible"`
+	ID               int64               `json:"id"`
+	Name             string              `json:"name"`
+	NameEn           string              `json:"name_en"`
+	Info             string              `json:"info"`
+	InfoEn           string              `json:"info_en"`
+	CreateTime       pkgmodels.LocalTime `json:"create_time"`
+	UpdateTime       pkgmodels.LocalTime `json:"update_time"`
+	Resources        []pkgmodels.KvModel `json:"resources"`
+	Groups           []pkgmodels.KvModel `json:"groups"`
+	Developers       []string            `json:"developers"`
+	Publishers       []string            `json:"publishers"`
+	Appid            int64               `json:"appid"`
+	Header           string              `json:"header"`
+	Links            []pkgmodels.KvModel `json:"links"`
+	Weight           int64               `json:"weight"`
+	PrimaryTag       int64               `json:"primary_tag"`
+	SecondaryTag     int64               `json:"secondary_tag"`
 }
 
 type GameWorkspaceTag struct {
@@ -188,8 +190,9 @@ type TagCategoryPayload struct {
 	SortOrder int32  `json:"sort_order"`
 }
 type GameClassificationPayload struct {
-	Weight         int64   `json:"weight"`
-	PrimaryTagID   *int64  `json:"primary_tag_id"`
-	SecondaryTagID *int64  `json:"secondary_tag_id"`
-	TagIDs         []int64 `json:"tag_ids"`
+	ShowcaseEligible *bool   `json:"showcase_eligible"`
+	Weight           int64   `json:"weight"`
+	PrimaryTagID     *int64  `json:"primary_tag_id"`
+	SecondaryTagID   *int64  `json:"secondary_tag_id"`
+	TagIDs           []int64 `json:"tag_ids"`
 }

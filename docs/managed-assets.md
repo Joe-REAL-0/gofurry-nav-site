@@ -44,6 +44,30 @@ exercises real COS/R2 plus the development GFN/GFA transaction and audit path.
 It creates labeled dev records and soft-deletes them afterward. Immutable files
 and their audit trail are retained; no production data or object deletion occurs.
 
+## Game Showcase artwork (#119-A)
+
+The same immutable COS Primary/R2 Mirror service owns Campaign artwork through
+`POST/DELETE /api/v1/game/showcase/campaigns/:id/artwork/{desktop|mobile}`.
+POST uses multipart `file`; DELETE clears the business reference only. Draft
+creation assigns the Campaign ID before upload. Native `content.read/write`,
+session and CSRF controls apply; no new asset registry or cloud client exists.
+
+Both kinds accept at most 5 MiB of original AVIF bytes. Desktop requires exactly
+1600×800 and mobile 1200×675. Bounded ISOBMFF parsing follows the primary item to
+its associated `ispe`, rejecting malformed, ambiguous or unsupported transformed
+geometry; it performs no pixel processing. This follows the [AVIF spatial
+extent contract](https://aomediacodec.github.io/av1-avif/v1.2.0.html#image-spatial-extents-property).
+The returned key is `game/showcase/{campaign_id}/{desktop|mobile}/{hash32}.avif`.
+
+Upload/Primary verification and best-effort Mirror precede the GFG transaction
+and existing independent GFA Audit. A Primary failure cannot change the reference;
+Mirror failure returns a warning. After commit, Showcase revision increments
+best-effort. Published Campaigns always retain required desktop artwork. Existing
+Nav Icon/Hero/Pattern contracts and initial production cutover remain unchanged.
+Cloud Inspector and Mirror Repair accept these new keys through the existing
+CloudOps endpoints. Stage A cloud tests use injected stores, never real buckets.
+See [Game Showcase backend contract](game-showcase.md) for APIs and verification.
+
 ## Public appearance and CDN resolution
 
 Home schema v4 replaces `backgrounds` with `hero.desktop` and `hero.mobile`.

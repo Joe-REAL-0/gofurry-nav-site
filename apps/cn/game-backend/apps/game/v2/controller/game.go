@@ -8,6 +8,7 @@ import (
 	v2dao "github.com/gofurry/gofurry-game-backend/apps/game/v2/dao"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	v2service "github.com/gofurry/gofurry-game-backend/apps/game/v2/service"
+	"github.com/gofurry/gofurry-game-backend/apps/game/v2/showcase"
 	reviewmodels "github.com/gofurry/gofurry-game-backend/apps/review/models"
 	reviewservice "github.com/gofurry/gofurry-game-backend/apps/review/service"
 	"github.com/gofurry/gofurry-game-backend/common"
@@ -15,10 +16,13 @@ import (
 )
 
 type GameV2API struct {
-	readModelService *v2service.ReadModelService
-	viewService      *v2service.GameViewService
-	reviewService    *reviewservice.ReviewService
-	insights         insightsReader
+	showcaseService   *showcase.Service
+	showcaseAnalytics *showcase.Analytics
+	showcaseSigner    showcase.Signer
+	readModelService  *v2service.ReadModelService
+	viewService       *v2service.GameViewService
+	reviewService     *reviewservice.ReviewService
+	insights          insightsReader
 }
 
 func New(readModelDAO *v2dao.ReadModelDAO, viewService *v2service.GameViewService, reviewService *reviewservice.ReviewService, insights insightsReader) *GameV2API {
@@ -65,9 +69,6 @@ func (api *GameV2API) TouchGameView(c fiber.Ctx) error {
 	}
 
 	clientIP := util.GetClientIP(c)
-	if clientIP == "" {
-		clientIP = c.IP()
-	}
 
 	viewCount, err := api.newGameViewService().TouchGameViewCount(gameID, clientIP)
 	if err != nil {

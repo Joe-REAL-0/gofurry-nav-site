@@ -110,7 +110,7 @@ func Start() (*Runtime, error) {
 		Pools: pools, Audit: auditLogger, AuthService: auth, EdgeOneScheduler: scheduler,
 		CloudAPI: cloudapi.New(cloudService, auditLogger),
 		AuthAPI:  authcontroller.New(auth, auditLogger), NavAPI: navadmin.New(pools.Nav, auditLogger).WithAssets(assetStorage, cfg.ExternalServices.AssetStorage.Primary.PublicBaseURL, cfg.ExternalServices.AssetStorage.Mirror.PublicBaseURL),
-		GameAPI: gameadmin.New(pools.Game, auditLogger), OptionsAPI: options.New(pools.Nav, pools.Game),
+		GameAPI: gameadmin.New(pools.Game, auditLogger).WithShowcaseAssets(assetStorage), OptionsAPI: options.New(pools.Nav, pools.Game),
 		CollectionAPI: collectioncontroller.New(collectionService),
 		MetricAPI:     metricadmin.NewAPI(metricService), ChangeAPI: changeadmin.NewAPI(changeService),
 		DataOpsAPI: dataops.NewAPI(dataOpsService), AuditAPI: auditadmin.NewAPI(auditService),

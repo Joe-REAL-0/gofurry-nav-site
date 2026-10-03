@@ -26,7 +26,6 @@ import (
 
 	"errors"
 	"github.com/bwmarrin/snowflake"
-	"github.com/gofiber/fiber/v3"
 	"github.com/gofurry/gofurry-game-backend/common"
 	log "github.com/gofurry/gofurry-game-backend/common/log"
 	cm "github.com/gofurry/gofurry-game-backend/common/models"
@@ -366,32 +365,6 @@ func DesensitizeIP(ip string) string {
 
 	// 异常情况
 	return "***"
-}
-
-// 获取客户端真实 IP
-func GetClientIP(c fiber.Ctx) string {
-	// 先尝试 X-Forwarded-For
-	xff := c.Get("X-Forwarded-For")
-	if xff != "" {
-		ips := strings.Split(xff, ",")
-		ip := strings.TrimSpace(ips[0])
-		if ip != "" && ip != "::1" && !strings.HasPrefix(ip, "127.") {
-			return ip
-		}
-	}
-
-	// 再尝试 X-Real-IP
-	xri := c.Get("X-Real-IP")
-	if xri != "" && xri != "::1" && !strings.HasPrefix(xri, "127.") {
-		return xri
-	}
-
-	// fallback
-	ip := c.IP()
-	if ip == "" || ip == "::1" || strings.HasPrefix(ip, "127.") {
-		return ""
-	}
-	return ip
 }
 
 // CryptoRandInt 生成 [0, n) 范围的安全随机数

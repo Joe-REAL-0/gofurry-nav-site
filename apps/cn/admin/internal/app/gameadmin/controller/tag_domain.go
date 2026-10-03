@@ -402,11 +402,23 @@ func (api *GameAPI) SaveClassification(c fiber.Ctx) error {
 			}
 		}
 		after, err := q.ListGameTagRelations(ctx, id)
-		type classificationSnapshot struct {
-			Weight int64
-			Tags   any
+		eligibility, eligibilityErr := q.ShowcaseGameStatus(ctx, id)
+		if eligibilityErr != nil {
+			return id, before, nil, eligibilityErr
 		}
-		return id, classificationSnapshot{game.Weight, before}, classificationSnapshot{req.Weight, after}, err
+		previousEligible := eligibility.ShowcaseEligible
+		if req.ShowcaseEligible != nil {
+			if eligibilityErr = q.SetShowcaseEligibility(ctx, gamesqlc.SetShowcaseEligibilityParams{ID: id, ShowcaseEligible: *req.ShowcaseEligible}); eligibilityErr != nil {
+				return id, before, nil, eligibilityErr
+			}
+			eligibility.ShowcaseEligible = *req.ShowcaseEligible
+		}
+		type classificationSnapshot struct {
+			Weight           int64
+			Tags             any
+			ShowcaseEligible bool
+		}
+		return id, classificationSnapshot{game.Weight, before, previousEligible}, classificationSnapshot{req.Weight, after, eligibility.ShowcaseEligible}, err
 	})
 	if err != nil {
 		return common.NewResponse(c).Error(err)

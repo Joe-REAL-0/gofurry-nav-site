@@ -19,6 +19,7 @@ import (
 	gamev2 "github.com/gofurry/gofurry-game-backend/apps/game/v2/controller"
 	prize "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 	"github.com/gofurry/gofurry-game-backend/common"
+	"github.com/gofurry/gofurry-game-backend/common/util"
 	"github.com/gofurry/gofurry-game-backend/middleware"
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -41,7 +42,7 @@ func (router *router) Init(pool *pgxpool.Pool, gameAPI *gamev2.GameV2API, prizeA
 		AppName:      common.COMMON_PROJECT_NAME,
 		ServerHeader: "gofurry-Game",
 		ErrorHandler: customErrorHandler,
-		TrustProxy:   true,
+		TrustProxy:   false,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		JSONEncoder:  sonic.Marshal,
@@ -90,7 +91,7 @@ func registerMiddlewares(app *fiber.App) {
 			Max:        cfg.Middleware.Limiter.MaxRequests,                             // 单位时间最大请求数
 			Expiration: time.Duration(cfg.Middleware.Limiter.Expiration) * time.Second, // 时间窗口
 			KeyGenerator: func(c fiber.Ctx) string {
-				return c.IP() // 按 IP 限流
+				return util.GetClientIP(c)
 			},
 			LimitReached: func(c fiber.Ctx) error {
 				return common.NewResponse(c).ErrorWithCode("请求过于频繁, 请稍后再试", fiber.StatusTooManyRequests)

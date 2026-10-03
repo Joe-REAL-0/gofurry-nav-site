@@ -143,36 +143,38 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 }
 
 const getGame = `-- name: GetGame :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+SELECT showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game WHERE id=$1
 `
 
 type GetGameRow struct {
-	ID           int64            `json:"id"`
-	Name         string           `json:"name"`
-	NameEn       string           `json:"name_en"`
-	Info         string           `json:"info"`
-	InfoEn       string           `json:"info_en"`
-	CreateTime   pgtype.Timestamp `json:"create_time"`
-	UpdateTime   pgtype.Timestamp `json:"update_time"`
-	Resources    []byte           `json:"resources"`
-	Groups       []byte           `json:"groups"`
-	Developers   []byte           `json:"developers"`
-	Publishers   []byte           `json:"publishers"`
-	Appid        int64            `json:"appid"`
-	Header       string           `json:"header"`
-	Links        []byte           `json:"links"`
-	Weight       int64            `json:"weight"`
-	ViewCount    int64            `json:"view_count"`
-	PrimaryTag   int64            `json:"primary_tag"`
-	SecondaryTag int64            `json:"secondary_tag"`
+	ShowcaseEligible bool             `json:"showcase_eligible"`
+	ID               int64            `json:"id"`
+	Name             string           `json:"name"`
+	NameEn           string           `json:"name_en"`
+	Info             string           `json:"info"`
+	InfoEn           string           `json:"info_en"`
+	CreateTime       pgtype.Timestamp `json:"create_time"`
+	UpdateTime       pgtype.Timestamp `json:"update_time"`
+	Resources        []byte           `json:"resources"`
+	Groups           []byte           `json:"groups"`
+	Developers       []byte           `json:"developers"`
+	Publishers       []byte           `json:"publishers"`
+	Appid            int64            `json:"appid"`
+	Header           string           `json:"header"`
+	Links            []byte           `json:"links"`
+	Weight           int64            `json:"weight"`
+	ViewCount        int64            `json:"view_count"`
+	PrimaryTag       int64            `json:"primary_tag"`
+	SecondaryTag     int64            `json:"secondary_tag"`
 }
 
 func (q *Queries) GetGame(ctx context.Context, id int64) (GetGameRow, error) {
 	row := q.db.QueryRow(ctx, getGame, id)
 	var i GetGameRow
 	err := row.Scan(
+		&i.ShowcaseEligible,
 		&i.ID,
 		&i.Name,
 		&i.NameEn,
@@ -241,7 +243,7 @@ func (q *Queries) GetPrize(ctx context.Context, id int64) (GfgPrize, error) {
 const insertGame = `-- name: InsertGame :one
 INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count)
 VALUES ($1,$2,$3,$4,$5,NOW()::timestamp(0),NOW()::timestamp(0),$6,$7,$8,$9,$10,$11,$12,$13,0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+RETURNING showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag
 `
@@ -263,24 +265,25 @@ type InsertGameParams struct {
 }
 
 type InsertGameRow struct {
-	ID           int64            `json:"id"`
-	Name         string           `json:"name"`
-	NameEn       string           `json:"name_en"`
-	Info         string           `json:"info"`
-	InfoEn       string           `json:"info_en"`
-	CreateTime   pgtype.Timestamp `json:"create_time"`
-	UpdateTime   pgtype.Timestamp `json:"update_time"`
-	Resources    []byte           `json:"resources"`
-	Groups       []byte           `json:"groups"`
-	Developers   []byte           `json:"developers"`
-	Publishers   []byte           `json:"publishers"`
-	Appid        int64            `json:"appid"`
-	Header       string           `json:"header"`
-	Links        []byte           `json:"links"`
-	Weight       int64            `json:"weight"`
-	ViewCount    int64            `json:"view_count"`
-	PrimaryTag   int64            `json:"primary_tag"`
-	SecondaryTag int64            `json:"secondary_tag"`
+	ShowcaseEligible bool             `json:"showcase_eligible"`
+	ID               int64            `json:"id"`
+	Name             string           `json:"name"`
+	NameEn           string           `json:"name_en"`
+	Info             string           `json:"info"`
+	InfoEn           string           `json:"info_en"`
+	CreateTime       pgtype.Timestamp `json:"create_time"`
+	UpdateTime       pgtype.Timestamp `json:"update_time"`
+	Resources        []byte           `json:"resources"`
+	Groups           []byte           `json:"groups"`
+	Developers       []byte           `json:"developers"`
+	Publishers       []byte           `json:"publishers"`
+	Appid            int64            `json:"appid"`
+	Header           string           `json:"header"`
+	Links            []byte           `json:"links"`
+	Weight           int64            `json:"weight"`
+	ViewCount        int64            `json:"view_count"`
+	PrimaryTag       int64            `json:"primary_tag"`
+	SecondaryTag     int64            `json:"secondary_tag"`
 }
 
 func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (InsertGameRow, error) {
@@ -301,6 +304,7 @@ func (q *Queries) InsertGame(ctx context.Context, arg InsertGameParams) (InsertG
 	)
 	var i InsertGameRow
 	err := row.Scan(
+		&i.ShowcaseEligible,
 		&i.ID,
 		&i.Name,
 		&i.NameEn,
@@ -540,7 +544,7 @@ func (q *Queries) ListGameWorkspaceTags(ctx context.Context, gameID int64) ([]Li
 }
 
 const listGames = `-- name: ListGames :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+SELECT showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game
 WHERE $1::text='' OR name ILIKE '%'||$1||'%' OR name_en ILIKE '%'||$1||'%'
@@ -555,24 +559,25 @@ type ListGamesParams struct {
 }
 
 type ListGamesRow struct {
-	ID           int64            `json:"id"`
-	Name         string           `json:"name"`
-	NameEn       string           `json:"name_en"`
-	Info         string           `json:"info"`
-	InfoEn       string           `json:"info_en"`
-	CreateTime   pgtype.Timestamp `json:"create_time"`
-	UpdateTime   pgtype.Timestamp `json:"update_time"`
-	Resources    []byte           `json:"resources"`
-	Groups       []byte           `json:"groups"`
-	Developers   []byte           `json:"developers"`
-	Publishers   []byte           `json:"publishers"`
-	Appid        int64            `json:"appid"`
-	Header       string           `json:"header"`
-	Links        []byte           `json:"links"`
-	Weight       int64            `json:"weight"`
-	ViewCount    int64            `json:"view_count"`
-	PrimaryTag   int64            `json:"primary_tag"`
-	SecondaryTag int64            `json:"secondary_tag"`
+	ShowcaseEligible bool             `json:"showcase_eligible"`
+	ID               int64            `json:"id"`
+	Name             string           `json:"name"`
+	NameEn           string           `json:"name_en"`
+	Info             string           `json:"info"`
+	InfoEn           string           `json:"info_en"`
+	CreateTime       pgtype.Timestamp `json:"create_time"`
+	UpdateTime       pgtype.Timestamp `json:"update_time"`
+	Resources        []byte           `json:"resources"`
+	Groups           []byte           `json:"groups"`
+	Developers       []byte           `json:"developers"`
+	Publishers       []byte           `json:"publishers"`
+	Appid            int64            `json:"appid"`
+	Header           string           `json:"header"`
+	Links            []byte           `json:"links"`
+	Weight           int64            `json:"weight"`
+	ViewCount        int64            `json:"view_count"`
+	PrimaryTag       int64            `json:"primary_tag"`
+	SecondaryTag     int64            `json:"secondary_tag"`
 }
 
 func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGamesRow, error) {
@@ -585,6 +590,7 @@ func (q *Queries) ListGames(ctx context.Context, arg ListGamesParams) ([]ListGam
 	for rows.Next() {
 		var i ListGamesRow
 		if err := rows.Scan(
+			&i.ShowcaseEligible,
 			&i.ID,
 			&i.Name,
 			&i.NameEn,
@@ -723,7 +729,7 @@ func (q *Queries) NextPrizeID(ctx context.Context) (int64, error) {
 const updateGame = `-- name: UpdateGame :one
 UPDATE gfg_game SET name=$1,name_en=$2,info=$3,info_en=$4,resources=$5,groups=$6,developers=$7,publishers=$8,appid=$9,header=$10,links=$11,update_time=NOW()::timestamp(0)
 WHERE id=$12
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+RETURNING showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag
 `
@@ -744,24 +750,25 @@ type UpdateGameParams struct {
 }
 
 type UpdateGameRow struct {
-	ID           int64            `json:"id"`
-	Name         string           `json:"name"`
-	NameEn       string           `json:"name_en"`
-	Info         string           `json:"info"`
-	InfoEn       string           `json:"info_en"`
-	CreateTime   pgtype.Timestamp `json:"create_time"`
-	UpdateTime   pgtype.Timestamp `json:"update_time"`
-	Resources    []byte           `json:"resources"`
-	Groups       []byte           `json:"groups"`
-	Developers   []byte           `json:"developers"`
-	Publishers   []byte           `json:"publishers"`
-	Appid        int64            `json:"appid"`
-	Header       string           `json:"header"`
-	Links        []byte           `json:"links"`
-	Weight       int64            `json:"weight"`
-	ViewCount    int64            `json:"view_count"`
-	PrimaryTag   int64            `json:"primary_tag"`
-	SecondaryTag int64            `json:"secondary_tag"`
+	ShowcaseEligible bool             `json:"showcase_eligible"`
+	ID               int64            `json:"id"`
+	Name             string           `json:"name"`
+	NameEn           string           `json:"name_en"`
+	Info             string           `json:"info"`
+	InfoEn           string           `json:"info_en"`
+	CreateTime       pgtype.Timestamp `json:"create_time"`
+	UpdateTime       pgtype.Timestamp `json:"update_time"`
+	Resources        []byte           `json:"resources"`
+	Groups           []byte           `json:"groups"`
+	Developers       []byte           `json:"developers"`
+	Publishers       []byte           `json:"publishers"`
+	Appid            int64            `json:"appid"`
+	Header           string           `json:"header"`
+	Links            []byte           `json:"links"`
+	Weight           int64            `json:"weight"`
+	ViewCount        int64            `json:"view_count"`
+	PrimaryTag       int64            `json:"primary_tag"`
+	SecondaryTag     int64            `json:"secondary_tag"`
 }
 
 func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (UpdateGameRow, error) {
@@ -781,6 +788,7 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (UpdateG
 	)
 	var i UpdateGameRow
 	err := row.Scan(
+		&i.ShowcaseEligible,
 		&i.ID,
 		&i.Name,
 		&i.NameEn,

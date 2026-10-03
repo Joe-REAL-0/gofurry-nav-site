@@ -192,6 +192,7 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 }
 
 func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	showcaseRoutes(root.Group("/showcase"), runtime)
 	api := runtime.GameAPI
 	root.Get("/games", authmw.Require(authorization.ContentRead), api.ListGames)
 	root.Post("/games", authmw.Require(authorization.ContentWrite), api.CreateGame)

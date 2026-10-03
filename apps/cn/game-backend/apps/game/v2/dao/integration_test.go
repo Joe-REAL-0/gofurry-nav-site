@@ -264,6 +264,7 @@ func TestPostgresReadModelSemantics(t *testing.T) {
 	}
 	seedGameCompare(t, ctx, pool, now)
 	assertGameCompare(t, ctx, pool)
+	assertShowcaseReadModels(t, ctx, pool)
 }
 
 func seedGameInsights(t *testing.T, ctx context.Context, pool *pgxpool.Pool, now time.Time) {

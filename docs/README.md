@@ -9,6 +9,7 @@ This directory contains cross-service documentation for the active GoFurry produ
 - [Analytics Metric operations](analytics-metrics.md)
 - [Change Intelligence operations](change-intelligence.md)
 - [Public Insights contract](public-insights.md)
+- [Game Showcase backend contract](game-showcase.md)
 - [Release Notes domain and APIs (Issue #132)](release-notes.md)
 - [Admin identity and authorization](admin-identity.md)
 - [React Admin development](admin-react.md)

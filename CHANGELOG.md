@@ -17,6 +17,7 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
+- Establish Games Home Showcase backend foundation with opt-in Game eligibility, audited Campaign APIs, exact-size managed AVIF artwork, deterministic Managed/Automatic composition, a separate public cache and signed qualified analytics with idempotent daily aggregation (#119-A). React Admin and Nav Web remain for later stages.
 - Add bilingual lottery activity titles/descriptions and prize titles/platforms across Admin and Nav Web, with per-field Chinese fallback for missing English text. Preserve translations through Game Backend reads, lottery closure and winner-history caching without exposing redemption keys.
 - Complete the public Release Notes experience with an editorial latest/monthly index, bilingual SSR Markdown articles, safe commit links and older/newer navigation. Share Admin Markdown security fixtures, add release URLs to the fail-closed sitemap, and replace Timeline contracts with focused Browser coverage and eight representative Visual baselines (#132).
 - Add a dedicated Admin Release Notes workspace with bilingual Markdown authoring, sanitized local preview, China-time status display, confirmed publication controls, save-before-publish ordering and unsaved-change protection. Establish shared Markdown security fixtures shared with public article rendering (#132).
@@ -24,11 +25,13 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Resolve Game Backend client IP only through configured trusted proxies and share that resolution across rate limiting, Game views and Showcase analytics (#119-A).
 - Preserve newlines and blank lines while editing Admin lottery prize keys; normalize pasted/typed lines only when submitting and reject a submission with no usable keys.
 - Serialize public Release Notes publication dates with their China-site UTC+8 offset, preserving stored wall-clock values instead of labeling them UTC and displaying an eight-hour shift (#132).
 
 ### Upgrade notes
 
+- Before deploying #119-A backend changes, apply the additive GFG Showcase migration through the authorized Goose workflow and configure the two distinct Showcase HMAC secrets plus trusted proxy CIDRs in explicit Game Backend YAML. Existing Games remain ineligible by default. No GFA/GFN migration, frontend deployment or real cloud maintenance is part of Stage A implementation.
 - For bilingual lotteries, apply `db/game/migrations/20261001010000_game_prize_translations.sql` to GFG through Goose, then deploy Game Backend, Admin with its embedded React frontend, and Nav Web. Existing records retain their content and use Chinese fallback until translations are entered. No GFA/GFN migration, Collector update, Redis key change or manual cache purge is required; the existing winner-history refresh populates bilingual cache data.
 - For #126 alone, rebuild and redeploy Nav Web using the existing `apps/cn/nav-web` / `./update.sh` flow. Font dependencies and assets are included in the Docker build; no backend, Collector or Admin update, database/Redis migration, runtime configuration change or separate font upload is required.
 

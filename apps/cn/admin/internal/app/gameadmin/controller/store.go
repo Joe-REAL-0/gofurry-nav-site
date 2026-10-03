@@ -10,6 +10,8 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	gamesqlc "github.com/gofurry/gofurry-admin/internal/db/game/sqlc"
+	"github.com/gofurry/gofurry-admin/internal/infra/cache"
+	log "github.com/gofurry/gofurry-admin/internal/infra/logging"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	pkgmodels "github.com/gofurry/gofurry-admin/pkg/models"
 	"github.com/jackc/pgx/v5"
@@ -19,15 +21,22 @@ import (
 )
 
 type gameStore struct {
-	pool  *pgxpool.Pool
-	q     *gamesqlc.Queries
-	audit *audit.Logger
+	pool             *pgxpool.Pool
+	q                *gamesqlc.Queries
+	audit            *audit.Logger
+	showcaseRevision func(context.Context) error
 }
 
 type gameMutation func(*gamesqlc.Queries) (targetID int64, before any, after any, err error)
 
 func newGameStore(pool *pgxpool.Pool, auditLogger *audit.Logger) *gameStore {
-	return &gameStore{pool: pool, q: gamesqlc.New(pool), audit: auditLogger}
+	return &gameStore{pool: pool, q: gamesqlc.New(pool), audit: auditLogger, showcaseRevision: func(ctx context.Context) error {
+		client := cache.GetRedisService()
+		if client == nil {
+			return errors.New("Showcase revision Redis unavailable")
+		}
+		return client.Incr(ctx, "game:v2:showcase:revision").Err()
+	}}
 }
 
 func (store *gameStore) mutate(ctx context.Context, meta audit.Meta, action, resource string, change gameMutation) common.Error {
@@ -37,8 +46,13 @@ func (store *gameStore) mutate(ctx context.Context, meta audit.Meta, action, res
 	}
 	defer tx.Rollback(ctx)
 	q := store.q.WithTx(tx)
-	if resource == "gfg_game" || resource == "gfg_tag" || resource == "gfg_tag_category" || resource == "gfg_game_tag" {
+	if resource == "gfg_game" || resource == "gfg_tag" || resource == "gfg_tag_category" || resource == "gfg_game_tag" || resource == "gfg_showcase_campaign" {
 		if err := q.LockTagDomain(ctx); err != nil {
+			return gameDAOError(err)
+		}
+	}
+	if resource == "gfg_showcase_campaign" {
+		if err := q.LockShowcaseDomain(ctx); err != nil {
 			return gameDAOError(err)
 		}
 	}
@@ -53,6 +67,15 @@ func (store *gameStore) mutate(ctx context.Context, meta audit.Meta, action, res
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return gameDAOError(err)
+	}
+	if resource == "gfg_showcase_campaign" || resource == "gfg_game" || resource == "gfg_game_tag" || resource == "gfg_tag" {
+		if store.showcaseRevision != nil {
+			revisionCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), time.Second)
+			defer cancel()
+			if err := store.showcaseRevision(revisionCtx); err != nil {
+				log.Warn("Showcase revision increment failed after committed mutation")
+			}
+		}
 	}
 	return nil
 }
@@ -381,6 +404,7 @@ func bytesPointer(value []byte) *string {
 }
 
 type gameFields struct {
+	ShowcaseEligible                                 bool
 	ID, Appid, Weight, PrimaryTag, SecondaryTag      int64
 	Name, NameEn, Info, InfoEn, Header               string
 	CreateTime, UpdateTime                           pgtype.Timestamp
@@ -388,26 +412,26 @@ type gameFields struct {
 }
 
 func gameModelFromFields(row gameFields) models.Game {
-	return models.Game{ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
+	return models.Game{ShowcaseEligible: row.ShowcaseEligible, ID: row.ID, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn,
 		CreateTime: localTime(row.CreateTime), UpdateTime: localTime(row.UpdateTime), Resources: bytesPointer(row.Resources), Groups: bytesPointer(row.Groups),
 		Developers: string(row.Developers), Publishers: string(row.Publishers), Appid: row.Appid, Header: row.Header,
 		Links: bytesPointer(row.Links), Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag}
 }
 
 func listGameModel(row gamesqlc.ListGamesRow) models.Game {
-	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+	return gameModelFromFields(gameFields{ShowcaseEligible: row.ShowcaseEligible, ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
 }
 
 func getGameModel(row gamesqlc.GetGameRow) models.Game {
-	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+	return gameModelFromFields(gameFields{ShowcaseEligible: row.ShowcaseEligible, ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
 }
 
 func insertGameModel(row gamesqlc.InsertGameRow) models.Game {
-	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+	return gameModelFromFields(gameFields{ShowcaseEligible: row.ShowcaseEligible, ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
 }
 
 func updateGameModel(row gamesqlc.UpdateGameRow) models.Game {
-	return gameModelFromFields(gameFields{ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
+	return gameModelFromFields(gameFields{ShowcaseEligible: row.ShowcaseEligible, ID: row.ID, Appid: row.Appid, Weight: row.Weight, PrimaryTag: row.PrimaryTag, SecondaryTag: row.SecondaryTag, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, Header: row.Header, CreateTime: row.CreateTime, UpdateTime: row.UpdateTime, Resources: row.Resources, Groups: row.Groups, Developers: row.Developers, Publishers: row.Publishers, Links: row.Links})
 }
 
 func commentModel(row gamesqlc.GfgGameComment) models.GameComment {

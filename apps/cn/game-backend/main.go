@@ -12,6 +12,7 @@ import (
 	v2controller "github.com/gofurry/gofurry-game-backend/apps/game/v2/controller"
 	v2dao "github.com/gofurry/gofurry-game-backend/apps/game/v2/dao"
 	v2service "github.com/gofurry/gofurry-game-backend/apps/game/v2/service"
+	"github.com/gofurry/gofurry-game-backend/apps/game/v2/showcase"
 	prizecontroller "github.com/gofurry/gofurry-game-backend/apps/prize/controller"
 	prizedao "github.com/gofurry/gofurry-game-backend/apps/prize/dao"
 	prizeservice "github.com/gofurry/gofurry-game-backend/apps/prize/service"
@@ -27,6 +28,7 @@ import (
 	"github.com/gofurry/gofurry-game-backend/roof/env"
 	"github.com/gofurry/gofurry-game-backend/routers"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"strings"
 )
 
 func main() {
@@ -87,12 +89,25 @@ func (gf *goFurry) InitOnStart() error {
 	reviewService := reviewservice.New(reviewdao.New(gf.pool))
 	insightsService := v2service.NewInsightsService(v2dao.NewInsightsDAO(gamesqlc.New(gf.pool)))
 	gf.gameAPI = v2controller.New(gf.readDAO, gf.viewSvc, reviewService, insightsService)
+	showcaseService := showcase.New(showcase.SQLReader{Pool: gf.pool}, cs.GetRedisService())
+	signer := showcase.Signer{TrackingSecret: cfg.Game.ShowcaseTrackingSecret, HashSecret: cfg.Game.ShowcaseAnalyticsHashSecret}
+	analytics := showcase.NewAnalytics(cs.GetRedisService(), gamesqlc.New(gf.pool), signer, strings.Split(cfg.Middleware.Cors.AllowOrigins, ","))
+	gf.gameAPI.WithShowcase(showcaseService, analytics, signer)
 	gf.prizeAPI = prizecontroller.New(prizeService)
 
 	if err := cs.InitSchedulerOnStart(); err != nil {
 		return err
 	}
 	if err := schedule.InitScheduleOnStart(gf.readDAO, gf.viewSvc, gf.prizeDAO); err != nil {
+		return err
+	}
+	if err := cs.AddIntervalJob("game-showcase-analytics", 5*time.Minute, func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer cancel()
+		if err := analytics.Aggregate(ctx); err != nil {
+			gfLog.Warn("Showcase aggregate maintenance failed")
+		}
+	}); err != nil {
 		return err
 	}
 	return nil

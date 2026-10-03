@@ -203,8 +203,9 @@ type GfgGame struct {
 	// 三方网站链接
 	Links []byte `json:"links"`
 	// 权重
-	Weight    int64 `json:"weight"`
-	ViewCount int64 `json:"view_count"`
+	Weight           int64 `json:"weight"`
+	ViewCount        int64 `json:"view_count"`
+	ShowcaseEligible bool  `json:"showcase_eligible"`
 }
 
 type GfgGameAsset struct {
@@ -738,6 +739,75 @@ type GfgPrizeMember struct {
 	PrizeKey *string `json:"prize_key"`
 	// 创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
+}
+
+type GfgShowcaseAnalyticsDailyQuality struct {
+	StatDate                pgtype.Date        `json:"stat_date"`
+	InvalidTokenEvents      int64              `json:"invalid_token_events"`
+	InvalidOriginEvents     int64              `json:"invalid_origin_events"`
+	FilteredUserAgentEvents int64              `json:"filtered_user_agent_events"`
+	DuplicateImpressions    int64              `json:"duplicate_impressions"`
+	DuplicateClicks         int64              `json:"duplicate_clicks"`
+	SessionRateLimited      int64              `json:"session_rate_limited"`
+	IpRateLimited           int64              `json:"ip_rate_limited"`
+	MalformedEvents         int64              `json:"malformed_events"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgShowcaseCampaign struct {
+	ID                  int64              `json:"id"`
+	InternalName        string             `json:"internal_name"`
+	ContentType         string             `json:"content_type"`
+	Sponsored           bool               `json:"sponsored"`
+	LinkedGameID        *int64             `json:"linked_game_id"`
+	State               string             `json:"state"`
+	StartsAt            pgtype.Timestamptz `json:"starts_at"`
+	EndsAt              pgtype.Timestamptz `json:"ends_at"`
+	Weight              int32              `json:"weight"`
+	PinPosition         *int16             `json:"pin_position"`
+	DesktopObjectKey    *string            `json:"desktop_object_key"`
+	MobileObjectKey     *string            `json:"mobile_object_key"`
+	FocalX              float64            `json:"focal_x"`
+	FocalY              float64            `json:"focal_y"`
+	PrimaryActionType   *string            `json:"primary_action_type"`
+	PrimaryTarget       *string            `json:"primary_target"`
+	SecondaryActionType *string            `json:"secondary_action_type"`
+	SecondaryTarget     *string            `json:"secondary_target"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgShowcaseCampaignLocale struct {
+	CampaignID    int64              `json:"campaign_id"`
+	Lang          string             `json:"lang"`
+	Enabled       bool               `json:"enabled"`
+	Title         string             `json:"title"`
+	Summary       string             `json:"summary"`
+	Tags          []string           `json:"tags"`
+	EditorialNote *string            `json:"editorial_note"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type GfgShowcaseDailyStat struct {
+	StatDate            pgtype.Date        `json:"stat_date"`
+	SubjectKey          string             `json:"subject_key"`
+	SubjectKind         string             `json:"subject_kind"`
+	CampaignID          *int64             `json:"campaign_id"`
+	GameID              *int64             `json:"game_id"`
+	Reason              string             `json:"reason"`
+	ValidImpressions    int64              `json:"valid_impressions"`
+	QualifiedClicks     int64              `json:"qualified_clicks"`
+	ClickArtwork        int64              `json:"click_artwork"`
+	ClickTitle          int64              `json:"click_title"`
+	ClickPrimary        int64              `json:"click_primary"`
+	ClickSecondary      int64              `json:"click_secondary"`
+	ImpressionPosition1 int64              `json:"impression_position_1"`
+	ImpressionPosition2 int64              `json:"impression_position_2"`
+	ImpressionPosition3 int64              `json:"impression_position_3"`
+	ImpressionPosition4 int64              `json:"impression_position_4"`
+	SessionEstimate     int64              `json:"session_estimate"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 // 游戏标签表

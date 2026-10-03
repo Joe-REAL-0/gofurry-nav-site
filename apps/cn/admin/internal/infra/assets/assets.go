@@ -1,5 +1,5 @@
 // Package assets owns bounded immutable object writes. Business references and
-// audit transactions remain in Nav Admin; no replication database is required.
+// audit transactions remain in the owning Admin domain; no replication database is required.
 package assets
 
 import (
@@ -54,6 +54,11 @@ func NewObject(kind string, siteID int64, filename string, data []byte) (Object,
 	o.SHA256 = hex.EncodeToString(hash[:])
 	o.ContentType = contentType
 	switch kind {
+	case "showcase-desktop", "showcase-mobile":
+		if siteID <= 0 {
+			return o, errors.New("invalid campaign id")
+		}
+		o.Key = fmt.Sprintf("game/showcase/%d/%s/%s.avif", siteID, strings.TrimPrefix(kind, "showcase-"), o.SHA256[:32])
 	case "site-icon":
 		if siteID <= 0 {
 			return o, errors.New("invalid site id")
