@@ -352,6 +352,17 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:8.10.1-trixie
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      GOFURRY_SHOWCASE_REDIS_ADDR: 127.0.0.1:6379
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
@@ -452,4 +463,4 @@ jobs:
         working-directory: apps/cn/admin
         env:
           GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-admin-integration.yaml
-        run: go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade|CollaborationThreeDatabase)' -count=1 -v
+        run: go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade|CollaborationThreeDatabase|ShowcaseThreeDatabase)' -count=1 -v
