@@ -1,9 +1,10 @@
 import { createElement } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { DATAOPS_READ_CAPABILITY } from '../../lib/capabilities'
 import { isGlobalSearchShortcut } from '../../lib/keyboard'
-import { AdminBrand, capabilityAwareHeaderActions, capabilityAwareNavigation, logoutAndRedirect, navigationGroups } from './app-shell'
+import { AdminBrand, Breadcrumbs, capabilityAwareHeaderActions, capabilityAwareNavigation, logoutAndRedirect, navigationGroups } from './app-shell'
 
 describe('capability-aware navigation', () => {
   it('shows content routes without reproducing role checks', () => {
@@ -88,6 +89,16 @@ describe('capability-aware navigation', () => {
 it('assigns distinct Phosphor icons to each sidebar destination', () => {
   const entries = navigationGroups.flatMap(group => group.entries)
   expect(new Set(entries.map(entry => entry.icon)).size).toBe(entries.length)
+})
+
+it('shows Showcase only through content.read and renders its breadcrumb', () => {
+  const paths = (allowed: boolean) => capabilityAwareNavigation(capability => allowed && capability === 'content.read').flatMap(group => group.entries.map(entry => entry.href))
+  expect(paths(true)).toContain('/game/showcase')
+  expect(paths(false)).not.toContain('/game/showcase')
+  const view = render(createElement(MemoryRouter, { initialEntries: ['/game/showcase/119'] }, createElement(Breadcrumbs)))
+  expect(screen.getByText('首页 Showcase')).toBeInTheDocument()
+  expect(screen.getByText('#119')).toBeInTheDocument()
+  view.unmount()
 })
 
 it('shows one collaboration entry only through collaboration.read', () => {

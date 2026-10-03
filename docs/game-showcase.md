@@ -1,7 +1,8 @@
 # Game Showcase backend contract (#119-A)
 
-Stage A provides backend contracts only. React Admin and Nav Web consumption
-belong to later stages. Showcase is a separate optional slice; the existing
+Stage A owns the backend contracts below. Stage B's React Admin operations consume
+them through `/game/showcase` and `/game/showcase/:id`; Public Nav Web consumption
+belongs to Stage C. Showcase is a separate optional slice; the existing
 `GET /api/v2/game/home` payload and its long-lived cache remain unchanged.
 
 ## Durable ownership
@@ -165,6 +166,16 @@ Public event/aggregate writes are not operator Audit events. No raw event, raw I
 IP hash, session or UA is persisted in PostgreSQL by Showcase analytics.
 
 ## Verification
+
+React Admin's native Showcase workspace exposes composition, Campaign CRUD and
+lifecycle, strict locale content, managed artwork/focal controls, Shanghai-time
+schedules, statistics/CSV, aggregate quality and automatic diagnostics. It does
+not duplicate Composer or public Hero behavior. Persisted artwork displays object
+keys without guessing CDN URLs. Focal edits send the complete existing content
+payload; eligibility writes remain in Game Classification. Campaign History is an
+`audit.read`-gated entry to system Audit, not a separate history API. See
+[Admin frontend contract](../contracts/admin-frontend.md) and
+[React Admin acceptance](admin-react.md#showcase-operations-119-b).
 
 Go/sqlc/schema checks follow the root playbook with Go 1.26.7. Pure Composer,
 Trending, token, proxy and asset tests run in normal Go suites. Explicit

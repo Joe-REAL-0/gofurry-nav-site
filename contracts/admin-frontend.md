@@ -53,6 +53,8 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 /nav/sayings
 /game/games
 /game/games/:id
+/game/showcase
+/game/showcase/:id
 /game/tags
 /game/tag-categories
 /game/comments
@@ -68,7 +70,32 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 
 Site Group exposes a homepage curation page showing the first eight active sites and the remaining members. Operators move sites instead of entering weights. Group-oriented GET/PUT `/api/v1/nav/site-groups/:id/curation` uses `content.read`/`content.write`, a revision-checked complete member order, and the existing Nav transaction/audit/cache invalidation path. It persists only mapping weights; site-level bulk replacement preserves existing weights. Public derived caches refresh on the existing ten-minute schedule, so saving is not an immediate public-cache publication.
 
-Site, Game and Release Notes are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
+Site, Game, Release Notes and Showcase are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
+
+Showcase consumes the frozen [backend contract](../docs/game-showcase.md) through
+`content.read/write`. Its routes precede `/game/:resource`; composition, Campaign
+list and discovery tabs, locale, filters and pagination use URL state. Creation
+opens a real Draft ID workspace with overview/content/assets/schedule/stats/history.
+Read-only users can inspect every tab without mutation controls. Lifecycle actions
+and artwork clear require confirmation; dirty forms and staged uploads protect
+navigation/unload and disable lifecycle actions. Archived Campaigns are read-only.
+
+Campaign locale editors are independent zh/en RHF fields. Sponsored payloads clear
+both Editorial Notes; action types remain fixed. Artwork uploads retain original
+AVIF bytes and use the shared session/CSRF transport. Local object URLs are revoked;
+persisted artwork shows provider-neutral keys, without guessed CDN URLs. Focal
+controls live in Assets but save the complete `/content` payload. Scheduling uses
+the shared DateTimePicker and explicit Asia/Shanghai RFC3339 conversion independent
+of the workstation timezone. Backend readiness/diagnostics remain authoritative.
+
+Statistics use backend totals, at most 366 inclusive dates, two count-series
+ECharts and same-origin CSV links. HLL session totals are labeled estimates with
+possible cross-day duplication. Lists never request per-row statistics. Discovery
+shows internal evidence and links to Game Classification; only that existing form
+writes `showcase_eligible` with its complete classification payload. History links
+to system Audit through `audit.read`, never fabricates a partial Campaign history.
+Public Hero, public tracking, new cloud resolvers and backend changes are outside
+this frontend workspace. See [React Admin](../docs/admin-react.md) for acceptance.
 
 Lottery remains a simple Resource Engine resource. Activity title/description and
 prize title/platform each have Chinese and English fields; participation passwords
@@ -113,7 +140,8 @@ independently of selected IDs.
 Category and Tag resources create explicit stable codes with database-assigned IDs;
 code controls are read-only after creation. Categories are selected by name and
 normal removal is visibly archive/restore. Game classification saves weight,
-nullable primary/secondary IDs and the complete Tag set in one
+nullable primary/secondary IDs, the complete Tag set and independent
+`showcase_eligible` in one
 `PUT /api/v1/game/games/:id/classification` request; content saves do not overwrite
 classification. The returned workspace includes the role union and resets the form.
 

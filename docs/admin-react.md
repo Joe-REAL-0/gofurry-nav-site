@@ -2,6 +2,39 @@
 
 The sole Admin frontend is `apps/cn/admin/react`. It owns content workspaces and all operational/system workflows and is the production entrypoint embedded by the Go binary.
 
+## Showcase operations (#119-B)
+
+`src/features/showcase` owns `/game/showcase` (current composition, Campaigns,
+automatic discovery) and `/game/showcase/:id` (overview, content, artwork,
+schedule/display, statistics, history). It uses native shared controls and the
+existing [Stage A API](game-showcase.md), outside Resource Engine. `content.read`
+can inspect every tab; `content.write` permits mutations. New Drafts immediately
+open their real ID workspace. Lists use URL filters and do not fetch per-row stats.
+
+Content explicitly edits zh/en; Sponsored clears both Editorial Notes and CTA
+types stay fixed. Assets accept original desktop 1600×800/mobile 1200×675 AVIF up
+to 5 MiB. The browser checks file hints/size; Go owns authoritative dimensions.
+Local previews are revoked on replacement/unmount. Reloaded artwork shows its
+object key, since Stage A supplies no persistent CDN URL. Mirror warnings remain
+successful Primary publication. Focus coordinates save the full content contract.
+
+Schedules interpret DateTimePicker wall time as Asia/Shanghai (UTC+08:00), with
+explicit RFC3339 conversion. Lifecycle actions and reference clearing confirm;
+unsaved edits/staged uploads protect tab navigation, routing and unload. Statistics
+display backend totals, daily two-series trends, click sources and same-origin CSV.
+Multi-day sessions are summed daily HLL estimates, not distinct people. Discovery
+links to Game Classification for eligibility; History links to system Audit when
+`audit.read` is available and scopes its initial resource filter.
+
+Vitest/Testing Library cover these contracts without real cloud resources. After
+automated checks, human acceptance still covers light/dark and narrow screens,
+the full create/edit/upload/schedule/publish/pause/resume/stats/CSV workflow and
+Game eligibility reflected in diagnostics. Real Development COS/R2 acceptance
+requires explicit authorization. Production data/cloud operations and Stage C
+Public Web implementation are outside this stage.
+
+## Local development
+
 Start the existing Go API with the ignored local development config:
 
 ~~~text

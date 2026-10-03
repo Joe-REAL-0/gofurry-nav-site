@@ -44,6 +44,14 @@ describe('content workspace routing', () => {
   })
 })
 
+it.each([['/game/showcase', 'game/showcase'], ['/game/showcase/119', 'game/showcase/:id']])('routes %s natively before Resource Engine with content.read', (pathname, path) => {
+  const matches = matchRoutes(router.routes, pathname)
+  expect(matches?.at(-1)?.route.path).toBe(path)
+  const paths = matches?.at(-2)?.route.children?.map(route => route.path) ?? []
+  expect(paths.indexOf(path)).toBeLessThan(paths.indexOf('game/:resource'))
+  expect(matches?.some(({ route }) => isValidElement<{ capability?: string }>(route.element) && route.element.props.capability === 'content.read')).toBe(true)
+})
+
 it('guards Collaboration independently from content', () => {
  const matches = matchRoutes(router.routes, '/collaboration')
  expect(matches?.some(({ route }) => isValidElement<{ capability?: string }>(route.element) && route.element.props.capability === 'collaboration.read')).toBe(true)
