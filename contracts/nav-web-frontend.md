@@ -1737,24 +1737,36 @@ context/action copy surrounds strict backend-locale content. Sponsored never sho
 an Editorial Note. Managed/Steam images use their existing routing components;
 the managed resolver accepts only the frozen Showcase AVIF key grammar. Mobile
 artwork falls back to the desktop key when absent. Exhausted images retain the
-slide, count, text and actions on a neutral surface. No CDN URLs are constructed
-in business components.
+slide, count, text and actions on a neutral surface. ManagedAssetImage uses an
+optional mobile object key with native picture/source selection, so only the
+current viewport variant downloads. The default single-image contract is retained.
+Visited Showcase image nodes and their provider/failure state survive until the
+snapshot/page ends. A slow new image leaves the previous decoded artwork visible
+until ready; stale completions never replace a newer selection. No CDN URLs are
+constructed in business components.
 
 One item has no controls/count; two to four use native, non-circular Prev/Next.
-Index lives only in the page instance and resets on snapshot change. Switching is
-instant, with no initial animation, autoplay, swipe, keyboard-shell capture or
-focus movement. The polite live region is initially empty and updates only after
-an explicit switch. Internal actions use localized Game routes; external HTTPS
+Index lives only in the page instance and resets on snapshot change. Initial SSR
+has no animation; explicit switching uses a 200ms media/text transition, instant
+under reduced motion. Rapid clicks update immediately without animation locks.
+There is no autoplay, swipe, keyboard-shell capture or focus movement. The polite
+live region is initially empty and updates only after an explicit switch.
+Internal actions use localized Game routes; external HTTPS
 actions use `noopener noreferrer` in a new tab. Artwork/title/actions are separate
 links, not one clickable Hero. Appearance belongs to `games.less` under
 `--games-home-showcase-*`; Tailwind owns structure. Existing style debt and goldens
-cannot be increased or updated by this implementation.
+cannot be increased or updated by this implementation. Showcase material matches
+Games Home cards (Light 40%, Dark 6.5%, matching shadow/text family) through its
+own tokens. Narrow layouts place the 44px navigation controls below the CTAs.
 
 Tracking requires the active item, >=50% root intersection, a visible document
 and a continuous 1000ms interval. Leaving visibility, switching items/snapshots
 or unmounting cancels that timer. Page-local snapshot/item dedupe supplements the
-server authority. Lazy UUIDv4 identity uses sessionStorage only, with page-memory
-fallback when blocked; missing crypto.randomUUID disables tracking. Click sources
+server authority. Pending media cannot generate impressions; the previous artwork
+keeps its own destination/token during handoff, while new text/CTA follow the
+selected index. Cached hidden frames never become tracking owners. Lazy UUIDv4
+identity uses sessionStorage only, with page-memory fallback when blocked;
+missing crypto.randomUUID disables tracking. Click sources
 are artwork/title/primary/secondary, sent without awaiting or blocking navigation.
 Direct best-effort `$fetch<void>` accepts the event endpoint's empty 204, with no
 useApi envelope, retry, toast or analytics-driven UI state. Browser accounting

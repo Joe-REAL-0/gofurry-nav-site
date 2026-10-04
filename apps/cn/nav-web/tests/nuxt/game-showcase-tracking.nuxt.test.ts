@@ -120,3 +120,20 @@ it('disables side effects without crypto.randomUUID, even with stored identity',
     expect(send).not.toHaveBeenCalled()
   } finally { view.wrapper.unmount() }
 })
+
+it('keeps pending media out of impressions while attributing artwork clicks to the displayed item', async () => {
+  const view = await mountTracking()
+  try {
+    view.ratio(1); await vi.advanceTimersByTimeAsync(500)
+    view.active.value = undefined
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(send).not.toHaveBeenCalled()
+    view.tracking.click('artwork', item('A'))
+    view.tracking.click('primary', item('B'))
+    expect(send.mock.calls.map(([event]) => [event.event, event.tracking_token])).toEqual([['click', 'signed-A'], ['click', 'signed-B']])
+    view.active.value = item('B')
+    await vi.advanceTimersByTimeAsync(999); expect(send).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(send).toHaveBeenLastCalledWith({ tracking_token: 'signed-B', session_id: id, event: 'impression' })
+  } finally { view.wrapper.unmount() }
+})

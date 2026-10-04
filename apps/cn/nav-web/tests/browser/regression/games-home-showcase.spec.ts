@@ -9,6 +9,8 @@ export async function assertGameHomeShowcaseAppearance(scene: GamesHomeScene) {
   await expect(hero).toHaveCSS('border-radius', '16px')
   await expect(hero).toHaveCSS('transform', 'none')
   await expect(hero).toHaveCSS('animation-name', 'none')
+  await expect(hero).toHaveCSS('background-color', await scene.cards(0).first().evaluate(element => getComputedStyle(element).backgroundColor))
+  await expect(hero).toHaveCSS('box-shadow', await scene.cards(0).first().evaluate(element => getComputedStyle(element).boxShadow))
   await expect(hero.locator('.game-home-showcase__title')).toHaveCSS('font-weight', '600')
   await expect(hero.locator('.game-home-showcase__title')).toHaveCSS('-webkit-line-clamp', '2')
   await expect(hero.locator('.game-home-showcase__context')).toHaveCSS('font-weight', '600')
@@ -18,7 +20,7 @@ export async function assertGameHomeShowcaseAppearance(scene: GamesHomeScene) {
   expect(Math.abs(imageBox!.width - frameBox!.width)).toBeLessThan(1)
   expect(Math.abs(imageBox!.height - frameBox!.height)).toBeLessThan(1)
   const box = await hero.boundingBox()
-  await image.hover()
+  await hero.locator('.game-home-showcase__artwork').hover()
   await expect(hero).toHaveCSS('transform', 'none')
   await expect(image).toHaveCSS('transform', 'none')
   expect(await hero.boundingBox()).toEqual(box)
@@ -156,7 +158,7 @@ for (const scenario of ['managed-sponsored-tabletop', 'managed-sponsored-merchan
 test('Managed Primary failure tries Mirror with focal coordinates; missing mobile key uses desktop', async ({ gamesHome }) => {
   const scene = await gamesHome.open({ showcase: 'primary-failure', width: 390 })
   const media = scene.showcase.locator('img:visible')
-  await expect(media).toHaveAttribute('src', `${showcaseOrigins.mirror}/${scene.snapshot.items[0]!.artwork.mobile_object_key}`)
+  await expect.poll(() => media.evaluate(image => (image as HTMLImageElement).currentSrc)).toBe(`${showcaseOrigins.mirror}/${scene.snapshot.items[0]!.artwork.mobile_object_key}`)
   await expect(media).toHaveCSS('object-position', '25% 75%')
   expect(scene.assets.some(url => url.startsWith(showcaseOrigins.primary))).toBe(true)
   expect(scene.assets.some(url => url.startsWith(showcaseOrigins.mirror))).toBe(true)
@@ -249,3 +251,94 @@ async function reviewScreenshot(scene: GamesHomeScene, name: string) {
   await scene.settle(scene.showcase)
   await scene.page.screenshot({ path: join(directory, `${name}.png`) })
 }
+
+for (const width of [1440, 375]) {
+  test(`Responsive artwork loads one variant and retains decoded nodes with cache disabled (${width})`, async ({ gamesHome, page }) => {
+    const cdp = await page.context().newCDPSession(page)
+    await cdp.send('Network.enable')
+    await cdp.send('Network.setCacheDisabled', { cacheDisabled: true })
+    const scene = await gamesHome.open({ showcase: 'two-managed', width })
+    const hero = scene.showcase, variant = width < 1024 ? 'mobile_object_key' : 'desktop_object_key'
+    const firstURL = `${showcaseOrigins.primary}/${scene.snapshot.items[0]!.artwork[variant]}`
+    const secondURL = `${showcaseOrigins.primary}/${scene.snapshot.items[1]!.artwork[variant]}`
+    const current = hero.locator('.game-home-showcase__frame[data-active="true"]')
+    await expect.poll(() => current.locator('img').evaluate(image => (image as HTMLImageElement).currentSrc)).toBe(firstURL)
+    const firstNode = await current.locator('img').elementHandle()
+    expect(scene.assets.filter(url => url.includes('/game/showcase/'))).toEqual([firstURL])
+    await hero.getByRole('button', { name: '下一项精选' }).click()
+    await expect(current).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
+    await expect.poll(() => current.locator('img').evaluate(image => (image as HTMLImageElement).currentSrc)).toBe(secondURL)
+    for (let index = 0; index < 3; index++) {
+      await hero.getByRole('button', { name: '上一项精选' }).click()
+      await expect(current).toHaveAttribute('data-key', scene.snapshot.items[0]!.key)
+      expect(await current.locator('img').evaluate((image, original) => image === original, firstNode)).toBe(true)
+      await hero.getByRole('button', { name: '下一项精选' }).click()
+      await expect(current).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
+    }
+    expect(scene.assets.filter(url => url.includes('/game/showcase/'))).toEqual([firstURL, secondURL])
+    if (width < 640) {
+      const action = await hero.locator('.gf-button').boundingBox(), controls = await hero.locator('.game-home-showcase__controls').boundingBox()
+      expect(controls!.y).toBeGreaterThanOrEqual(action!.y + action!.height)
+      for (const button of await hero.locator('.game-home-showcase__controls button').all()) {
+        const box = await button.boundingBox(); expect(box!.width).toBeGreaterThanOrEqual(44); expect(box!.height).toBeGreaterThanOrEqual(44)
+      }
+      expect(await pageOverflow(scene)).toBe(false)
+    }
+    await reviewScreenshot(scene, `refined-two-items-${width}`)
+    scene.assertQuiet()
+  })
+}
+
+test('Slow artwork keeps the decoded frame, skips pending impressions and ignores stale completion after rapid navigation', async ({ gamesHome, page }) => {
+  const scene = await gamesHome.open({ showcase: 'two-managed' })
+  const hero = scene.showcase, first = scene.snapshot.items[0]!, second = scene.snapshot.items[1]!
+  await expect(hero.locator('.game-home-showcase__frame[data-active="true"] img')).toBeVisible()
+  await page.clock.install()
+  const url = `${showcaseOrigins.primary}/${second.artwork.desktop_object_key}`
+  const gate = scene.holdArtwork(url)
+  try {
+    await hero.getByRole('button', { name: '下一项精选' }).click()
+    await gate.requested
+    await expect(hero.locator('h2')).toHaveText(second.title)
+    await expect(hero.locator('.game-home-showcase__count')).toHaveText('02 / 02')
+    const visible = hero.locator('.game-home-showcase__frame[data-active="true"]')
+    await expect(visible).toHaveAttribute('data-key', first.key)
+    expect(await visible.locator('img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await expect(hero.locator('.game-home-showcase__artwork')).toHaveAttribute('href', '/games/6101')
+    await page.clock.runFor(1500)
+    expect(scene.events.filter(event => event.event === 'impression' && event.tracking_token === second.tracking_token)).toEqual([])
+    await hero.getByRole('button', { name: '上一项精选' }).click()
+    const finished = page.waitForResponse(url)
+    gate.release()
+    await finished
+    await expect(hero.locator('.game-home-showcase__frame[data-active="false"] img')).toHaveJSProperty('complete', true)
+    await page.clock.runFor(300)
+    await expect(visible).toHaveAttribute('data-key', first.key)
+    await hero.getByRole('button', { name: '下一项精选' }).click()
+    await expect(visible).toHaveAttribute('data-key', second.key)
+    await page.clock.runFor(999)
+    expect(scene.events.filter(event => event.event === 'impression' && event.tracking_token === second.tracking_token)).toEqual([])
+    await page.clock.runFor(1)
+    await expect.poll(() => scene.events.filter(event => event.event === 'impression' && event.tracking_token === second.tracking_token).length).toBe(1)
+    expect(scene.assets.filter(value => value === url)).toHaveLength(1)
+    scene.assertQuiet()
+  } finally { gate.release() }
+})
+
+test('Only user switching animates; rapid controls remain available and reduced motion is instant', async ({ gamesHome, page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const scene = await gamesHome.open({ showcase: 'two-managed' })
+  const hero = scene.showcase
+  await expect(hero.locator('.game-home-showcase__copy')).toHaveCSS('animation-name', 'none')
+  await hero.getByRole('button', { name: '下一项精选' }).click()
+  await expect(hero.locator('.game-home-showcase__copy')).toHaveCSS('animation-name', 'games-home-showcase-copy')
+  await expect(hero.locator('.game-home-showcase__copy')).toHaveCSS('animation-duration', '0.2s')
+  await expect(hero.getByRole('button', { name: '上一项精选' })).toBeEnabled()
+  await hero.getByRole('button', { name: '上一项精选' }).click()
+  await expect(hero.locator('h2')).toHaveText(scene.snapshot.items[0]!.title)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await hero.getByRole('button', { name: '下一项精选' }).click()
+  await expect(hero.locator('.game-home-showcase__copy')).toHaveCSS('animation-name', 'none')
+  await expect(hero.locator('.game-home-showcase__frame[data-active="true"]')).toHaveCSS('transition-duration', '0s')
+  scene.assertQuiet()
+})

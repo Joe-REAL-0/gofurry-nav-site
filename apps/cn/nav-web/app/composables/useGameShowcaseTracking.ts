@@ -81,8 +81,7 @@ export function useGameShowcaseTracking(
     document.removeEventListener('visibilitychange', evaluate)
   })
 
-  function click(source: GameShowcaseClickSource) {
-    const item = toValue(active)
+  function click(source: GameShowcaseClickSource, item = toValue(active)) {
     if (!mounted || !item?.tracking_token) return
     const sessionID = session()
     if (!sessionID) return

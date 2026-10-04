@@ -1,9 +1,4 @@
 {
-  "app/components/common/ManagedAssetImage.vue": {
-    "vue/require-default-prop": {
-      "count": 1
-    }
-  },
   "app/components/common/SteamAssetImage.vue": {
     "vue/require-default-prop": {
       "count": 1

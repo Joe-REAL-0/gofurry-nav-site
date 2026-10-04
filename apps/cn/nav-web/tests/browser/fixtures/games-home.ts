@@ -119,6 +119,7 @@ export type GamesHomeScene = {
   expectNewsPopup(url: string): void,
   showcase: Locator, snapshot: GameShowcaseSnapshot, events: GameShowcaseEvent[], assets: string[],
   expectShowcasePopup(url: string): void, expectGameDestination(id: string): void,
+  holdArtwork(url: string): { requested: Promise<void>; release(): void },
   closureClip(target: Locator): Promise<{ x: number, y: number, width: number, height: number }>,
 }
 
@@ -185,6 +186,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     page.on('console', message => { if (message.type() === 'error') diagnostics.push({ text: message.text(), url: message.location().url }) })
     const external: string[] = [], failed: string[] = [], assets: string[] = [], browserAPI: string[] = []
     const covers = new Map<string, string>()
+    const artworkGates = new Map<string, { requested: Promise<void>; arrived(): void; pending: Promise<void>; release(): void }>()
     const expectedPopups: string[] = [], popupRequests: string[] = [], popups: Page[] = []
     // Keep the live arrays for popup errors, including errors arriving after page creation.
     const popupErrors: string[][] = []
@@ -200,6 +202,8 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       const id = covers.get(url.href)
       if (id && request.method() === 'GET') {
         assets.push(url.href)
+        const gate = artworkGates.get(url.href)
+        if (gate) { gate.arrived(); await gate.pending }
         if (expectedMediaFailures.has(url.href)) return route.fulfill({ status: 503, body: 'Injected artwork failure' })
         return route.fulfill({ contentType: 'image/svg+xml', body: cover(id) })
       }
@@ -322,6 +326,15 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
             expectedPopups.push(url)
           },
           expectGameDestination(id) { state.destination = id },
+          holdArtwork(url) {
+            expect(covers.has(url), 'Gate only a declared fixture asset').toBe(true)
+            let arrived!: () => void, release!: () => void
+            const requested = new Promise<void>(resolve => { arrived = resolve })
+            const pending = new Promise<void>(resolve => { release = resolve })
+            const gate = { requested, pending, arrived, release }
+            artworkGates.set(url, gate)
+            return gate
+          },
           reviews: sidebar.getByRole('heading', { name: locale === 'en' ? 'Latest Reviews' : '最新评论', exact: true }).locator('..'),
           expectNewsPopup(url) {
             expect(state.data.latest_news[locale === 'en' ? 'news_en' : 'news_zh'].map(item => item.url)).toContain(url)
@@ -358,6 +371,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       assertQuiet()
     } finally {
       releaseReads()
+      for (const gate of artworkGates.values()) gate.release()
       await testInfo.attach('games-home-network.json', { contentType: 'application/json', body: JSON.stringify({
         upstream: state.upstream.map(String), browserAPI, events: state.events, assets, external, failed, errors, diagnostics, popupErrors, expectedPopups, popupRequests,
       }, null, 2) })

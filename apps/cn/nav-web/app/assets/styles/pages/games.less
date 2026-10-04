@@ -3,18 +3,18 @@
  * continue to come from the design system. No shell or image hover movement.
  */
 .games-page {
-  --games-home-showcase-surface: var(--gf-surface);
-  --games-home-showcase-border: var(--gf-border);
-  --games-home-showcase-shadow: 0 4px 16px rgba(91, 62, 28, 0.04);
-  --games-home-showcase-title: var(--gf-text-main);
-  --games-home-showcase-summary: var(--gf-text-muted);
-  --games-home-showcase-context: var(--gf-accent);
-  --games-home-showcase-meta: var(--gf-text-soft);
+  --games-home-showcase-surface: rgba(255, 250, 242, 0.40);
+  --games-home-showcase-border: transparent;
+  --games-home-showcase-shadow: 0 4px 12px rgba(91, 62, 28, 0.03);
+  --games-home-showcase-title: rgba(71, 42, 20, 0.92);
+  --games-home-showcase-summary: rgba(120, 83, 53, 0.58);
+  --games-home-showcase-context: rgba(124, 45, 18, 0.88);
+  --games-home-showcase-meta: rgba(87, 83, 78, 0.70);
   --games-home-showcase-tag-bg: color-mix(in srgb, var(--gf-accent) 6%, transparent);
   --games-home-showcase-tag-text: var(--gf-text-muted);
   --games-home-showcase-note-border: var(--gf-border-strong);
   --games-home-showcase-note-text: var(--gf-text-muted);
-  --games-home-showcase-control-text: var(--gf-text-muted);
+  --games-home-showcase-control-text: rgba(154, 52, 18, 0.74);
   --games-home-showcase-control-bg: transparent;
   --games-home-showcase-control-hover-bg: var(--gf-surface-hover);
   --games-home-showcase-control-disabled: var(--gf-text-soft);
@@ -25,7 +25,13 @@
 
 html.dark .games-page {
   /* Slate stays light in weight; artwork supplies contrast, not heavy elevation. */
+  --games-home-showcase-surface: rgba(226, 232, 240, 0.065);
   --games-home-showcase-shadow: none;
+  --games-home-showcase-title: rgba(241, 245, 249, 0.88);
+  --games-home-showcase-summary: rgba(203, 213, 225, 0.62);
+  --games-home-showcase-context: rgba(190, 208, 222, 0.72);
+  --games-home-showcase-meta: rgba(226, 232, 240, 0.76);
+  --games-home-showcase-control-text: rgba(180, 213, 226, 0.62);
 }
 
 .game-home-showcase {
@@ -35,8 +41,45 @@ html.dark .games-page {
   box-shadow: var(--games-home-showcase-shadow);
 }
 
-.game-home-showcase__artwork {
+.game-home-showcase__artwork-frame {
   background: var(--games-home-showcase-media-fallback-bg);
+}
+
+/* Retained media nodes keep decoded resources and provider failures for this
+ * snapshot. New frames become visible only after decoding; SSR has no motion. */
+.game-home-showcase__frame {
+  opacity: 0;
+}
+
+.game-home-showcase__frame[data-active="true"] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .game-home-showcase__media[data-motion="true"] .game-home-showcase__frame {
+    transform: translateX(8px);
+    // Keep the outgoing image opaque underneath the incoming one. Fading both
+    // simultaneously exposes the pale surface halfway through the handoff.
+    transition: opacity 0s 200ms, transform 200ms ease, visibility 0s 200ms;
+  }
+
+  .game-home-showcase__media[data-motion="true"][data-direction="previous"] .game-home-showcase__frame {
+    transform: translateX(-8px);
+  }
+
+  .game-home-showcase__media[data-motion="true"] .game-home-showcase__frame[data-active="true"] {
+    transform: translateX(0);
+    transition: opacity 200ms ease, transform 200ms ease, visibility 0s;
+  }
+
+  .game-home-showcase__copy--switch {
+    animation: games-home-showcase-copy 200ms ease;
+  }
+}
+
+@keyframes games-home-showcase-copy {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .game-home-showcase__image {

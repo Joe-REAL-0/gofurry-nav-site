@@ -203,7 +203,12 @@ The native Showcase surface precedes Recently Released. It uses 64/36 Desktop,
 stacked 2:1 Tablet and 16:9 Mobile artwork; existing Managed/Steam components own
 provider routing and fallback. UI text/action labels are localized, while content
 uses the backend's exact locale. Index is page-local, controls are non-circular,
-and transitions are instant. No autoplay/swipe or whole-Hero link is introduced.
+with 200ms transitions only after user switching (instant for reduced motion).
+Responsive picture sources avoid downloading both managed variants. Visited media
+nodes retain decoded images/fallback state; a new decoded frame replaces the old
+one without clearing the artwork. Pending frames do not count impressions, and
+the displayed artwork keeps its own click destination/token during handoff.
+No autoplay/swipe or whole-Hero link is introduced.
 
 An impression candidate requires >=50% viewport visibility in a visible tab for
 one uninterrupted second. A page-local Set dedupes snapshot/item impressions.

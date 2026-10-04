@@ -33,6 +33,11 @@ added. Save-Data isolates image-fallback tests from unrelated provider probes.
 Pure presentation/key tests and real Nuxt service/component/tracking tests own
 canonical dates, destination safety, empty 204, snapshot/page index reset, UUIDv4,
 blocked storage, continuous 1000ms visibility, interruption, dedupe and cleanup.
+Follow-up regressions disable HTTP cache and assert one viewport artwork variant,
+retained DOM/request counts on revisits, gated slow-media handoff and late-response
+races, pending-frame impression exclusion, 200ms user-only/reduced-motion behavior,
+matching Home material and a separate narrow-screen navigation row. Shared image
+Nuxt tests retain single-image consumers and independent responsive fallback.
 After the full install/static/Unit/Nuxt/typecheck/production build sequence, run:
 
 ```sh
