@@ -31,8 +31,8 @@ export function ShowcaseSchedule({ workspace, canWrite, onBusyChange }: EditorPr
   return <Section title="排期与展示" description={operatingTimezone}><form className="grid gap-5" onSubmit={form.handleSubmit(v => { if (canWrite) mutation.mutate(v) })}>
     <PublishedNotice workspace={workspace} />{mutation.error && <Alert tone="danger">{mutation.error.message}</Alert>}
     <div className="grid gap-4 md:grid-cols-2">{(['starts_at', 'ends_at'] as const).map((name, index) => <FormField key={name} label={index ? '结束时间' : '开始时间'} required error={form.formState.errors[name]?.message}><Controller name={name} control={form.control} render={({ field }) => <DateTimePicker disabled={disabled} ariaLabel={index ? '结束时间' : '开始时间'} value={field.value} onValueChange={field.onChange} />} /></FormField>)}</div>
-    <FormField label="Weight" error={form.formState.errors.weight?.message} help="Weight 影响同类候选在稳定编排中的选择概率，不保证固定位置。"><Input disabled={disabled} type="number" min={1} max={10000} {...form.register('weight')} /></FormField>
-    <FormField label="Pin Position" help="固定位置仅用于特殊策展或有明确位置约定的推广活动。"><Controller name="pin_position" control={form.control} render={({ field }) => <Select ariaLabel="Pin Position" disabled={disabled} value={field.value} onValueChange={field.onChange} options={[{ value: '', label: '不固定' }, ...[1, 2, 3, 4].map(n => ({ value: String(n), label: `#${n}` }))]} />} /></FormField>
+    <FormField label="选取权重" error={form.formState.errors.weight?.message} help="数值越高，在多个合格活动竞争展示名额时越容易被选中；不会决定具体展示位置。"><Input disabled={disabled} type="number" min={1} max={10000} {...form.register('weight')} /></FormField>
+    <FormField label="固定展示位置" help="固定后将优先占据指定位置，仅建议用于重点活动或有位置约定的推广。"><Controller name="pin_position" control={form.control} render={({ field }) => <Select ariaLabel="固定展示位置" disabled={disabled} value={field.value} onValueChange={field.onChange} options={[{ value: '', label: '自动排序' }, ...[1, 2, 3, 4].map(n => ({ value: String(n), label: `第 ${n} 位` }))]} />} /></FormField>
     {canWrite && <div className="flex justify-end"><Button disabled={!form.formState.isDirty || mutation.isPending}>保存排期与展示</Button></div>}
   </form></Section>
 }

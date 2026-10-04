@@ -30,7 +30,7 @@ export function useGameShowcaseAutoplay(root: Ref<HTMLElement | null>, state: Au
   }
   function eligible() {
     const index = toValue(state.index), count = toValue(state.itemCount)
-    return mounted.value && count > 1 && index >= 0 && index < count - 1
+    return mounted.value && count > 1 && index >= 0 && index < count
       && toValue(state.artworkReady) && visible && document.visibilityState === 'visible'
       && !hovered && !focused && !userPaused.value && !reducedMotion.value
   }

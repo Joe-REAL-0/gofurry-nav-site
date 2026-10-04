@@ -55,7 +55,7 @@ Optional `GOFURRY_SHOWCASE_REVIEW_DIR` writes temporary reviewer screenshots fro
 these same Functional cases. Choose an ignored local directory; these images are
 not goldens and carry no visual approval.
 
-### Showcase Autoplay V1
+### Showcase circular Autoplay
 
 `game-showcase-autoplay.nuxt.test.ts` mounts the real composable with fake timers
 and controlled browser signals: exact 6000ms readiness windows, interruptions,
@@ -67,8 +67,11 @@ it does not replace either real composable or the analytics sender. No real
 six-second sleeps, new fixture app or Visual baseline is introduced.
 
 Browser cases separately prove slow-image handoff, hover/focus/intersection/tab
-interruptions, manual reset, Pause/Play, end behavior, silent auto changes,
-independent one-second impressions and complete reduced-motion disablement.
+interruptions, manual reset, Pause/Play, 4-to-1 automatic wrap, both manual
+boundary wraps, silent auto changes, repeated-loop impression dedupe and decoded
+node retention. Responsive first-item artwork can be gated while displaying the
+last item to prove a wrapped slow handoff starts its own full window. Reduced
+motion completely disables autoplay while manual circular navigation remains.
 The normal Browser/Visual reduced-motion default remains unchanged. Run the
 requested frozen install/static/Unit/Nuxt/build gates, then:
 

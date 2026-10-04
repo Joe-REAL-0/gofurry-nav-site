@@ -25,7 +25,7 @@ const columns: AdminColumn<Campaign>[] = [
   { key: 'sponsored', header: '商业属性', sortable: false, render: row => <StatusBadge tone={row.sponsored ? 'info' : 'neutral'}>{row.sponsored ? '商业推广' : 'Editorial'}</StatusBadge> },
   { key: 'derived_status', header: '状态', sortable: false, render: row => <CampaignStatus value={row.derived_status} /> },
   { key: 'starts_at', header: '展示周期（上海时间）', sortable: false, render: row => <div className="py-2 text-xs"><p>{displayTime(row.starts_at)}</p><p>至 {displayTime(row.ends_at)}</p></div> },
-  { key: 'weight', header: 'Weight', sortable: false }, { key: 'pin_position', header: 'Pin', sortable: false, render: row => row.pin_position ? `#${row.pin_position}` : '不固定' }, { key: 'id', header: 'ID', sortable: false },
+  { key: 'weight', header: '选取权重', sortable: false }, { key: 'pin_position', header: '固定展示位置', sortable: false, render: row => row.pin_position ? `第 ${row.pin_position} 位` : '自动排序' }, { key: 'id', header: 'ID', sortable: false },
 ]
 export function CampaignList() {
   const auth = useAuth(); const navigate = useNavigate(); const [creating, setCreating] = useState(false)

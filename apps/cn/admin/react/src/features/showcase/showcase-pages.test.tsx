@@ -177,7 +177,7 @@ it('replaces and revokes previews, preserves Primary failure, confirms clear, an
   fireEvent.click(screen.getByRole('button', { name: '确认清除' }))
   expect(await screen.findByText('valid desktop artwork required')).toBeInTheDocument()
   expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/showcase/campaigns/119/artwork/desktop', 'DELETE')
-  fireEvent.change(screen.getByRole('spinbutton', { name: '水平焦点' }), { target: { value: '0' } })
+  fireEvent.click(screen.getByRole('button', { name: '左侧' }))
   fireEvent.click(screen.getByRole('button', { name: '保存焦点' }))
   await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/showcase/campaigns/119/content', 'PUT', expect.objectContaining({ focal_x: 0, focal_y: 0.5, internal_name: workspace.internal_name, linked_game_id: 1, locales: workspace.locales, primary_action_type: 'game', secondary_action_type: 'steam' })))
 })
@@ -196,7 +196,7 @@ it('converts shared picker wall time explicitly and saves weight/pin', async () 
   setup('/game/showcase/119?tab=schedule'); await screen.findByRole('button', { name: '开始时间' })
   expect(document.querySelector('input[type="datetime-local"]')).toBeNull()
   fireEvent.click(screen.getByRole('button', { name: '开始时间' })); fireEvent.click(screen.getByRole('button', { name: '小时加一' })); fireEvent.click(screen.getByRole('button', { name: '确定' }))
-  fireEvent.change(screen.getByRole('spinbutton', { name: /Weight/ }), { target: { value: '250' } }); await choose('Pin Position', '#3')
+  fireEvent.change(screen.getByRole('spinbutton', { name: /选取权重/ }), { target: { value: '250' } }); await choose('固定展示位置', '第 3 位')
   fireEvent.click(screen.getByRole('button', { name: '保存排期与展示' }))
   await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/showcase/campaigns/119/schedule', 'PUT', { starts_at: '2026-10-03T19:00:00+08:00', ends_at: '2026-10-03T21:00:00+08:00', weight: 250, pin_position: 3 }))
 })
@@ -221,14 +221,28 @@ it.each(['content', 'assets', 'schedule', 'stats'])('keeps %s readable without c
   if (tab === 'schedule') expect(screen.getByRole('button', { name: '开始时间' })).toBeDisabled()
   if (tab === 'stats') expect(await screen.findByRole('link', { name: '导出 CSV' })).toBeInTheDocument()
 })
-it('hides create without content.write and links real Audit with resource scope only', async () => {
+it('hides create without content.write and replaces History with capability-gated Header Audit', async () => {
   mocks.capabilities = ['content.read']; const { router } = setup('/game/showcase?tab=campaigns'); await screen.findByRole('link', { name: 'October Campaign' })
   expect(screen.queryByRole('button', { name: '新建活动' })).not.toBeInTheDocument()
   await act(() => router.navigate('/game/showcase/119?tab=history'))
-  expect(await screen.findByText(/当前账号没有 audit.read/)).toBeInTheDocument()
-  mocks.capabilities.push('audit.read'); await act(() => router.navigate('/game/showcase/119')); fireEvent.click(screen.getByRole('tab', { name: '历史' }))
-  fireEvent.click(await screen.findByRole('link', { name: '打开操作审计' }))
+  expect(await screen.findByText('活动概览')).toBeInTheDocument()
+  expect(router.state.location.search).toBe('?tab=history')
+  expect(screen.getByRole('tab', { name: '概览' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['概览', '内容', '素材', '排期与展示', '统计'])
+  expect(screen.queryByRole('button', { name: '操作审计' })).not.toBeInTheDocument()
+  expect(screen.queryByText(/操作历史由/)).not.toBeInTheDocument()
+  mocks.capabilities.push('audit.read'); await act(() => router.navigate('/game/showcase/119'))
+  fireEvent.click(await screen.findByRole('button', { name: '操作审计' }))
   await waitFor(() => expect(getJSON).toHaveBeenCalledWith('/api/v1/audit/logs?page=1&page_size=20&resource=gfg_showcase_campaign'))
+  expect(router.state.location.pathname + router.state.location.search).toBe('/system/audit?resource=gfg_showcase_campaign')
+})
+it('keeps the Header Audit entry behind dirty-form navigation protection', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  const { router } = setup('/game/showcase/119?tab=assets'); await screen.findByText('素材焦点')
+  fireEvent.click(screen.getByRole('button', { name: '右上' }))
+  fireEvent.click(screen.getByRole('button', { name: '操作审计' }))
+  await waitFor(() => expect(confirm).toHaveBeenCalled())
+  expect(router.state.location.pathname).toBe('/game/showcase/119')
 })
 it('shows backend KPI totals, estimates, date URL state and CSV without fetching CSV as JSON', async () => {
   const { router } = setup('/game/showcase/119?tab=stats&from=2026-10-01&to=2026-10-03')
@@ -257,4 +271,78 @@ it('disposes and resizes the two-series chart, and renders a normal empty trend'
   fireEvent(window, new Event('resize')); expect(mocks.chart.resize).toHaveBeenCalled()
   unmount(); expect(mocks.chart.dispose).toHaveBeenCalled()
   render(<ShowcaseTrend daily={[]} />); expect(screen.getByText('暂无统计趋势')).toBeInTheDocument()
+})
+
+it('selects all nine focal presets without a remote preview or number inputs, then saves the complete content', async () => {
+  setup('/game/showcase/119?tab=assets'); await screen.findByText('素材焦点')
+  expect(screen.getByRole('button', { name: '居中' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  expect(screen.getByText('已配置 Managed Artwork')).toBeInTheDocument()
+  const points = [['左上', 0, 0], ['上方', .5, 0], ['右上', 1, 0], ['左侧', 0, .5], ['居中', .5, .5], ['右侧', 1, .5], ['左下', 0, 1], ['下方', .5, 1], ['右下', 1, 1]] as const
+  for (const [label, x, y] of points) {
+    fireEvent.click(screen.getByRole('button', { name: label }))
+    expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(screen.getByRole('group', { name: '素材焦点位置' })).getAllByRole('button', { pressed: true })).toHaveLength(1)
+    expect(screen.getByText(`focal_x ${x.toFixed(2)} · focal_y ${y.toFixed(2)}`)).toBeInTheDocument()
+  }
+  expect(sendJSON).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: '保存焦点' }))
+  const w = campaignFixture()
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/showcase/campaigns/119/content', 'PUT', {
+    internal_name: w.internal_name, content_type: w.content_type, sponsored: false, linked_game_id: 1,
+    focal_x: 1, focal_y: 1, primary_action_type: 'game', primary_target: null, secondary_action_type: 'steam', secondary_target: w.secondary_target, locales: w.locales,
+  }))
+})
+it.each(['Desktop', 'Mobile'] as const)('maps %s preview clicks to clamped focal coordinates and updates object-position immediately', async label => {
+  setup('/game/showcase/119?tab=assets'); await screen.findByText('素材焦点')
+  fireEvent.change(screen.getByLabelText(`选择 ${label} AVIF`), { target: { files: [new File(['original'], 'focus.avif', { type: 'image/avif' })] } })
+  const image = await screen.findByRole('img', { name: `${label} 本地预览` }), preview = image.closest('button')!
+  vi.spyOn(preview, 'getBoundingClientRect').mockReturnValue(new DOMRect(100, 200, 400, 200))
+  for (const [clientX, clientY, position, label] of [[300, 300, '50% 50%', '居中'], [460, 220, '90% 10%', '右上'], [50, 500, '0% 100%', '左下'], [600, 100, '100% 0%', '右上']] as const) {
+    fireEvent.click(preview, { detail: 1, clientX, clientY })
+    expect(image).toHaveStyle({ objectPosition: position })
+    expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true')
+  }
+  const user = userEvent.setup()
+  preview.focus(); await user.keyboard('{Enter}')
+  expect(image).toHaveStyle({ objectPosition: '50% 50%' })
+  screen.getByRole('button', { name: '下方' }).focus(); await user.keyboard(' ')
+  expect(image).toHaveStyle({ objectPosition: '50% 100%' })
+  expect(sendJSON).not.toHaveBeenCalled(); expect(sendForm).not.toHaveBeenCalled()
+})
+it('selects the closest preset for persisted arbitrary coordinates and disables readonly focal controls', async () => {
+  workspace.focal_x = .8; workspace.focal_y = .2; mocks.capabilities = ['content.read']
+  setup('/game/showcase/119?tab=assets'); await screen.findByText('素材焦点')
+  expect(screen.getByRole('button', { name: '右上' })).toHaveAttribute('aria-pressed', 'true')
+  for (const button of within(screen.getByRole('group', { name: '素材焦点位置' })).getAllByRole('button')) expect(button).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: '左下' }))
+  expect(screen.getByText('focal_x 0.80 · focal_y 0.20')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '保存焦点' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument(); expect(sendJSON).not.toHaveBeenCalled()
+})
+it('labels weight and pin honestly and preserves null auto-position payload', async () => {
+  workspace.pin_position = 2
+  setup('/game/showcase/119?tab=schedule'); await screen.findByRole('button', { name: '开始时间' })
+  expect(screen.getByText('数值越高，在多个合格活动竞争展示名额时越容易被选中；不会决定具体展示位置。')).toBeInTheDocument()
+  expect(screen.getByText('固定后将优先占据指定位置，仅建议用于重点活动或有位置约定的推广。')).toBeInTheDocument()
+  expect(screen.getByRole('spinbutton', { name: /选取权重/ })).toHaveAttribute('min', '1')
+  expect(screen.getByRole('spinbutton', { name: /选取权重/ })).toHaveAttribute('max', '10000')
+  await choose('固定展示位置', '自动排序')
+  fireEvent.click(screen.getByRole('button', { name: '保存排期与展示' }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/showcase/campaigns/119/schedule', 'PUT', expect.objectContaining({ weight: 100, pin_position: null })))
+})
+
+it('disables a retained local focal preview when write capability is lost', async () => {
+  const { client } = setup('/game/showcase/119?tab=assets'); await screen.findByText('素材焦点')
+  fireEvent.change(screen.getByLabelText('选择 Desktop AVIF'), { target: { files: [new File(['original'], 'focus.avif', { type: 'image/avif' })] } })
+  const image = await screen.findByRole('img', { name: 'Desktop 本地预览' }), preview = image.closest('button')!
+  vi.spyOn(preview, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 200))
+  mocks.capabilities = ['content.read']
+  await act(() => client.setQueryData(['showcase', 'campaign', '119'], { ...workspace, updated_at: '2026-10-04T00:00:00Z' }))
+  await waitFor(() => expect(preview).toBeDisabled())
+  fireEvent.click(preview, { detail: 1, clientX: 400, clientY: 0 })
+  expect(image).toHaveStyle({ objectPosition: '50% 50%' })
+  expect(screen.queryByRole('button', { name: '保存焦点' })).not.toBeInTheDocument()
+  expect(sendJSON).not.toHaveBeenCalled(); expect(sendForm).not.toHaveBeenCalled()
 })

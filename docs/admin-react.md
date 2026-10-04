@@ -6,7 +6,7 @@ The sole Admin frontend is `apps/cn/admin/react`. It owns content workspaces and
 
 `src/features/showcase` owns `/game/showcase` (current composition, Campaigns,
 automatic discovery) and `/game/showcase/:id` (overview, content, artwork,
-schedule/display, statistics, history). It uses native shared controls and the
+schedule/display, statistics). It uses native shared controls and the
 existing [Stage A API](game-showcase.md), outside Resource Engine. `content.read`
 can inspect every tab; `content.write` permits mutations. New Drafts immediately
 open their real ID workspace. Lists use URL filters and do not fetch per-row stats.
@@ -17,14 +17,21 @@ to 5 MiB. The browser checks file hints/size; Go owns authoritative dimensions.
 Local previews are revoked on replacement/unmount. Reloaded artwork shows its
 object key, since Stage A supplies no persistent CDN URL. Mirror warnings remain
 successful Primary publication. Focus coordinates save the full content contract.
+A 3×3 grid highlights the nearest preset; staged local preview clicks select
+clamped x/y and update object-position immediately. Saving remains explicit and
+read-only controls are disabled. Weak technical text replaces the numeric inputs.
+No persistent CDN URL is guessed when no local preview exists.
 
 Schedules interpret DateTimePicker wall time as Asia/Shanghai (UTC+08:00), with
 explicit RFC3339 conversion. Lifecycle actions and reference clearing confirm;
 unsaved edits/staged uploads protect tab navigation, routing and unload. Statistics
 display backend totals, daily two-series trends, click sources and same-origin CSV.
 Multi-day sessions are summed daily HLL estimates, not distinct people. Discovery
-links to Game Classification for eligibility; History links to system Audit when
-`audit.read` is available and scopes its initial resource filter.
+links to Game Classification for eligibility. The Header “操作审计” action is
+visible only with `audit.read` and carries only the Campaign resource filter.
+History is removed; old `tab=history` falls back to overview without redirect.
+“选取权重” and “固定展示位置” replace Weight/Pin labels, with explanatory
+help and unchanged 1..10000 / null-or-1..4 payloads.
 
 Vitest/Testing Library cover these contracts without real cloud resources. After
 automated checks, human acceptance still covers light/dark and narrow screens,

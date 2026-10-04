@@ -77,13 +77,21 @@ for (const locale of ['zh', 'en'] as const) {
   })
 }
 
-test('Four items preserve supplied order, non-circular boundaries, focus and user-only announcements', async ({ gamesHome }) => {
+test('Four items preserve supplied order, circular navigation, focus and user-only announcements', async ({ gamesHome }) => {
   const scene = await gamesHome.open({ showcase: 'four-items' })
   const { showcase: hero, page, snapshot } = scene
   const next = hero.getByRole('button', { name: '下一项精选' }), prev = hero.getByRole('button', { name: '上一项精选' })
   await expect(hero.locator('.game-home-showcase__count')).toHaveText('01 / 04')
-  await expect(prev).toBeDisabled(); await expect(next).toBeEnabled()
+  await expect(prev).toBeEnabled(); await expect(next).toBeEnabled()
   await expect(hero.locator('[aria-live]')).toHaveText('')
+  await prev.click()
+  await expect(hero.locator('.game-home-showcase__count')).toHaveText('04 / 04')
+  await expect(hero.locator('[aria-live]')).toHaveText(`4 / 4 · ${snapshot.items[3]!.title}`)
+  await expect(hero.locator('.game-home-showcase__media')).toHaveAttribute('data-direction', 'previous')
+  await next.click()
+  await expect(hero.locator('.game-home-showcase__count')).toHaveText('01 / 04')
+  await expect(hero.locator('[aria-live]')).toHaveText(`1 / 4 · ${snapshot.items[0]!.title}`)
+  await expect(hero.locator('.game-home-showcase__media')).toHaveAttribute('data-direction', 'next')
   await next.focus(); await page.keyboard.press('ArrowRight')
   await expect(hero.locator('h2')).toHaveText(snapshot.items[0]!.title)
   for (let i = 1; i < 4; i++) {
@@ -93,9 +101,9 @@ test('Four items preserve supplied order, non-circular boundaries, focus and use
     await expect(hero.locator('.game-home-showcase__count')).toHaveText(`0${i + 1} / 04`)
     if (i < 3) await expect(next).toBeFocused()
   }
-  await expect(next).toBeDisabled(); await expect(prev).toBeEnabled()
+  await expect(next).toBeEnabled(); await expect(prev).toBeEnabled()
   await prev.click(); await prev.click(); await prev.click()
-  await expect(prev).toBeDisabled()
+  await expect(prev).toBeEnabled()
   await expect(hero.locator('h2')).toHaveText(snapshot.items[0]!.title)
   await expect(hero.locator('[aria-live]')).toHaveText(`1 / 4 · ${snapshot.items[0]!.title}`)
   scene.assertQuiet()
@@ -469,7 +477,7 @@ test('Manual Next resets autoplay, announces once, and subsequent auto switching
   scene.assertQuiet()
 })
 
-test('Pause persists, Play waits afresh, the end never loops, and manual Prev restarts from the end', async ({ gamesHome, page }) => {
+test('Pause persists across loops and Play always waits a fresh 6000ms including at the last item', async ({ gamesHome, page }) => {
   const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'two-managed', height: 200 }))
   await page.clock.runFor(3000)
   await scene.showcase.getByRole('button', { name: '暂停自动轮播' }).click()
@@ -480,32 +488,87 @@ test('Pause persists, Play waits afresh, the end never loops, and manual Prev re
   await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('01 / 02')
   await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 02')
   await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
-  await expect(scene.showcase.getByRole('button', { name: '下一项精选' })).toBeDisabled()
+  await expect(scene.showcase.getByRole('button', { name: '下一项精选' })).toBeEnabled()
   await scene.showcase.getByRole('button', { name: '暂停自动轮播' }).click()
-  await scene.showcase.getByRole('button', { name: '继续自动轮播' }).click()
   await leaveShowcase(scene)
   await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('02 / 02')
-  await scene.showcase.getByRole('button', { name: '上一项精选' }).click()
+  await scene.showcase.getByRole('button', { name: '继续自动轮播' }).click()
   await leaveShowcase(scene)
-  await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('01 / 02')
-  await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('01 / 02')
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[0]!.key)
+  await page.clock.runFor(6000); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText('')
   await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(2)
   scene.assertQuiet()
 })
 
-test('Reduced-motion default disables autoplay entirely and retains manual navigation', async ({ gamesHome, page }) => {
+test('Reduced-motion default disables autoplay entirely but both manual boundaries loop and announce', async ({ gamesHome, page }) => {
   await page.clock.install()
-  const scene = await gamesHome.open({ showcase: 'two-managed' })
+  const scene = await gamesHome.open({ showcase: 'four-items' })
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100))
   await expect(scene.showcase.getByRole('button', { name: /自动轮播/ })).toHaveCount(0)
-  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('01 / 02')
-  await scene.showcase.getByRole('button', { name: '下一项精选' }).click()
-  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
-  await expect(scene.showcase.locator('[aria-live]')).toHaveText(`2 / 2 · ${scene.snapshot.items[1]!.title}`)
+  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('01 / 04')
+  await scene.showcase.getByRole('button', { name: '上一项精选' }).click()
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[3]!.key)
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText(`4 / 4 · ${scene.snapshot.items[3]!.title}`)
   await leaveShowcase(scene)
-  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('04 / 04')
+  await scene.showcase.getByRole('button', { name: '下一项精选' }).click()
+  await expect(countLabel(scene)).toHaveText('01 / 04')
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText(`1 / 4 · ${scene.snapshot.items[0]!.title}`)
+  await leaveShowcase(scene); await page.clock.runFor(60000)
+  await expect(countLabel(scene)).toHaveText('01 / 04')
   await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(2)
   scene.assertQuiet()
+})
+
+test('Two complete autoplay rounds wrap 4 to 1 silently and dedupe impressions and decoded artwork', async ({ gamesHome, page }) => {
+  const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'four-items', height: 200 }))
+  const firstNode = await activeArtwork(scene).locator('img').elementHandle()
+  let firstRoundRequests = 0
+  for (let step = 1; step <= 8; step++) {
+    await page.clock.runFor(5999)
+    await expect(countLabel(scene)).toHaveText(`0${(step - 1) % 4 + 1} / 04`)
+    await page.clock.runFor(1)
+    const index = step % 4
+    await expect(countLabel(scene)).toHaveText(`0${index + 1} / 04`)
+    await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[index]!.key)
+    await expect(scene.showcase.locator('[aria-live]')).toHaveText('')
+    await expect(scene.showcase.locator('.game-home-showcase__media')).toHaveAttribute('data-direction', 'next')
+    if (step === 4) firstRoundRequests = scene.assets.length
+  }
+  await page.clock.runFor(1000)
+  await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(4)
+  for (const item of scene.snapshot.items) expect(scene.events.filter(event => event.tracking_token === item.tracking_token && event.event === 'impression')).toHaveLength(1)
+  expect(await activeArtwork(scene).locator('img').evaluate((image, first) => image === first, firstNode)).toBe(true)
+  expect(scene.assets).toHaveLength(firstRoundRequests)
+  await expect(scene.showcase.locator('.game-home-showcase__frame')).toHaveCount(4)
+  scene.assertQuiet()
+})
+
+test('A last-to-first auto wrap retains the last decoded artwork while the first responsive variant is slow', async ({ gamesHome, page }) => {
+  const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'four-items', height: 200 }))
+  const first = scene.snapshot.items[0]!, last = scene.snapshot.items[3]!
+  await scene.showcase.getByRole('button', { name: '上一项精选' }).click()
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', last.key)
+  const url = `${showcaseOrigins.primary}/${first.artwork.mobile_object_key}`, gate = scene.holdArtwork(url)
+  try {
+    await page.setViewportSize({ width: 375, height: 900 }); await gate.requested
+    expect(await activeArtwork(scene).locator('img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await leaveShowcase(scene)
+    await page.clock.runFor(6000); await expect(countLabel(scene)).toHaveText('01 / 04')
+    await expect(activeArtwork(scene)).toHaveAttribute('data-key', last.key)
+    const announcement = `4 / 4 · ${last.title}`
+    await expect(scene.showcase.locator('[aria-live]')).toHaveText(announcement)
+    await page.clock.runFor(20000); await expect(countLabel(scene)).toHaveText('01 / 04')
+    const response = page.waitForResponse(url); gate.release(); await response
+    await expect(activeArtwork(scene)).toHaveAttribute('data-key', first.key)
+    await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('01 / 04')
+    await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 04')
+    await expect(scene.showcase.locator('[aria-live]')).toHaveText(announcement)
+    scene.assertQuiet()
+  } finally { gate.release() }
 })
 
 for (const width of [1440, 1024, 768, 375]) {

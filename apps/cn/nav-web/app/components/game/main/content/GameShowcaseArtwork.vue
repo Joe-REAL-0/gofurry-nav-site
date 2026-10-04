@@ -26,7 +26,7 @@ import SteamAssetImage from '~/components/common/SteamAssetImage.vue'
 import type { GameShowcaseItem } from '~/types/game'
 import { showcaseFocalPoint } from '~/utils/gameShowcasePresentation'
 
-const props = defineProps<{ items: GameShowcaseItem[]; activeKey: string }>()
+const props = defineProps<{ items: GameShowcaseItem[]; activeKey: string; direction: 'next' | 'previous' }>()
 const emit = defineEmits<{ display: [state: { key: string; ready: boolean }] }>()
 const root = ref<HTMLElement | null>(null)
 const visited = ref(new Set([props.activeKey]))
@@ -34,7 +34,6 @@ const ready = new Set<string>()
 const failed = ref(new Set<string>())
 const displayedKey = ref(props.activeKey)
 const interacted = ref(false)
-const direction = ref('next')
 const retained = computed(() => props.items.filter(entry => visited.value.has(entry.key)))
 const focalStyle = (entry: GameShowcaseItem) => ({ objectPosition: `${showcaseFocalPoint(entry.artwork.focal_x)}% ${showcaseFocalPoint(entry.artwork.focal_y)}%` })
 
@@ -56,9 +55,8 @@ async function decode(image: HTMLImageElement, key: string) {
   if (image.isConnected && image.naturalWidth > 0 && source === (image.currentSrc || image.src)) settled(key)
 }
 function loaded(event: Event, key: string) { void decode(event.target as HTMLImageElement, key) }
-watch(() => props.activeKey, (key, previous) => {
+watch(() => props.activeKey, (key) => {
   interacted.value = true
-  direction.value = props.items.findIndex(entry => entry.key === key) > props.items.findIndex(entry => entry.key === previous) ? 'next' : 'previous'
   visited.value.add(key)
   if (ready.has(key)) displayedKey.value = key
   report()

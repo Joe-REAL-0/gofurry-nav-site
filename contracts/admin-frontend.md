@@ -75,7 +75,7 @@ Site, Game, Release Notes and Showcase are dedicated workspaces. Simple resource
 Showcase consumes the frozen [backend contract](../docs/game-showcase.md) through
 `content.read/write`. Its routes precede `/game/:resource`; composition, Campaign
 list and discovery tabs, locale, filters and pagination use URL state. Creation
-opens a real Draft ID workspace with overview/content/assets/schedule/stats/history.
+opens a real Draft ID workspace with overview/content/assets/schedule/stats.
 Read-only users can inspect every tab without mutation controls. Lifecycle actions
 and artwork clear require confirmation; dirty forms and staged uploads protect
 navigation/unload and disable lifecycle actions. Archived Campaigns are read-only.
@@ -84,7 +84,16 @@ Campaign locale editors are independent zh/en RHF fields. Sponsored payloads cle
 both Editorial Notes; action types remain fixed. Artwork uploads retain original
 AVIF bytes and use the shared session/CSRF transport. Local object URLs are revoked;
 persisted artwork shows provider-neutral keys, without guessed CDN URLs. Focal
-controls live in Assets but save the complete `/content` payload. Scheduling uses
+controls live in Assets but save the complete `/content` payload. A nine-button
+grid selects x/y at 0, 0.5 or 1 and highlights the nearest preset; staged local
+preview clicks set clamped proportional coordinates and immediately update
+object-position. Neither interaction auto-saves or changes image bytes. Native
+preview buttons support keyboard centering; the grid is the precise keyboard
+alternative. Numeric values are diagnostic TechnicalLabel text, not primary
+inputs. Without a local preview the grid remains usable; read-only/busy controls
+are disabled. Weight is labeled “选取权重” (1..10000), Pin “固定展示位置”
+(自动排序/null or 第 1–4 位), preserving the backend selection/position semantics.
+Scheduling uses
 the shared DateTimePicker and explicit Asia/Shanghai RFC3339 conversion independent
 of the workstation timezone. Backend readiness/diagnostics remain authoritative.
 
@@ -92,8 +101,12 @@ Statistics use backend totals, at most 366 inclusive dates, two count-series
 ECharts and same-origin CSV links. HLL session totals are labeled estimates with
 possible cross-day duplication. Lists never request per-row statistics. Discovery
 shows internal evidence and links to Game Classification; only that existing form
-writes `showcase_eligible` with its complete classification payload. History links
-to system Audit through `audit.read`, never fabricates a partial Campaign history.
+writes `showcase_eligible` with its complete classification payload. The Campaign
+Header has an “操作审计” action only for `auth.can('audit.read')`, after 返回活动
+and before lifecycle actions. It opens `/system/audit?resource=gfg_showcase_campaign`
+without claiming target-ID filtering. History and its intermediary component are
+removed; old `tab=history` naturally renders overview without redirecting. Dirty
+navigation protection also applies to the Header action.
 Public Hero, public tracking, new cloud resolvers and backend changes are outside
 this frontend workspace. See [React Admin](../docs/admin-react.md) for acceptance.
 

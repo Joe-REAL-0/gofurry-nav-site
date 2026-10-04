@@ -2,7 +2,7 @@
   <section v-if="item" ref="root" class="game-home-showcase mb-6 overflow-hidden lg:mb-7" :aria-label="t('gameShowcase.label')">
     <div class="flex flex-col lg:h-80 lg:flex-row">
       <div class="game-home-showcase__artwork-frame relative aspect-video min-w-0 overflow-hidden sm:aspect-[2/1] lg:aspect-auto lg:w-[64%] lg:shrink-0">
-        <GameShowcaseArtwork :key="snapshot.snapshot_id" :items="snapshot.items" :active-key="item.key" @display="artworkState = $event" />
+        <GameShowcaseArtwork :key="snapshot.snapshot_id" :items="snapshot.items" :active-key="item.key" :direction="direction" @display="artworkState = $event" />
         <component
           :is="artworkLink ? NuxtLink : 'div'" v-bind="artworkLink" class="game-home-showcase__artwork absolute inset-0 z-20 block"
           :aria-label="artworkLink ? displayedArtwork?.title : undefined" @click="artworkLink && click('artwork', displayedArtwork)"
@@ -37,8 +37,8 @@
             <button v-if="showAutoplayControl" type="button" :aria-label="t(userPaused ? 'gameShowcase.control.play' : 'gameShowcase.control.pause')" @click="togglePause">
               <component :is="userPaused ? PhPlay : PhPause" :size="14" class="mx-auto" aria-hidden="true" />
             </button>
-            <button type="button" :aria-label="t('gameShowcase.control.previous')" :disabled="index === 0" @click="move(-1)"><span aria-hidden="true">‹</span></button>
-            <button type="button" :aria-label="t('gameShowcase.control.next')" :disabled="index === snapshot.items.length - 1" @click="move(1)"><span aria-hidden="true">›</span></button>
+            <button type="button" :aria-label="t('gameShowcase.control.previous')" @click="move(-1)"><span aria-hidden="true">‹</span></button>
+            <button type="button" :aria-label="t('gameShowcase.control.next')" @click="move(1)"><span aria-hidden="true">›</span></button>
           </div>
         </div>
       </div>
@@ -65,6 +65,7 @@ const root = ref<HTMLElement | null>(null)
 const index = ref(0)
 const announcement = ref('')
 const interacted = ref(false)
+const direction = ref<'next' | 'previous'>('next')
 const artworkState = ref({ key: props.snapshot.items[0]?.key ?? '', ready: false })
 const item = computed(() => props.snapshot.items[index.value])
 const count = computed(() => `${String(index.value + 1).padStart(2, '0')} / ${String(props.snapshot.items.length).padStart(2, '0')}`)
@@ -94,9 +95,12 @@ watch(() => props.snapshot.snapshot_id, () => {
   artworkState.value = { key: props.snapshot.items[0]?.key ?? '', ready: false }
 }, { flush: 'sync' })
 function move(delta: number, source: 'manual' | 'auto' = 'manual') {
-  const next = Math.max(0, Math.min(props.snapshot.items.length - 1, index.value + delta))
+  const count = props.snapshot.items.length
+  if (count <= 1) return
+  const next = (index.value + delta + count) % count
   if (next === index.value) return
   interacted.value = true
+  direction.value = delta < 0 ? 'previous' : 'next'
   index.value = next
   if (source === 'manual') {
     announcement.value = t('gameShowcase.live.slide', { current: index.value + 1, total: props.snapshot.items.length, title: item.value?.title })

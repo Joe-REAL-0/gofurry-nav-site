@@ -172,8 +172,10 @@ lifecycle, strict locale content, managed artwork/focal controls, Shanghai-time
 schedules, statistics/CSV, aggregate quality and automatic diagnostics. It does
 not duplicate Composer or public Hero behavior. Persisted artwork displays object
 keys without guessing CDN URLs. Focal edits send the complete existing content
-payload; eligibility writes remain in Game Classification. Campaign History is an
-`audit.read`-gated entry to system Audit, not a separate history API. See
+payload; eligibility writes remain in Game Classification. A capability-gated
+Header action opens system Audit with only `resource=gfg_showcase_campaign`; no
+Campaign History tab or target filter is provided. Old `tab=history` naturally
+falls back to overview without a redirect. See
 [Admin frontend contract](../contracts/admin-frontend.md) and
 [React Admin acceptance](admin-react.md#showcase-operations-119-b).
 
@@ -202,14 +204,15 @@ unchanged; the frontend never reorders, selects or filters returned items.
 The native Showcase surface precedes Recently Released. It uses 64/36 Desktop,
 stacked 2:1 Tablet and 16:9 Mobile artwork; existing Managed/Steam components own
 provider routing and fallback. UI text/action labels are localized, while content
-uses the backend's exact locale. Index is page-local, controls are non-circular,
+uses the backend's exact locale. Index is page-local; manual and automatic
+navigation are circular,
 with the existing 200ms switching transitions (instant for reduced motion).
 Responsive picture sources avoid downloading both managed variants. Visited media
 nodes retain decoded images/fallback state; a new decoded frame replaces the old
 one without clearing the artwork. Pending frames do not count impressions, and
 the displayed artwork keeps its own click destination/token during handoff.
-No swipe or whole-Hero link is introduced. The Autoplay V1 follow-up below
-supersedes the initial no-autoplay scope.
+No swipe or whole-Hero link is introduced. The circular Autoplay follow-up below
+supersedes the initial no-autoplay and non-circular scopes.
 
 An impression candidate requires >=50% viewport visibility in a visible tab for
 one uninterrupted second. A page-local Set dedupes snapshot/item impressions.
@@ -225,18 +228,21 @@ not accept new Visual snapshots or close #119. Desktop/Tablet/Mobile maintainer
 review precedes separately authorized pinned Visual generation and comparison.
 
 
-### Public Autoplay V1
+### Public circular Autoplay
 
 The dedicated frontend autoplay composable advances only forward every 6000ms
-and stops at the last item. Each full interval starts only after the current
+and wraps from the last item to the first. Manual Prev/Next also wrap and remain
+enabled for multiple items; one item hides all controls. This supersedes the
+earlier stop-at-end V1 contract. Each full interval starts only after the current
 artwork is ready and displayed, with >=50% viewport intersection, a visible tab,
 no mouse hover/focus within, no user Pause, and no reduced-motion preference.
 Any interruption discards elapsed time. Manual navigation resets the interval;
-Pause is page-memory only and Play never loops from the end. Zero/one item and
+Pause is page-memory only and Play resumes a fresh interval from the current item.
+Zero/one item and
 reduced motion hide the Pause/Play control and disable autoplay.
 
 Only manual navigation updates aria-live. Autoplay never sends an impression;
-existing one-second qualified-impression tracking, dedupe, asset retention,
+existing one-second qualified-impression tracking, dedupe across loops, asset retention,
 fallback and stale-response protection are unchanged. Fake-timer Nuxt tests and
 Playwright-clock cases in the existing Home fixture cover these contracts.
 Dynamic maintainer review is still required; no accepted Visual snapshot changes.

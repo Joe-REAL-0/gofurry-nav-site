@@ -1745,12 +1745,13 @@ snapshot/page ends. A slow new image leaves the previous decoded artwork visible
 until ready; stale completions never replace a newer selection. No CDN URLs are
 constructed in business components.
 
-One item has no controls/count; two to four use native, non-circular Prev/Next.
+One item has no controls/count; two to four use native, circular Prev/Next
+(always enabled).
 Index lives only in the page instance and resets on snapshot change. Initial SSR
 has no animation; switching uses the existing 200ms media/text transition, instant
 under reduced motion. Rapid clicks update immediately without animation locks.
-There is no swipe, keyboard-shell capture or focus movement. Autoplay V1 below
-supersedes the first pass's no-autoplay restriction. The polite live region is
+There is no swipe, keyboard-shell capture or focus movement. Circular Autoplay below
+supersedes the earlier no-autoplay and non-circular restrictions. The polite live region is
 initially empty and updates only after a manual switch, never an automatic one.
 Internal actions use localized Game routes; external HTTPS
 actions use `noopener noreferrer` in a new tab. Artwork/title/actions are separate
@@ -1780,12 +1781,12 @@ separate from maintainer Desktop/Tablet/Mobile review, new Visual acceptance and
 issue closure. No accepted Visual spec or snapshot changes in this first pass.
 
 
-### Showcase Autoplay V1 (#119-C follow-up)
+### Showcase circular Autoplay (#119-C follow-up)
 
 `useGameShowcaseAutoplay` owns one forward-only timeout with
 `AUTO_ADVANCE_MS = 6000`. It owns its own intersection/visibility/hover/focus/media
 listeners; it neither imports Tracking nor sends analytics. It runs only for
-multiple items before the last index, when the existing `artworkState.ready` is
+multiple items, including the last index, when the existing `artworkState.ready` is
 true and `artworkState.key === item.key`, root intersection is >=50%, the document
 is visible, the mouse is outside, focus is outside, the user has not paused and
 reduced motion is off. Every interruption clears the timeout; resumption starts a
@@ -1793,8 +1794,11 @@ new complete 6000ms window. Pending pictures never consume that window.
 
 Manual Prev/Next reset the window without permanently disabling autoplay. Pause
 is page-instance memory only, survives snapshot changes, and writes no cookie or
-storage. Play restarts a full window when eligible and never returns the last
-item to the first. Manual Prev from the last item may start another full window.
+storage. Play restarts a full window when eligible. Both automatic and manual
+navigation wrap with modulo arithmetic: last Next returns to first, first Prev
+returns to last. This explicitly supersedes V1's stop-at-end/non-circular behavior.
+The navigation owner passes the actual move direction to Artwork so wrapping
+retains the existing forward/backward transition without inferring from indexes.
 Reduced motion disables autoplay completely and hides its control; zero/one item
 also hides the control and has no timer. Mount/unmount own and release every
 listener, observer and timer. Automatic changes never update aria-live.
@@ -1805,7 +1809,8 @@ added button requires space. Layout proportions, height, typography, colors,
 transitions, crop, CTA and disclosure are unchanged. Existing visited-image
 retention, slow/stale handoff and neutral fallback remain Artwork's responsibility.
 Tracking still requires its independent continuous one-second visibility window
-and snapshot/item dedupe; an auto switch does not create an impression itself.
+and snapshot/item dedupe across every loop; an auto switch does not create an
+impression itself.
 
 Maintainer approval of the preceding appearance is recorded separately from this
 autoplay follow-up's pending dynamic review. No Visual baseline update or final

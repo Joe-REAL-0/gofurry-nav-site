@@ -25,7 +25,7 @@ async function mountAutoplay(count = 4, ready = true) {
   vi.useRealTimers()
   const root = ref<HTMLElement | null>(null), index = ref(0), itemCount = ref(count), artworkReady = ref(ready), snapshotId = ref('snapshot-a')
   let autoplay!: ReturnType<typeof useGameShowcaseAutoplay>
-  const advance = vi.fn(() => { artworkReady.value = false; index.value++ })
+  const advance = vi.fn(() => { artworkReady.value = false; index.value = (index.value + 1) % itemCount.value })
   const wrapper = await mountSuspended(defineComponent({ setup() {
     autoplay = useGameShowcaseAutoplay(root, { index, itemCount, artworkReady, snapshotId }, advance)
     return () => h('section', { ref: root }, [h('button'), h('button')])
@@ -110,16 +110,21 @@ it('user pause survives other conditions and snapshots without storage; Play sta
   finally { nextPage.wrapper.unmount() }
 })
 
-it('never loops at the last item, including Play; manual Prev allows a fresh window', async () => {
-  const view = await mountAutoplay(2)
+it('advances from the last item to the first and gives the wrapped artwork a fresh full window', async () => {
+  const view = await mountAutoplay(4)
   try {
-    view.ratios([1]); await vi.advanceTimersByTimeAsync(6000); view.artworkReady.value = true
-    expect(view.index.value).toBe(1)
-    view.autoplay.togglePause(); view.autoplay.togglePause()
+    view.index.value = 3; view.ratios([1])
+    await vi.advanceTimersByTimeAsync(5999); expect(view.index.value).toBe(3)
+    await vi.advanceTimersByTimeAsync(1); expect(view.index.value).toBe(0)
     await vi.advanceTimersByTimeAsync(60000); expect(view.advance).toHaveBeenCalledTimes(1)
-    view.index.value = 0; view.autoplay.restart()
-    await vi.advanceTimersByTimeAsync(5999); expect(view.advance).toHaveBeenCalledTimes(1)
-    await vi.advanceTimersByTimeAsync(1); expect(view.advance).toHaveBeenCalledTimes(2)
+    view.artworkReady.value = true
+    await vi.advanceTimersByTimeAsync(5999); expect(view.index.value).toBe(0)
+    await vi.advanceTimersByTimeAsync(1); expect(view.index.value).toBe(1)
+    view.index.value = 3; view.artworkReady.value = true; view.autoplay.togglePause()
+    await vi.advanceTimersByTimeAsync(60000); expect(view.index.value).toBe(3)
+    view.autoplay.togglePause()
+    await vi.advanceTimersByTimeAsync(5999); expect(view.index.value).toBe(3)
+    await vi.advanceTimersByTimeAsync(1); expect(view.index.value).toBe(0)
   } finally { view.wrapper.unmount() }
 })
 
