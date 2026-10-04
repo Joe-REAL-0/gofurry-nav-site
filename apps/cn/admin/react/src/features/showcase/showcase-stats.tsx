@@ -26,7 +26,7 @@ export function ShowcaseTrend({ daily }: { daily: DailyStat[] }) {
       const color = (name: string) => style.getPropertyValue(name).trim()
       chart.setOption({
         animation: false, textStyle: { color: color('--foreground') },
-        legend: { textStyle: { color: color('--foreground') }, data: ['有效曝光', '有效点击'] },
+        legend: { top: 0, bottom: 'auto', textStyle: { color: color('--foreground') }, data: ['有效曝光', '有效点击'] },
         grid: { left: 16, right: 16, top: 42, bottom: 24, containLabel: true },
         xAxis: { type: 'category', data: daily.map(day => day.stat_date), axisLabel: { color: color('--muted-foreground') } },
         yAxis: { type: 'value', minInterval: 1, axisLabel: { color: color('--muted-foreground') }, splitLine: { lineStyle: { color: color('--border') } } },

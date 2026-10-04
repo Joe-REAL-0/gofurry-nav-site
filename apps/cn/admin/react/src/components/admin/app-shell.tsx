@@ -38,7 +38,7 @@ export const navigationGroups: NavGroup[] = [
   ] },
   { label: '游戏内容', entries: [
     { label: '游戏', href: '/game/games', icon: GameController, capability: 'content.read' },
-    { label: '首页 Showcase', href: '/game/showcase', icon: Presentation, capability: 'content.read' },
+    { label: '首页展柜', href: '/game/showcase', icon: Presentation, capability: 'content.read' },
     { label: '标签', href: '/game/tags', icon: Tag, capability: 'content.read' },
     { label: '标签类别', href: '/game/tag-categories', icon: TreeStructure, capability: 'content.read' },
     { label: '评论', href: '/game/comments', icon: Chats, capability: 'content.read' },
@@ -61,7 +61,7 @@ export function capabilityAwareNavigation(can: (capability: string) => boolean) 
   return navigationGroups.map((group) => ({ ...group, entries: group.entries.filter((entry) => !entry.capability || can(entry.capability)) })).filter((group) => group.entries.length > 0)
 }
 
-const breadcrumbLabels: Record<string, string> = { collaboration: '协作中心', nav: '导航内容', game: '游戏内容', showcase: '首页 Showcase', sites: '网站', games: '游戏', 'site-groups': '网站分组', 'hero-assets': '首页 Hero', 'background-patterns': '背景图案', 'update-notices': '更新公告', sayings: '金句', tags: '标签', comments: '评论', prizes: '抽奖', collection: '采集', metrics: '数据指标', changes: '变化事件', system: '系统', cloud: '云资源', 'data-operations': '数据运维', audit: '操作审计', accounts: '账号与权限' }
+const breadcrumbLabels: Record<string, string> = { collaboration: '协作中心', nav: '导航内容', game: '游戏内容', showcase: '首页展柜', sites: '网站', games: '游戏', 'site-groups': '网站分组', 'hero-assets': '首页 Hero', 'background-patterns': '背景图案', 'update-notices': '更新公告', sayings: '金句', tags: '标签', comments: '评论', prizes: '抽奖', collection: '采集', metrics: '数据指标', changes: '变化事件', system: '系统', cloud: '云资源', 'data-operations': '数据运维', audit: '操作审计', accounts: '账号与权限' }
 
 export function Breadcrumbs() {
   const location = useLocation()

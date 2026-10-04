@@ -7,8 +7,10 @@ The sole Admin frontend is `apps/cn/admin/react`. It owns content workspaces and
 `src/features/showcase` owns `/game/showcase` (current composition, Campaigns,
 automatic discovery) and `/game/showcase/:id` (overview, content, artwork,
 schedule/display, statistics). It uses native shared controls and the
-existing [Stage A API](game-showcase.md), outside Resource Engine. `content.read`
-can inspect every tab; `content.write` permits mutations. New Drafts immediately
+existing [Stage A API](game-showcase.md), outside Resource Engine. Navigation,
+breadcrumbs and the page title use “首页展柜”. Discovery locale/pool filters share
+the table toolbar with column controls; daily trend legends sit above the plot.
+`content.read` can inspect every tab; `content.write` permits mutations. New Drafts immediately
 open their real ID workspace. Lists use URL filters and do not fetch per-row stats.
 
 Content explicitly edits zh/en; Sponsored clears both Editorial Notes and CTA

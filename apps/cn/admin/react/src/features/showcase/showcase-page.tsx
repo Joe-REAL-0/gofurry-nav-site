@@ -42,9 +42,9 @@ export function CampaignList() {
 export function ShowcasePage() {
   const { params, update, locale } = useShowcaseURL()
   const tab = tabs.some(item => item.key === params.get('tab')) ? params.get('tab')! : 'composition'
-  return <PageLayout className="min-w-0"><PageHeader title="首页 Showcase" /><p className="text-xs text-muted-foreground">{operatingTimezone}</p>
+  return <PageLayout className="min-w-0"><PageHeader title="首页展柜" /><p className="text-xs text-muted-foreground">{operatingTimezone}</p>
     <div className="overflow-x-auto"><div className="min-w-max"><WorkspaceTabs tabs={tabs} active={tab} onChange={value => update({ tab: value === 'composition' ? null : value, page_num: null })} /></div></div>
-    {tab !== 'campaigns' && <LocaleSelect value={locale} onChange={value => update({ locale: value, page_num: '1' })} />}
+    {tab === 'composition' && <LocaleSelect value={locale} onChange={value => update({ locale: value, page_num: '1' })} />}
     {tab === 'composition' && <ShowcaseComposition locale={locale} />}{tab === 'campaigns' && <CampaignList />}{tab === 'discovery' && <ShowcaseDiscovery />}
   </PageLayout>
 }

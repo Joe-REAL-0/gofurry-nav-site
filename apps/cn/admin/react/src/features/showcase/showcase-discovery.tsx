@@ -4,7 +4,7 @@ import { DataTable, type AdminColumn } from '../../components/admin/data-table'
 import { StatusBadge } from '../../components/admin/status'
 import { Select } from '../../components/ui/select'
 import { showcaseAPI } from './api'
-import { reasonLabels, useShowcaseURL } from './showcase-shared'
+import { LocaleSelect, reasonLabels, useShowcaseURL } from './showcase-shared'
 import type { Candidate, Pool, Release, TrendWindow } from './types'
 
 export const exclusionLabels: Record<string, string> = { not_approved: '未允许自动 Showcase', adult: 'Adult 内容', locale_incomplete: '当前语言内容不完整', steam_artwork_unavailable: 'Steam Artwork 不可用', upcoming_requirements: '不满足 Upcoming 条件', new_release_requirements: '不满足 New Release 条件', trending_requirements: '不满足 Trending 条件' }
@@ -25,8 +25,8 @@ export function ShowcaseDiscovery() {
   const { params, update, locale, page, size } = useShowcaseURL()
   const pool: Pool = params.get('pool') === 'new_release' ? 'new_release' : params.get('pool') === 'trending' ? 'trending' : 'upcoming'
   const query = useQuery({ queryKey: ['showcase', 'candidates', pool, locale, page, size], queryFn: () => showcaseAPI.candidates(pool, locale, page, size) })
-  return <div className="grid min-w-0 gap-3"><div className="max-w-64"><Select ariaLabel="自动发现 Pool" value={pool} onValueChange={value => update({ pool: value, page_num: '1' })} options={(['upcoming', 'new_release', 'trending'] as const).map(value => ({ value, label: reasonLabels[value] }))} /></div>
-    <p className="text-sm text-muted-foreground">自动资格由游戏的「分类与展示」统一维护。这里展示 Composer 候选诊断。</p>
-    <DataTable columns={columns} data={query.data?.items ?? []} total={query.data?.total ?? 0} page={page} pageSize={size} search="" searchable={false} onSearchChange={() => undefined} onPageChange={value => update({ page_num: String(value) })} onPageSizeChange={value => update({ page_num: '1', page_size: String(value) })} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} />
-  </div>
+  return <DataTable columns={columns} data={query.data?.items ?? []} total={query.data?.total ?? 0} page={page} pageSize={size} search="" searchable={false} onSearchChange={() => undefined} onPageChange={value => update({ page_num: String(value) })} onPageSizeChange={value => update({ page_num: '1', page_size: String(value) })} loading={query.isLoading} error={query.error?.message} onRetry={() => void query.refetch()} toolbar={<>
+    <LocaleSelect value={locale} onChange={value => update({ locale: value, page_num: '1' })} />
+    <div className="w-64 max-w-full"><Select ariaLabel="自动发现 Pool" value={pool} onValueChange={value => update({ pool: value, page_num: '1' })} options={(['upcoming', 'new_release', 'trending'] as const).map(value => ({ value, label: reasonLabels[value] }))} /></div>
+  </>} />
 }

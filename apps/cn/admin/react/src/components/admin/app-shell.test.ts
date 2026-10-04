@@ -96,7 +96,7 @@ it('shows Showcase only through content.read and renders its breadcrumb', () => 
   expect(paths(true)).toContain('/game/showcase')
   expect(paths(false)).not.toContain('/game/showcase')
   const view = render(createElement(MemoryRouter, { initialEntries: ['/game/showcase/119'] }, createElement(Breadcrumbs)))
-  expect(screen.getByText('首页 Showcase')).toBeInTheDocument()
+  expect(screen.getByText('首页展柜')).toBeInTheDocument()
   expect(screen.getByText('#119')).toBeInTheDocument()
   view.unmount()
 })
