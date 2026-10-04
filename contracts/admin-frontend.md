@@ -110,6 +110,16 @@ navigation protection also applies to the Header action.
 Public Hero, public tracking, new cloud resolvers and backend changes are outside
 this frontend workspace. See [React Admin](../docs/admin-react.md) for acceptance.
 
+Discovery defaults to eligible candidates and exposes pending-approval, blocked,
+and all-diagnostics groups with server counts. Keyword, status, exclusion, sorting,
+pool, locale and pagination persist in URL state. The internal diagnostic API owns
+whole-set filtering/sorting before pagination; React must not filter only a fetched
+page or fetch every page to simulate global search. Pool order is explicitly not
+homepage position. Technical evidence lives in an accessible diagnostic dialog;
+read-only accounts get inspection links without mutation wording. Pending approval
+never includes a Game blocked by any other condition. Empty eligible results offer
+pending/all views instead of suggesting a service failure.
+
 Lottery remains a simple Resource Engine resource. Activity title/description and
 prize title/platform each have Chinese and English fields; participation passwords
 and redemption keys are language-independent. String-array controls MUST retain

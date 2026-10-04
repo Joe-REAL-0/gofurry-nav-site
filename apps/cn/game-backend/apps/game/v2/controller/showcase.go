@@ -9,7 +9,7 @@ import (
 	"github.com/gofurry/gofurry-game-backend/common"
 	"github.com/gofurry/gofurry-game-backend/common/util"
 	"io"
-	"strconv"
+	"net/url"
 	"time"
 )
 
@@ -38,10 +38,10 @@ func (api *GameV2API) GetShowcase(c fiber.Ctx) error {
 	return common.NewResponse(c).SuccessWithData(snap)
 }
 func (api *GameV2API) GetShowcaseCandidates(c fiber.Ctx) error {
-	lang, region, pool := c.Query("lang", "zh"), c.Query("region", "CN"), c.Query("pool")
-	page, e := strconv.Atoi(c.Query("page_num", "1"))
-	size, se := strconv.Atoi(c.Query("page_size", "20"))
-	if !showcase.ValidateScope(lang, region) || (pool != "upcoming" && pool != "new_release" && pool != "trending") || e != nil || se != nil || page < 1 || page > 1000000 || size < 1 || size > 100 {
+	lang, region := c.Query("lang", "zh"), c.Query("region", "CN")
+	values, e := url.ParseQuery(string(c.Request().URI().QueryString()))
+	query, qe := showcase.ParseDiagnosticQuery(values)
+	if !showcase.ValidateScope(lang, region) || e != nil || qe != nil {
 		return common.NewResponse(c).ErrorWithCode("invalid candidate query", 400)
 	}
 	if api.showcaseService == nil {
@@ -53,17 +53,7 @@ func (api *GameV2API) GetShowcaseCandidates(c fiber.Ctx) error {
 	if e != nil {
 		return common.NewResponse(c).ErrorWithCode("Showcase unavailable", 503)
 	}
-	items := input.Diagnostics[pool]
-	total := len(items)
-	start := (page - 1) * size
-	if start > total {
-		start = total
-	}
-	end := min(total, start+size)
-	return common.NewResponse(c).SuccessWithData(struct {
-		Total int                   `json:"total"`
-		Items []showcase.Diagnostic `json:"items"`
-	}{total, append([]showcase.Diagnostic{}, items[start:end]...)})
+	return common.NewResponse(c).SuccessWithData(showcase.QueryDiagnostics(input.Diagnostics[query.Pool], query))
 }
 func (api *GameV2API) ShowcaseEvent(c fiber.Ctx) error {
 	var event showcase.Event

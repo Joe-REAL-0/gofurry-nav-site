@@ -93,6 +93,29 @@ they expose eligibility/exclusion reasons and internal Trending evidence. Admin
 proxies these reads using its existing configured Game Backend service address,
 token and token header. It does not implement another Composer.
 
+Internal candidate reads additionally accept `status=all|eligible|pending_approval|blocked`,
+`keyword` (at most 100 Unicode characters; case-insensitive localized name substring
+or exact Game ID, optionally prefixed with `#`), `excluded_reason`, and
+`sort=pool|name|game_id`. Omitted status/sort retain legacy all-games/ID order.
+Exclusion filters accept the existing common reason codes and the selected pool's
+`*_requirements` code. Invalid filters return 400. Filtering and sorting run over
+the complete diagnostic set before pagination; `total` is the filtered count.
+Additive `counts` reports all four status counts after keyword/exclusion filtering
+but before status filtering. `pending_approval` means the **only** exclusion is
+`not_approved`; all other non-candidates are `blocked`.
+
+`sort=pool` groups eligible, pending approval, then blocked games. Within each group,
+Upcoming uses ascending canonical date/window start (year/month/quarter use the
+beginning of the known period), New Release uses descending first-available date,
+and Trending uses descending internal selection weight. Unknown dates sort last;
+numeric Game ID breaks ties. Name ordering is case-insensitive lexical order with
+the same ID tie-break. This operator ordering never feeds Composer.
+Diagnostic rows add `status`, `first_available` (from the existing first-available
+projection), and `pool_failures` explaining the frozen gates. Existing aggregate
+exclusion codes and eligibility calculations remain unchanged. No schema migration,
+public Showcase DTO, selection, cache or tracking change is involved. Deploy the
+updated Game Backend and Admin together for the new operations view.
+
 ## Frozen Composer V1
 
 `MAX_ITEMS=4`, `MAX_SPONSORED=1`; default Managed<=2 and Automatic>=2 when available.

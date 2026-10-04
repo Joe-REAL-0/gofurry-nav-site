@@ -79,6 +79,9 @@ type Diagnostic struct {
 	Candidate        bool     `json:"candidate"`
 	ExcludedReasons  []string `json:"excluded_reasons"`
 	Trending         *Trend   `json:"trending,omitempty"`
+	Status           string   `json:"status"`
+	FirstAvailable   *string  `json:"first_available"`
+	PoolFailures     []string `json:"pool_failures"`
 }
 type Inputs struct {
 	Candidates  []Candidate

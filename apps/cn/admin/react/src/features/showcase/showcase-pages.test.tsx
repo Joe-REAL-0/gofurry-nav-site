@@ -21,7 +21,7 @@ beforeEach(() => {
   workspace = campaignFixture(); mocks.capabilities = ['content.read', 'content.write', 'audit.read']
   vi.mocked(getJSON).mockImplementation(async path => {
     if (path.includes('/composition')) return compositionFixture()
-    if (path.includes('/candidates')) return { total: 1, items: [candidateFixture()] }
+    if (path.includes('/candidates')) return { total: 1, items: [candidateFixture()], counts: { eligible: 0, pending_approval: 0, blocked: 1, all: 1 } }
     if (path.includes('/analytics/quality')) return { daily: [], timezone: 'Asia/Shanghai' }
     if (path.includes('/stats?')) return statsFixture()
     if (path.includes('/campaigns?')) return { list: [workspace], total: 41 }
@@ -71,11 +71,14 @@ it('keeps tabs, locale, pool and pagination in the URL and discovery never write
   await choose('展示语言', 'English'); await waitFor(() => expect(router.state.location.search).toContain('locale=en'))
   expect(getJSON).toHaveBeenCalledWith('/api/v1/game/showcase/composition?lang=en&region=CN')
   fireEvent.click(screen.getByRole('tab', { name: '自动发现' })); await screen.findByText('Candidate game')
-  await choose('自动发现 Pool', '热度上升')
+  await choose('自动发现类型', '热度上升')
   expect(router.state.location.search).toContain('pool=trending')
-  expect(screen.getByText('未允许自动 Showcase')).toBeInTheDocument(); expect(screen.getByText('future_reason')).toBeInTheDocument()
-  expect(screen.getByText(/Momentum 1,800/)).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: /打开游戏/ })).toHaveAttribute('href', '/game/games/1?tab=classification')
+  expect(screen.getByText('尚未允许自动展示')).toBeInTheDocument(); expect(screen.getByText('future_reason')).toBeInTheDocument()
+  expect(screen.queryByText(/增长动量/)).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '查看 Candidate game 的诊断' }))
+  expect(await screen.findByText(/增长动量 1,800/)).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '关闭' }))
+  expect(screen.getByRole('link', { name: '去检查' })).toHaveAttribute('href', '/game/games/1?tab=classification')
   expect(sendJSON).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('tab', { name: '活动' })); await screen.findByRole('link', { name: 'October Campaign' })
   fireEvent.click(screen.getByRole('button', { name: '下一页' }))

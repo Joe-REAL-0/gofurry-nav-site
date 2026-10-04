@@ -10,6 +10,17 @@ schedule/display, statistics). It uses native shared controls and the
 existing [Stage A API](game-showcase.md), outside Resource Engine. Navigation,
 breadcrumbs and the page title use “首页展柜”. Discovery locale/pool filters share
 the table toolbar with column controls; daily trend legends sit above the plot.
+Discovery now defaults to “可用候选”, with “待开启” (only missing operator approval),
+“条件未满足”, and “全部诊断” groups. Counts and filtered totals come from the internal
+Game Backend diagnostic read, before pagination. Search by localized name/Game ID
+is debounced by 300 ms; advanced exclusion filters and pool-specific/name/ID sorting
+use URL state (`candidate_status`, `candidate_keyword`, `candidate_sort`,
+`excluded_reason`) independently of Campaign filters. Changing a filter resets the
+page; changing pool clears incompatible exclusion filters. The table shows Game,
+status, key evidence, blockers and actions; “查看诊断” opens full release/first-available
+and finalized-player evidence in a keyboard-accessible dialog. Classification owns
+all eligibility writes. This view requires the matching Admin proxy/Game Backend
+read-only diagnostic extension; it does not change Composer or enrollment rules.
 `content.read` can inspect every tab; `content.write` permits mutations. New Drafts immediately
 open their real ID workspace. Lists use URL filters and do not fetch per-row stats.
 

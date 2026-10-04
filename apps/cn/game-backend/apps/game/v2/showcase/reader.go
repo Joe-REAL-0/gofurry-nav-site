@@ -182,6 +182,8 @@ func automaticCandidate(g gamesqlc.ListShowcaseGamesRow, pool string, now time.T
 		d.ExcludedReasons = append(d.ExcludedReasons, pool+"_requirements")
 	}
 	d.Candidate = len(d.ExcludedReasons) == 0
+	d.FirstAvailable = date(g.FirstAvailable)
+	d.PoolFailures = diagnosticPoolFailures(d, pool, today)
 	tags := append([]string{}, g.Tags...)
 	if len(tags) > 3 {
 		tags = tags[:3]

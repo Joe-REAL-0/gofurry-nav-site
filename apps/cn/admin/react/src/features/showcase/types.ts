@@ -32,7 +32,10 @@ export type Candidate = {
   game_id: string; name: string; showcase_eligible: boolean; sfw: boolean; locale_ready: boolean; artwork_ready: boolean
   release: Release | null; candidate: boolean; excluded_reasons: string[]
   trending?: { recent: TrendWindow; baseline: TrendWindow; momentum: number; eligible: boolean; weight: number }
+  status: 'eligible' | 'pending_approval' | 'blocked'; first_available: string | null; pool_failures: string[]
 }
+export type CandidateStatus = Candidate['status'] | 'all'
+export type CandidatePage = { total: number; items: Candidate[]; counts: Record<CandidateStatus, number> }
 export type Counts = { valid_impressions: number; qualified_clicks: number; session_estimate: number; click_artwork: number; click_title: number; click_primary: number; click_secondary: number }
 export type DailyStat = Counts & { stat_date: string; impression_position_1: number; impression_position_2: number; impression_position_3: number; impression_position_4: number }
 export type Stats = { totals: Counts & { ctr: number; session_estimate_method: string }; daily: DailyStat[]; timezone: string }

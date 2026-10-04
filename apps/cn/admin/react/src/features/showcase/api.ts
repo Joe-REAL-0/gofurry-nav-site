@@ -1,7 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query'
 import { getJSON, sendForm, sendJSON } from '../../lib/api'
 import type { PageResult } from '../../lib/types'
-import type { Campaign, CampaignWorkspace, Candidate, Composition, ContentPayload, Lifecycle, Locale, Pool, Publication, QualityDay, SchedulePayload, Stats } from './types'
+import type { Campaign, CampaignWorkspace, CandidatePage, Composition, ContentPayload, Lifecycle, Locale, Publication, QualityDay, SchedulePayload, Stats } from './types'
 
 export const showcaseBase = '/api/v1/game/showcase'
 export const campaignPath = (id: string) => `${showcaseBase}/campaigns/${encodeURIComponent(id)}`
@@ -15,7 +15,7 @@ export const showcaseAPI = {
   upload: (id: string, variant: 'desktop' | 'mobile', file: File) => { const body = new FormData(); body.set('file', file); return sendForm<Publication>(`${campaignPath(id)}/artwork/${variant}`, body) },
   clear: (id: string, variant: 'desktop' | 'mobile') => sendJSON<void>(`${campaignPath(id)}/artwork/${variant}`, 'DELETE'),
   composition: (locale: Locale) => getJSON<Composition>(`${showcaseBase}/composition?lang=${locale}&region=CN`),
-  candidates: (pool: Pool, locale: Locale, page: number, size: number) => getJSON<{ total: number; items: Candidate[] }>(`${showcaseBase}/candidates?pool=${pool}&lang=${locale}&region=CN&page_num=${page}&page_size=${size}`),
+  candidates: (params: URLSearchParams) => getJSON<CandidatePage>(`${showcaseBase}/candidates?${params}`),
   stats: (id: string, from: string, to: string) => getJSON<Stats>(`${campaignPath(id)}/stats?${new URLSearchParams({ from, to })}`),
   quality: (from: string, to: string) => getJSON<{ daily: QualityDay[]; timezone: string }>(`${showcaseBase}/analytics/quality?${new URLSearchParams({ from, to })}`),
 }

@@ -10,6 +10,8 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Changed
 
+- Turn Admin Showcase discovery into an operator-facing candidate list with eligible, pending-approval, blocked and all-diagnostics groups; whole-set name/ID search, exclusion filters, pool-specific sorting and counts run before pagination. Keep URL state, capability-based actions and Game Classification ownership; move technical evidence into an on-demand diagnostic dialog and distinguish missing player facts from zero players (#119).
+- Refine Showcase operations with a visual artwork focal selector, direct capability-checked Audit access, clearer weight/pin labels and a compact discovery toolbar. Preserve complete content payloads and existing selection, artwork and audit contracts (#119).
 - Standardize Nav Web typography on Manrope Variable + Noto Sans SC Variable, with both Fontsource packages pinned to 5.3.0 and normal variable fonts bundled locally. Share Sans/Mono tokens while preserving the system Mono stack and Rating's Arial glyph exception (#126).
 - Normalize non-Insights font weights to the semantic 400/500/600/700/800 scale and enforce family, weight and font-shorthand constraints through Stylelint. Keep #108's existing Insights weights behind a precise temporary exception; preserve authored font sizes, line heights, tracking, layout and style-debt budgets (#126).
 - Refresh 126 approved Typography Visual baselines without changing the 19-spec, 130-PNG inventory. Complete two full comparisons in the pinned Linux environment after maintainer typography approval (#126).
@@ -17,7 +19,8 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Added
 
-- Establish Games Home Showcase backend foundation with opt-in Game eligibility, audited Campaign APIs, exact-size managed AVIF artwork, deterministic Managed/Automatic composition, a separate public cache and signed qualified analytics with idempotent daily aggregation (#119-A). React Admin and Nav Web remain for later stages.
+- Add Games Home Showcase with opt-in Game eligibility, audited Campaign APIs, exact-size managed AVIF artwork, deterministic Managed/Automatic composition, a separate public cache and signed qualified analytics with idempotent daily aggregation. Cover the Admin-to-Game-Backend event/Redis/PostgreSQL/Stats flow in disposable cross-service CI (#119).
+- Add the native React Admin Showcase workspace for bilingual Campaign content, managed artwork, scheduling, publication controls, statistics and CSV, plus the optional public Games Home Showcase with localized actions, retained decoded artwork and qualified impression/click tracking. Circular manual navigation and six-second autoplay respect artwork readiness, viewport visibility, hover, focus, explicit pause and reduced motion (#119).
 - Add bilingual lottery activity titles/descriptions and prize titles/platforms across Admin and Nav Web, with per-field Chinese fallback for missing English text. Preserve translations through Game Backend reads, lottery closure and winner-history caching without exposing redemption keys.
 - Complete the public Release Notes experience with an editorial latest/monthly index, bilingual SSR Markdown articles, safe commit links and older/newer navigation. Share Admin Markdown security fixtures, add release URLs to the fail-closed sitemap, and replace Timeline contracts with focused Browser coverage and eight representative Visual baselines (#132).
 - Add a dedicated Admin Release Notes workspace with bilingual Markdown authoring, sanitized local preview, China-time status display, confirmed publication controls, save-before-publish ordering and unsaved-change protection. Establish shared Markdown security fixtures shared with public article rendering (#132).
@@ -25,13 +28,16 @@ Versioned entries may be prepared in a release PR; Git tags and GitHub Releases 
 
 ### Fixed
 
+- Bound the optional public Showcase read to one second with no retry, preserving exactly two parallel Games Home SSR reads and no hydration refetch. A slow or unavailable Showcase leaves Home content usable without an error surface; controllable-gate Browser regression covers the timeout path (#119).
+- Preserve decoded artwork through Showcase transitions to avoid blank flashes or redundant image reloads; keep manual-only live announcements and per-snapshot/item impression deduplication across carousel loops. Move Admin statistics legends above the plot to keep date labels unobstructed (#119).
 - Resolve Game Backend client IP only through configured trusted proxies and share that resolution across rate limiting, Game views and Showcase analytics (#119-A).
 - Preserve newlines and blank lines while editing Admin lottery prize keys; normalize pasted/typed lines only when submitting and reject a submission with no usable keys.
 - Serialize public Release Notes publication dates with their China-site UTC+8 offset, preserving stored wall-clock values instead of labeling them UTC and displaying an eight-hour shift (#132).
 
 ### Upgrade notes
 
-- Before deploying #119-A backend changes, apply the additive GFG Showcase migration through the authorized Goose workflow and configure the two distinct Showcase HMAC secrets plus trusted proxy CIDRs in explicit Game Backend YAML. Existing Games remain ineligible by default. No GFA/GFN migration, frontend deployment or real cloud maintenance is part of Stage A implementation.
+- For the complete #119 rollout, apply `db/game/migrations/20261003010000_game_home_showcase.sql` to GFG through the authorized Goose workflow, then deploy Game Backend, Admin with its embedded React build, and Nav Web. Already-migrated environments must not replay the migration. Existing Games remain ineligible until enabled through Classification; there is no GFA/GFN migration, Collector update or manual Redis/cloud maintenance requirement.
+- Configure Admin's explicit `external_services.game_backend` URL, token and header to match Game Backend's reachable internal listener and `admin` authentication settings. Game Backend also requires two distinct Showcase HMAC secrets, the actual public frontend CORS origins and the actual trusted proxy CIDRs. Updating binaries does not update runtime YAML. The final discovery improvements require matching Game Backend and Admin builds only, with no additional migration; the optional SSR timeout fix alone requires Nav Web. See [Showcase contracts and operations](docs/game-showcase.md) (#119).
 - For bilingual lotteries, apply `db/game/migrations/20261001010000_game_prize_translations.sql` to GFG through Goose, then deploy Game Backend, Admin with its embedded React frontend, and Nav Web. Existing records retain their content and use Chinese fallback until translations are entered. No GFA/GFN migration, Collector update, Redis key change or manual cache purge is required; the existing winner-history refresh populates bilingual cache data.
 - For #126 alone, rebuild and redeploy Nav Web using the existing `apps/cn/nav-web` / `./update.sh` flow. Font dependencies and assets are included in the Docker build; no backend, Collector or Admin update, database/Redis migration, runtime configuration change or separate font upload is required.
 

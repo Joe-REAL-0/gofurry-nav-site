@@ -107,7 +107,10 @@ func (api *GameAPI) ShowcaseQuality(c fiber.Ctx) error {
 	}{rows, "Asia/Shanghai"})
 }
 func (api *GameAPI) ShowcaseProxy(c fiber.Ctx) error {
-	cfg := env.GetServerConfig().ExternalServices.GameBackend
+	return proxyShowcase(c, env.GetServerConfig().ExternalServices.GameBackend)
+}
+
+func proxyShowcase(c fiber.Ctx, cfg env.BackendServiceConfig) error {
 	operation := "composition"
 	if strings.HasSuffix(c.Path(), "/candidates") {
 		operation = "candidates"
@@ -122,6 +125,13 @@ func (api *GameAPI) ShowcaseProxy(c fiber.Ctx) error {
 	for _, key := range []string{"lang", "region", "pool", "page_num", "page_size"} {
 		if v := c.Query(key); v != "" {
 			query.Set(key, v)
+		}
+	}
+	if operation == "candidates" {
+		for _, key := range []string{"status", "keyword", "excluded_reason", "sort"} {
+			if v := c.Query(key); v != "" {
+				query.Set(key, v)
+			}
 		}
 	}
 	base.RawQuery = query.Encode()
