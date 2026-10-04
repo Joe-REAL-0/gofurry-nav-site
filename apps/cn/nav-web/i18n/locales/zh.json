@@ -32,7 +32,9 @@
     },
     "control": {
       "previous": "上一项精选",
-      "next": "下一项精选"
+      "next": "下一项精选",
+      "pause": "暂停自动轮播",
+      "play": "继续自动轮播"
     },
     "live": {
       "slide": "{current} / {total} · {title}"

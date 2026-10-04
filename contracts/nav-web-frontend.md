@@ -1747,10 +1747,11 @@ constructed in business components.
 
 One item has no controls/count; two to four use native, non-circular Prev/Next.
 Index lives only in the page instance and resets on snapshot change. Initial SSR
-has no animation; explicit switching uses a 200ms media/text transition, instant
+has no animation; switching uses the existing 200ms media/text transition, instant
 under reduced motion. Rapid clicks update immediately without animation locks.
-There is no autoplay, swipe, keyboard-shell capture or focus movement. The polite
-live region is initially empty and updates only after an explicit switch.
+There is no swipe, keyboard-shell capture or focus movement. Autoplay V1 below
+supersedes the first pass's no-autoplay restriction. The polite live region is
+initially empty and updates only after a manual switch, never an automatic one.
 Internal actions use localized Game routes; external HTTPS
 actions use `noopener noreferrer` in a new tab. Artwork/title/actions are separate
 links, not one clickable Hero. Appearance belongs to `games.less` under
@@ -1777,3 +1778,35 @@ populated/failure scenarios. `games-home-showcase.spec.ts` is explicitly assigne
 to the existing Full Games regression group. Runtime/Functional completion is
 separate from maintainer Desktop/Tablet/Mobile review, new Visual acceptance and
 issue closure. No accepted Visual spec or snapshot changes in this first pass.
+
+
+### Showcase Autoplay V1 (#119-C follow-up)
+
+`useGameShowcaseAutoplay` owns one forward-only timeout with
+`AUTO_ADVANCE_MS = 6000`. It owns its own intersection/visibility/hover/focus/media
+listeners; it neither imports Tracking nor sends analytics. It runs only for
+multiple items before the last index, when the existing `artworkState.ready` is
+true and `artworkState.key === item.key`, root intersection is >=50%, the document
+is visible, the mouse is outside, focus is outside, the user has not paused and
+reduced motion is off. Every interruption clears the timeout; resumption starts a
+new complete 6000ms window. Pending pictures never consume that window.
+
+Manual Prev/Next reset the window without permanently disabling autoplay. Pause
+is page-instance memory only, survives snapshot changes, and writes no cookie or
+storage. Play restarts a full window when eligible and never returns the last
+item to the first. Manual Prev from the last item may start another full window.
+Reduced motion disables autoplay completely and hides its control; zero/one item
+also hides the control and has no timer. Mount/unmount own and release every
+listener, observer and timer. Automatic changes never update aria-live.
+
+The compact Phosphor Pause/Play button reuses Showcase control appearance and the
+existing gameShowcase.control namespace. Only the control row may wrap when its
+added button requires space. Layout proportions, height, typography, colors,
+transitions, crop, CTA and disclosure are unchanged. Existing visited-image
+retention, slow/stale handoff and neutral fallback remain Artwork's responsibility.
+Tracking still requires its independent continuous one-second visibility window
+and snapshot/item dedupe; an auto switch does not create an impression itself.
+
+Maintainer approval of the preceding appearance is recorded separately from this
+autoplay follow-up's pending dynamic review. No Visual baseline update or final
+Visual Closure is authorized by this work.

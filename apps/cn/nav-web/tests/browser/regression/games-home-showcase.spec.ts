@@ -1,5 +1,7 @@
 import { test, expect, type GamesHomeScene } from '../fixtures/games-home'
 import { showcaseOrigins } from '../fixtures/games-home-showcase-data'
+import { steamSharedAssetCandidates } from '../../../app/utils/steamAssets'
+import type { Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 
@@ -325,7 +327,7 @@ test('Slow artwork keeps the decoded frame, skips pending impressions and ignore
   } finally { gate.release() }
 })
 
-test('Only user switching animates; rapid controls remain available and reduced motion is instant', async ({ gamesHome, page }) => {
+test('First render stays still; manual switching retains existing motion and reduced motion is instant', async ({ gamesHome, page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   const scene = await gamesHome.open({ showcase: 'two-managed' })
   const hero = scene.showcase
@@ -342,3 +344,188 @@ test('Only user switching animates; rapid controls remain available and reduced 
   await expect(hero.locator('.game-home-showcase__frame[data-active="true"]')).toHaveCSS('transition-duration', '0s')
   scene.assertQuiet()
 })
+
+// Install before navigation, while the normal reduced-motion fixture keeps
+// autoplay disabled. Freeze after its RAF/font readiness, then enable motion
+// outside the viewport. Native IntersectionObserver establishes the exact start.
+async function autoplayScene(page: Page, open: () => Promise<GamesHomeScene>) {
+  await page.clock.install({ time: new Date('2026-10-04T04:00:00Z') })
+  const scene = await open()
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100))
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(scene.showcase.getByRole('button', { name: '暂停自动轮播' })).toBeVisible()
+  await setAutoplayViewport(scene, true)
+  return scene
+}
+
+async function setAutoplayViewport(scene: GamesHomeScene, visible: boolean) {
+  await scene.page.setViewportSize({ width: 1440, height: visible ? 900 : 200 })
+  await scene.showcase.evaluate((element, expected) => new Promise<void>(resolve => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => (entry.isIntersecting && entry.intersectionRatio >= .5) === expected)) {
+        observer.disconnect(); resolve()
+      }
+    }, { threshold: [0, .5] })
+    observer.observe(element)
+  }), visible)
+}
+async function leaveShowcase(scene: GamesHomeScene) {
+  await scene.page.mouse.move(1, 1)
+  await scene.page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+}
+async function documentVisibility(scene: GamesHomeScene, visible: boolean) {
+  // Controlled platform boundary: both real composables receive the same
+  // visibilitychange, with their real observers/timers/network senders intact.
+  await scene.page.evaluate(value => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: value ? 'visible' : 'hidden' })
+    document.dispatchEvent(new Event('visibilitychange'))
+  }, visible)
+}
+const activeArtwork = (scene: GamesHomeScene) => scene.showcase.locator('.game-home-showcase__frame[data-active="true"]')
+const countLabel = (scene: GamesHomeScene) => scene.showcase.locator('.game-home-showcase__count')
+
+test('Autoplay waits 6000ms, stays silent, and does not replace the separate one-second impression rule', async ({ gamesHome, page }) => {
+  const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'four-items', height: 200 }))
+  expect(scene.events).toEqual([])
+  expect(scene.assets.filter(url => url.includes('/game/showcase/'))).toHaveLength(1)
+  await page.clock.runFor(999); expect(scene.events).toEqual([])
+  await page.clock.runFor(1); await expect.poll(() => scene.events.length).toBe(1)
+  await page.clock.runFor(4999); await expect(countLabel(scene)).toHaveText('01 / 04')
+  await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 04')
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText('')
+  expect(scene.events).toHaveLength(1)
+  await page.clock.runFor(999); expect(scene.events).toHaveLength(1)
+  await page.clock.runFor(1); await expect.poll(() => scene.events.length).toBe(2)
+  expect(scene.events.map(event => [event.event, event.tracking_token])).toEqual(scene.snapshot.items.slice(0, 2).map(item => ['impression', item.tracking_token]))
+  scene.assertQuiet()
+})
+
+test('Autoplay retains slow artwork and starts the next full window only after decoded handoff', async ({ gamesHome, page }) => {
+  const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'four-items', height: 200 }))
+  const second = scene.snapshot.items[1]!
+  const url = steamSharedAssetCandidates(second.artwork.url, 'china')[0]!
+  const gate = scene.holdArtwork(url)
+  try {
+    await page.clock.runFor(6000); await gate.requested
+    await expect(countLabel(scene)).toHaveText('02 / 04')
+    await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[0]!.key)
+    expect(await activeArtwork(scene).locator('img').evaluate(image => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await page.clock.runFor(20000)
+    await expect(countLabel(scene)).toHaveText('02 / 04')
+    expect(scene.events.some(event => event.tracking_token === second.tracking_token)).toBe(false)
+    const response = page.waitForResponse(url); gate.release(); await response
+    await expect(activeArtwork(scene)).toHaveAttribute('data-key', second.key)
+    await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('02 / 04')
+    await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('03 / 04')
+    await expect(scene.showcase.locator('[aria-live]')).toHaveText('')
+    await expect.poll(() => scene.events.filter(event => event.tracking_token === second.tracking_token).length).toBe(1)
+    expect(scene.assets.filter(value => value === url)).toHaveLength(1)
+    scene.assertQuiet()
+  } finally { gate.release() }
+})
+
+for (const reason of ['hover', 'focus', 'intersection', 'visibility', 'reduced-motion'] as const) {
+  test(`Autoplay restarts a full window after ${reason} interruption`, async ({ gamesHome, page }) => {
+    const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'two-managed', height: 200 }))
+    await page.clock.runFor(3000)
+    if (reason === 'hover') await scene.showcase.hover()
+    if (reason === 'focus') await scene.showcase.getByRole('button', { name: '下一项精选' }).focus()
+    if (reason === 'intersection') await setAutoplayViewport(scene, false)
+    if (reason === 'visibility') await documentVisibility(scene, false)
+    if (reason === 'reduced-motion') {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await expect(scene.showcase.getByRole('button', { name: '暂停自动轮播' })).toHaveCount(0)
+      await expect(scene.showcase.getByRole('button', { name: '下一项精选' })).toBeEnabled()
+    }
+    await page.clock.runFor(20000); await expect(countLabel(scene)).toHaveText('01 / 02')
+    if (reason === 'hover' || reason === 'focus') await leaveShowcase(scene)
+    if (reason === 'intersection') await setAutoplayViewport(scene, true)
+    if (reason === 'visibility') await documentVisibility(scene, true)
+    if (reason === 'reduced-motion') {
+      await page.emulateMedia({ reducedMotion: 'no-preference' })
+      await expect(scene.showcase.getByRole('button', { name: '暂停自动轮播' })).toBeVisible()
+    }
+    await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('01 / 02')
+    await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 02')
+    await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(1)
+    scene.assertQuiet()
+  })
+}
+
+test('Manual Next resets autoplay, announces once, and subsequent auto switching never changes aria-live', async ({ gamesHome, page }) => {
+  const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'four-items', height: 200 }))
+  await page.clock.runFor(3000)
+  await scene.showcase.getByRole('button', { name: '下一项精选' }).click()
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
+  const announcement = `2 / 4 · ${scene.snapshot.items[1]!.title}`
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText(announcement)
+  await page.clock.runFor(20000); await expect(countLabel(scene)).toHaveText('02 / 04')
+  await leaveShowcase(scene)
+  await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('02 / 04')
+  await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('03 / 04')
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText(announcement)
+  await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(2)
+  scene.assertQuiet()
+})
+
+test('Pause persists, Play waits afresh, the end never loops, and manual Prev restarts from the end', async ({ gamesHome, page }) => {
+  const scene = await autoplayScene(page, () => gamesHome.open({ showcase: 'two-managed', height: 200 }))
+  await page.clock.runFor(3000)
+  await scene.showcase.getByRole('button', { name: '暂停自动轮播' }).click()
+  await leaveShowcase(scene)
+  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('01 / 02')
+  await scene.showcase.getByRole('button', { name: '继续自动轮播' }).click()
+  await leaveShowcase(scene)
+  await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('01 / 02')
+  await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
+  await expect(scene.showcase.getByRole('button', { name: '下一项精选' })).toBeDisabled()
+  await scene.showcase.getByRole('button', { name: '暂停自动轮播' }).click()
+  await scene.showcase.getByRole('button', { name: '继续自动轮播' }).click()
+  await leaveShowcase(scene)
+  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await scene.showcase.getByRole('button', { name: '上一项精选' }).click()
+  await leaveShowcase(scene)
+  await page.clock.runFor(5999); await expect(countLabel(scene)).toHaveText('01 / 02')
+  await page.clock.runFor(1); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(2)
+  scene.assertQuiet()
+})
+
+test('Reduced-motion default disables autoplay entirely and retains manual navigation', async ({ gamesHome, page }) => {
+  await page.clock.install()
+  const scene = await gamesHome.open({ showcase: 'two-managed' })
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100))
+  await expect(scene.showcase.getByRole('button', { name: /自动轮播/ })).toHaveCount(0)
+  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('01 / 02')
+  await scene.showcase.getByRole('button', { name: '下一项精选' }).click()
+  await expect(activeArtwork(scene)).toHaveAttribute('data-key', scene.snapshot.items[1]!.key)
+  await expect(scene.showcase.locator('[aria-live]')).toHaveText(`2 / 2 · ${scene.snapshot.items[1]!.title}`)
+  await leaveShowcase(scene)
+  await page.clock.runFor(60000); await expect(countLabel(scene)).toHaveText('02 / 02')
+  await expect.poll(() => scene.events.filter(event => event.event === 'impression').length).toBe(2)
+  scene.assertQuiet()
+})
+
+for (const width of [1440, 1024, 768, 375]) {
+  test(`Autoplay control uses existing appearance and English labels without overflowing (${width})`, async ({ gamesHome, page }) => {
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    const scene = await gamesHome.open({ showcase: 'two-managed', locale: 'en', width })
+    const hero = scene.showcase
+    await hero.getByRole('button', { name: 'Pause autoplay' }).click()
+    await leaveShowcase(scene)
+    const pause = hero.getByRole('button', { name: 'Resume autoplay' }), next = hero.getByRole('button', { name: 'Next showcase item' })
+    await expect(pause).toBeVisible()
+    for (const property of ['width', 'height', 'background-color', 'color', 'border-radius', 'font-size']) {
+      await expect(pause).toHaveCSS(property, await next.evaluate((element, key) => getComputedStyle(element).getPropertyValue(key), property))
+    }
+    expect(await pageOverflow(scene)).toBe(false)
+    const root = await hero.boundingBox(), cta = await hero.locator('.gf-button').boundingBox(), controls = await hero.locator('.game-home-showcase__controls').boundingBox()
+    expect(cta!.x + cta!.width).toBeLessThanOrEqual(root!.x + root!.width)
+    expect(controls!.x + controls!.width).toBeLessThanOrEqual(root!.x + root!.width)
+    if (width >= 1024) expect(root!.height).toBeLessThan(350)
+    await reviewScreenshot(scene, `autoplay-control-${width}`)
+    scene.assertQuiet()
+  })
+}

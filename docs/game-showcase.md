@@ -203,12 +203,13 @@ The native Showcase surface precedes Recently Released. It uses 64/36 Desktop,
 stacked 2:1 Tablet and 16:9 Mobile artwork; existing Managed/Steam components own
 provider routing and fallback. UI text/action labels are localized, while content
 uses the backend's exact locale. Index is page-local, controls are non-circular,
-with 200ms transitions only after user switching (instant for reduced motion).
+with the existing 200ms switching transitions (instant for reduced motion).
 Responsive picture sources avoid downloading both managed variants. Visited media
 nodes retain decoded images/fallback state; a new decoded frame replaces the old
 one without clearing the artwork. Pending frames do not count impressions, and
 the displayed artwork keeps its own click destination/token during handoff.
-No autoplay/swipe or whole-Hero link is introduced.
+No swipe or whole-Hero link is introduced. The Autoplay V1 follow-up below
+supersedes the initial no-autoplay scope.
 
 An impression candidate requires >=50% viewport visibility in a visible tab for
 one uninterrupted second. A page-local Set dedupes snapshot/item impressions.
@@ -222,3 +223,20 @@ keys, session/visibility lifecycle, SSR/network budgets, media failures, navigat
 responsive semantics and event failure isolation. This first implementation does
 not accept new Visual snapshots or close #119. Desktop/Tablet/Mobile maintainer
 review precedes separately authorized pinned Visual generation and comparison.
+
+
+### Public Autoplay V1
+
+The dedicated frontend autoplay composable advances only forward every 6000ms
+and stops at the last item. Each full interval starts only after the current
+artwork is ready and displayed, with >=50% viewport intersection, a visible tab,
+no mouse hover/focus within, no user Pause, and no reduced-motion preference.
+Any interruption discards elapsed time. Manual navigation resets the interval;
+Pause is page-memory only and Play never loops from the end. Zero/one item and
+reduced motion hide the Pause/Play control and disable autoplay.
+
+Only manual navigation updates aria-live. Autoplay never sends an impression;
+existing one-second qualified-impression tracking, dedupe, asset retention,
+fallback and stale-response protection are unchanged. Fake-timer Nuxt tests and
+Playwright-clock cases in the existing Home fixture cover these contracts.
+Dynamic maintainer review is still required; no accepted Visual snapshot changes.

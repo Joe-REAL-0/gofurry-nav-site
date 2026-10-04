@@ -35,7 +35,7 @@ canonical dates, destination safety, empty 204, snapshot/page index reset, UUIDv
 blocked storage, continuous 1000ms visibility, interruption, dedupe and cleanup.
 Follow-up regressions disable HTTP cache and assert one viewport artwork variant,
 retained DOM/request counts on revisits, gated slow-media handoff and late-response
-races, pending-frame impression exclusion, 200ms user-only/reduced-motion behavior,
+races, pending-frame impression exclusion, 200ms switching/reduced-motion behavior,
 matching Home material and a separate narrow-screen navigation row. Shared image
 Nuxt tests retain single-image consumers and independent responsive fallback.
 After the full install/static/Unit/Nuxt/typecheck/production build sequence, run:
@@ -54,6 +54,27 @@ precede separately authorized pinned Showcase golden generation.
 Optional `GOFURRY_SHOWCASE_REVIEW_DIR` writes temporary reviewer screenshots from
 these same Functional cases. Choose an ignored local directory; these images are
 not goldens and carry no visual approval.
+
+### Showcase Autoplay V1
+
+`game-showcase-autoplay.nuxt.test.ts` mounts the real composable with fake timers
+and controlled browser signals: exact 6000ms readiness windows, interruptions,
+pause/page lifetime, reduced motion, boundaries, batched intersections and cleanup.
+`games-home-showcase.spec.ts` uses Playwright clock after the existing fixture's
+SSR/RAF/font readiness, with native intersection and gated real asset responses.
+A controlled document visibility property/event covers hidden-tab interruption;
+it does not replace either real composable or the analytics sender. No real
+six-second sleeps, new fixture app or Visual baseline is introduced.
+
+Browser cases separately prove slow-image handoff, hover/focus/intersection/tab
+interruptions, manual reset, Pause/Play, end behavior, silent auto changes,
+independent one-second impressions and complete reduced-motion disablement.
+The normal Browser/Visual reduced-motion default remains unchanged. Run the
+requested frozen install/static/Unit/Nuxt/build gates, then:
+
+```sh
+pnpm exec playwright test tests/browser/regression/games-home-showcase.spec.ts --workers=1
+```
 
 ## CI tiers (#134)
 

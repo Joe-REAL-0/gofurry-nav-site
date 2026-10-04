@@ -32,7 +32,9 @@
     },
     "control": {
       "previous": "Previous showcase item",
-      "next": "Next showcase item"
+      "next": "Next showcase item",
+      "pause": "Pause autoplay",
+      "play": "Resume autoplay"
     },
     "live": {
       "slide": "{current} / {total} · {title}"

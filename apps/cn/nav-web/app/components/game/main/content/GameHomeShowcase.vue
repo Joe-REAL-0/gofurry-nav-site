@@ -25,15 +25,18 @@
           <p v-if="item.reason === 'editorial' && !item.sponsored && item.editorial_note" class="game-home-showcase__note mt-2 hidden sm:line-clamp-2">{{ item.editorial_note }}</p>
         </div>
 
-        <div class="mt-3 flex shrink-0 flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-end">
+        <div class="mt-3 flex shrink-0 flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-end" :class="{ 'sm:flex-wrap': showAutoplayControl }">
           <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <NuxtLink v-if="primary" v-bind="primary" class="gf-button gf-button--primary gf-button--stationary" @click="click('primary', item)">{{ t(`gameShowcase.action.${item.primary_action.type}`) }}</NuxtLink>
             <NuxtLink v-if="secondary" v-bind="secondary" class="game-home-showcase__secondary" @click="click('secondary', item)">
               {{ t(`gameShowcase.secondary.${item.secondary_action!.type}`) }} <span aria-hidden="true">↗</span>
             </NuxtLink>
           </div>
-          <div v-if="snapshot.items.length > 1" class="game-home-showcase__controls flex shrink-0 items-center justify-end">
+          <div v-if="snapshot.items.length > 1" class="game-home-showcase__controls flex shrink-0 items-center justify-end" :class="{ 'sm:ml-auto': showAutoplayControl }">
             <span class="game-home-showcase__count whitespace-nowrap">{{ count }}</span>
+            <button v-if="showAutoplayControl" type="button" :aria-label="t(userPaused ? 'gameShowcase.control.play' : 'gameShowcase.control.pause')" @click="togglePause">
+              <component :is="userPaused ? PhPlay : PhPause" :size="14" class="mx-auto" aria-hidden="true" />
+            </button>
             <button type="button" :aria-label="t('gameShowcase.control.previous')" :disabled="index === 0" @click="move(-1)"><span aria-hidden="true">‹</span></button>
             <button type="button" :aria-label="t('gameShowcase.control.next')" :disabled="index === snapshot.items.length - 1" @click="move(1)"><span aria-hidden="true">›</span></button>
           </div>
@@ -48,10 +51,12 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NuxtLink } from '#components'
+import { PhPause, PhPlay } from '@phosphor-icons/vue'
 import GameShowcaseArtwork from './GameShowcaseArtwork.vue'
 import type { GameShowcaseAction, GameShowcaseSecondaryAction, GameShowcaseSnapshot } from '~/types/game'
 import { showcaseContextKey, showcaseDestination, showcaseReleaseDate } from '~/utils/gameShowcasePresentation'
 import { useGameShowcaseTracking } from '~/composables/useGameShowcaseTracking'
+import { useGameShowcaseAutoplay } from '~/composables/useGameShowcaseAutoplay'
 
 const props = defineProps<{ snapshot: GameShowcaseSnapshot }>()
 const { t, locale } = useI18n()
@@ -77,18 +82,25 @@ const secondary = computed(() => link(item.value?.secondary_action))
 // During a slow media handoff only the displayed artwork keeps its own link;
 // text/actions follow the new index immediately. Never attribute the old image
 // to the new campaign or count a pending/hidden frame as an impression.
-const impressionItem = computed(() => artworkState.value.ready && artworkState.value.key === item.value?.key ? item.value : undefined)
+const currentArtworkReady = computed(() => artworkState.value.ready && artworkState.value.key === item.value?.key)
+const impressionItem = computed(() => currentArtworkReady.value ? item.value : undefined)
 const { click } = useGameShowcaseTracking(root, () => props.snapshot.snapshot_id, impressionItem)
+const { userPaused, showControl: showAutoplayControl, togglePause, restart } = useGameShowcaseAutoplay(root, {
+  snapshotId: () => props.snapshot.snapshot_id, index, itemCount: () => props.snapshot.items.length, artworkReady: currentArtworkReady,
+}, () => move(1, 'auto'))
 
 watch(() => props.snapshot.snapshot_id, () => {
   index.value = 0; announcement.value = ''; interacted.value = false
   artworkState.value = { key: props.snapshot.items[0]?.key ?? '', ready: false }
 }, { flush: 'sync' })
-function move(delta: number) {
+function move(delta: number, source: 'manual' | 'auto' = 'manual') {
   const next = Math.max(0, Math.min(props.snapshot.items.length - 1, index.value + delta))
   if (next === index.value) return
   interacted.value = true
   index.value = next
-  announcement.value = t('gameShowcase.live.slide', { current: index.value + 1, total: props.snapshot.items.length, title: item.value?.title })
+  if (source === 'manual') {
+    announcement.value = t('gameShowcase.live.slide', { current: index.value + 1, total: props.snapshot.items.length, title: item.value?.title })
+    restart()
+  }
 }
 </script>
