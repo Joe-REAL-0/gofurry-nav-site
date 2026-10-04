@@ -1,11 +1,15 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
-import type { GameHomeApiResponse, GameV2ListItem, GameV2NewsItem, GameV2PriceView } from '../../../app/types/game'
+import type { GameHomeApiResponse, GameV2ListItem, GameV2NewsItem, GameV2PriceView, GameShowcaseSnapshot, GameShowcaseEvent } from '../../../app/types/game'
+import { makeShowcase, showcaseOrigins, type ShowcaseScenario } from './games-home-showcase-data'
+import { steamSharedAssetCandidates } from '../../../app/utils/steamAssets'
 import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 import { captureBrowserErrors } from './browser-errors'
 
 const assetOrigin = 'https://games-home-assets.example'
 const homePath = '/api/v2/game/home'
+const showcasePath = `${homePath}/showcase`
+const eventPath = `${showcasePath}/events`
 const collectedAt = '2026-09-18T04:40:00Z'
 export const groupNames = ['最近发售', '最近收录', '免费专区', '热门排行'] as const
 const englishGroupNames = ['Latest Release', 'Recently Added', 'Free to Play', 'Hot Ranking'] as const
@@ -49,7 +53,7 @@ function makeHome(): GameHomeApiResponse {
 
 type Dataset = 'core' | 'news-single' | 'news-populated' | 'reviews-populated' | 'layout-stress'
 type Language = 'zh' | 'en'
-type OpenOptions = { width?: number, height?: number, theme?: Theme, locale?: Language, dataset?: Dataset }
+type OpenOptions = { width?: number, height?: number, theme?: Theme, locale?: Language, dataset?: Dataset, showcase?: ShowcaseScenario }
 
 function makeNews(lang: Language): GameV2NewsItem[] {
   const titles = lang === 'zh'
@@ -104,7 +108,8 @@ function cover(id: string) {
 
 type Theme = 'light' | 'dark'
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
-type State = { data: GameHomeApiResponse, upstream: URL[], lang: Language }
+type State = { data: GameHomeApiResponse, upstream: URL[], lang: Language, showcase: GameShowcaseSnapshot, scenario: ShowcaseScenario,
+  events: GameShowcaseEvent[], parallel: Promise<void>, releaseReads(): void, destination?: string }
 type Worker = { app: App, current: State | null }
 export type GamesHomeScene = {
   page: Page, root: Locator, groups: Locator, stats: Locator, sidebar: Locator, dock: Locator, theme: Theme,
@@ -112,6 +117,8 @@ export type GamesHomeScene = {
   settle(...targets: Locator[]): Promise<void>, assertQuiet(): void, visualReady(): Promise<void>,
   news: Locator, reviews: Locator, rendered: string, locale: Language,
   expectNewsPopup(url: string): void,
+  showcase: Locator, snapshot: GameShowcaseSnapshot, events: GameShowcaseEvent[], assets: string[],
+  expectShowcasePopup(url: string): void, expectGameDestination(id: string): void,
   closureClip(target: Locator): Promise<{ x: number, y: number, width: number, height: number }>,
 }
 
@@ -125,24 +132,57 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       TZ: 'UTC', GOFURRY_TEST_GAMES_HOME_NOW: gamesHomeFixedNow,
       NODE_OPTIONS: [process.env.NODE_OPTIONS, `--import="${new URL('./games-home-clock.mjs', import.meta.url).href}"`].filter(Boolean).join(' '),
     }
-    worker.app = await startInsightsFixtureApp((url: URL) => {
+    worker.app = await startInsightsFixtureApp(async (url: URL, _media: string, body?: GameShowcaseEvent) => {
       const state = worker.current
       if (!state) throw new Error('Games Home API requires an active scenario')
       state.upstream.push(url)
+      if ([homePath, showcasePath].includes(url.pathname)) {
+        // Neither response can complete until both reads start: prove parallel SSR.
+        if (state.upstream.filter(value => [homePath, showcasePath].includes(value.pathname)).length === 2) state.releaseReads()
+        await state.parallel
+      }
       if (url.pathname === homePath && url.searchParams.size === 2
         && url.searchParams.get('lang') === state.lang && url.searchParams.get('region') === 'CN') return { data: state.data }
+      if (url.pathname === showcasePath && url.searchParams.size === 2
+        && url.searchParams.get('lang') === state.lang && url.searchParams.get('region') === 'CN') {
+        return state.scenario === 'showcase-failure' ? { status: 503 } : { data: state.showcase }
+      }
+      if (url.pathname === eventPath && body) {
+        state.events.push(body)
+        return { status: state.scenario === 'tracking-failure' ? 500 : 204 }
+      }
+      if (state.destination) {
+        const id = state.destination
+        if (url.pathname === '/api/v2/game/info' && url.searchParams.get('id') === id) return { data: {
+          id, appid: id, name: 'Showcase destination', summary: 'A local game destination', site: { view_count: 1, resources: [], groups: [], links: [] },
+          platforms: {}, prices: [], news: [], tags: [], developers: [], publishers: [], media: { screenshots: [], movies: [], assets: [] }, requirements: {}, support_info: {}, extra: {},
+        } }
+        if (url.pathname === '/api/v2/game/reviews' && url.searchParams.get('id') === id) return { data: { total: 0, remarks: [] } }
+        if (url.pathname === '/api/v2/game/recommend/similar' && url.searchParams.get('id') === id) return { data: [] }
+        if (url.pathname === `/api/v2/game/games/${id}/view`) return { data: { view_count: 2 } }
+        if (url.pathname === `/api/v2/game/games/${id}/insights`) return { data: {
+          game: { id: Number(id), name: 'Showcase destination' }, state: { free: null, windows: null, mac: null, linux: null, release: null, as_of: null },
+          players: { current: null, peak_30d: null, average_30d: null, as_of: null, observed_days_30d: 0, sample_coverage_30d: null },
+          price: null, regional_prices: { as_of: null, regions: [] }, recent_changes: [],
+        } }
+      }
       return { status: 500 }
-    }, clockEnvironment)
+    }, { ...clockEnvironment, NUXT_PUBLIC_ASSET_PRIMARY_BASE: showcaseOrigins.primary, NUXT_PUBLIC_ASSET_MIRROR_BASE: showcaseOrigins.mirror })
     try { await use(worker) }
     finally { worker.current = null; await worker.app.close() }
   }, { scope: 'worker' }],
   baseURL: async ({ gamesHomeApp }, use) => { await use(gamesHomeApp.app.base) },
   gamesHome: async ({ page, context, gamesHomeApp, gamesHomeFixedNow }, use, testInfo) => {
     const { app } = gamesHomeApp
-    const state: State = { data: makeHome(), upstream: [], lang: 'zh' }
+    let releaseReads!: () => void
+    const parallel = new Promise<void>(resolve => { releaseReads = resolve })
+    const state: State = { data: makeHome(), upstream: [], lang: 'zh', showcase: makeShowcase('empty', 'zh'), scenario: 'empty', events: [], parallel, releaseReads }
     gamesHomeApp.current = state
     const upstreamStart = app.requests.length
-    const errors = captureBrowserErrors(page)
+    const expectedMediaFailures = new Set<string>()
+    const errors = captureBrowserErrors(page, expectedMediaFailures)
+    const diagnostics: { text: string, url: string }[] = []
+    page.on('console', message => { if (message.type() === 'error') diagnostics.push({ text: message.text(), url: message.location().url }) })
     const external: string[] = [], failed: string[] = [], assets: string[] = [], browserAPI: string[] = []
     const covers = new Map<string, string>()
     const expectedPopups: string[] = [], popupRequests: string[] = [], popups: Page[] = []
@@ -160,6 +200,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       const id = covers.get(url.href)
       if (id && request.method() === 'GET') {
         assets.push(url.href)
+        if (expectedMediaFailures.has(url.href)) return route.fulfill({ status: 503, body: 'Injected artwork failure' })
         return route.fulfill({ contentType: 'image/svg+xml', body: cover(id) })
       }
       if (expectedPopups.includes(url.href) && request.method() === 'GET' && request.isNavigationRequest()) {
@@ -171,12 +212,32 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     })
     const assertQuiet = () => {
       expect(app.requests.slice(upstreamStart)).toEqual(state.upstream)
-      expect(state.upstream.map(url => url.pathname)).toEqual([homePath])
-      expect(Object.fromEntries(state.upstream[0]!.searchParams)).toEqual({ lang: state.lang, region: 'CN' })
-      expect(browserAPI, 'SSR payload must satisfy hydration, pagination and statistics without browser refetch').toEqual([])
+      const reads = state.upstream.filter(url => [homePath, showcasePath].includes(url.pathname))
+      expect(reads.map(url => url.pathname).sort()).toEqual([homePath, showcasePath].sort())
+      for (const url of reads) expect(Object.fromEntries(url.searchParams)).toEqual({ lang: state.lang, region: 'CN' })
+      const detail = state.upstream.filter(url => ![homePath, showcasePath, eventPath].includes(url.pathname))
+      const detailPaths = state.destination ? ['/api/v2/game/info', '/api/v2/game/reviews', '/api/v2/game/recommend/similar',
+        `/api/v2/game/games/${state.destination}/insights`, `/api/v2/game/games/${state.destination}/view`] : []
+      expect(detail.map(url => url.pathname).sort()).toEqual([...detailPaths].sort())
+      const sideEffects = state.events.map(() => `POST ${eventPath}`)
+      expect(browserAPI.filter(call => !detail.some(url => call.endsWith(url.pathname + url.search))), 'No browser GET for Home/Showcase, including hydration').toEqual(sideEffects)
+      for (const event of state.events) {
+        expect(Object.keys(event).sort()).toEqual((event.event === 'click' ? ['tracking_token', 'session_id', 'event', 'source'] : ['tracking_token', 'session_id', 'event']).sort())
+        expect(state.showcase.items.map(item => item.tracking_token)).toContain(event.tracking_token)
+        expect(event.session_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+        expect(['click', 'impression']).toContain(event.event)
+        if (event.event === 'click') expect(['artwork', 'title', 'primary', 'secondary']).toContain(event.source)
+      }
       expect(external).toEqual([])
       expect(failed).toEqual([])
-      expect(errors).toEqual([])
+      const eventDiagnostic = 'Failed to load resource: the server responded with a status of 500 (Internal Server Error)'
+      const eventFailures = diagnostics.filter(value => value.text === eventDiagnostic && value.url === `${app.base}${eventPath}`)
+      expect(eventFailures.length).toBe(state.scenario === 'tracking-failure' ? state.events.length : 0)
+      expect(errors.filter(value => value !== `error: ${eventDiagnostic}`)).toEqual([])
+      expect(errors.filter(value => value === `error: ${eventDiagnostic}`)).toHaveLength(eventFailures.length)
+      for (const url of expectedMediaFailures) {
+        expect(diagnostics.filter(value => value.url === url)).toHaveLength(assets.filter(value => value === url).length)
+      }
       expect(popupErrors.flat()).toEqual([])
       expect(popupRequests).toEqual(expectedPopups)
       expect(popups).toHaveLength(expectedPopups.length)
@@ -197,10 +258,21 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       }
     }
     try {
-      await use({ async open({ width = 1440, height = 900, theme = 'light', locale = 'zh', dataset = 'core' } = {}) {
+      await use({ async open({ width = 1440, height = 900, theme = 'light', locale = 'zh', dataset = 'core', showcase = 'empty' } = {}) {
         expect(state.upstream, 'Each scenario opens once').toHaveLength(0)
         state.lang = locale
         state.data = makeDataset(dataset, locale)
+        state.scenario = showcase
+        state.showcase = makeShowcase(showcase, locale)
+        for (const item of state.showcase.items) {
+          const urls = item.artwork.kind === 'managed'
+            ? [item.artwork.desktop_object_key, item.artwork.mobile_object_key].filter(Boolean).flatMap(key => Object.values(showcaseOrigins).map(origin => `${origin}/${key}`))
+            : steamSharedAssetCandidates(item.artwork.url, locale === 'en' ? 'global' : 'china')
+          for (const url of urls) {
+            covers.set(url, item.game_id || '6101')
+            if (showcase === 'media-failure' || showcase === 'steam-failure' || (showcase === 'primary-failure' && url.startsWith(showcaseOrigins.primary))) expectedMediaFailures.add(url)
+          }
+        }
         const { panel } = state.data
         for (const item of [...panel.latest_games, ...panel.updated_games, ...panel.free_games, ...panel.popular_games!,
           ...panel.top_online, ...panel.top_price, ...panel.highest_discount, ...panel.low_price]) covers.set(item.header_url, item.id)
@@ -209,15 +281,17 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         if (dataset === 'reviews-populated') expect(gamesHomeFixedNow, 'Reviews need the shared SSR/browser clock').toBeDefined()
         if (gamesHomeFixedNow !== undefined) await page.clock.setFixedTime(new Date(gamesHomeFixedNow))
         await page.setViewportSize({ width, height })
-        await context.addInitScript(({ origin, theme, steamKey, sample }) => {
+        await context.addInitScript(({ origin, theme, steamKey, sample, mediaFailure }) => {
           if (location.origin !== origin) return
+          // Real fallback, with Save-Data excluding unrelated failure-triggered probes.
+          if (mediaFailure) Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true })
           localStorage.setItem('theme', theme)
           const checkedAt = Date.now()
           localStorage.setItem('gf_asset_cdn_diagnostics', JSON.stringify({ selected: 'primary', checkedAt,
             primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
           localStorage.setItem(steamKey, JSON.stringify({ version: 1, selected: 'china', checkedAt, sample,
             china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' } }))
-        }, { origin: app.base, theme, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0] })
+        }, { origin: app.base, theme, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0], mediaFailure: expectedMediaFailures.size > 0 })
         const response = await page.goto(locale === 'en' ? '/en/games' : '/games', { waitUntil: 'load' })
         expect(response?.status()).toBe(200)
         const ssr = await response!.text()
@@ -239,9 +313,15 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         for (let index = 0; index < 4; index++) await expect(cards(index)).toHaveCount(8)
         await expect(stats.locator('.stats-type-tab--active')).toHaveText(locale === 'en' ? 'Player Count' : '在线人数')
         await settle(root)
-        assertQuiet()
+        if (showcase === 'empty' || showcase === 'showcase-failure') assertQuiet()
         return { page, root, groups, stats, sidebar, dock, theme, data: state.data, group, cards, settle, assertQuiet,
           rendered, locale, news: root.locator('.game-news-panel'),
+          showcase: root.locator('.game-home-showcase'), snapshot: state.showcase, events: state.events, assets,
+          expectShowcasePopup(url) {
+            expect(state.showcase.items.flatMap(item => [item.primary_action.target, item.secondary_action?.target])).toContain(url)
+            expectedPopups.push(url)
+          },
+          expectGameDestination(id) { state.destination = id },
           reviews: sidebar.getByRole('heading', { name: locale === 'en' ? 'Latest Reviews' : '最新评论', exact: true }).locator('..'),
           expectNewsPopup(url) {
             expect(state.data.latest_news[locale === 'en' ? 'news_en' : 'news_zh'].map(item => item.url)).toContain(url)
@@ -277,8 +357,9 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       } })
       assertQuiet()
     } finally {
+      releaseReads()
       await testInfo.attach('games-home-network.json', { contentType: 'application/json', body: JSON.stringify({
-        upstream: state.upstream.map(String), browserAPI, assets, external, failed, errors, popupErrors, expectedPopups, popupRequests,
+        upstream: state.upstream.map(String), browserAPI, events: state.events, assets, external, failed, errors, diagnostics, popupErrors, expectedPopups, popupRequests,
       }, null, 2) })
       for (const popup of popups) if (!popup.isClosed()) await popup.close()
       gamesHomeApp.current = null

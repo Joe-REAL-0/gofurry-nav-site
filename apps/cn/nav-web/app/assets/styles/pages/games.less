@@ -1,3 +1,158 @@
+/* Showcase is one quiet discovery surface. Its material and editorial hierarchy
+ * belong to Home, independently of Card/News; shared action/focus/shape meanings
+ * continue to come from the design system. No shell or image hover movement.
+ */
+.games-page {
+  --games-home-showcase-surface: var(--gf-surface);
+  --games-home-showcase-border: var(--gf-border);
+  --games-home-showcase-shadow: 0 4px 16px rgba(91, 62, 28, 0.04);
+  --games-home-showcase-title: var(--gf-text-main);
+  --games-home-showcase-summary: var(--gf-text-muted);
+  --games-home-showcase-context: var(--gf-accent);
+  --games-home-showcase-meta: var(--gf-text-soft);
+  --games-home-showcase-tag-bg: color-mix(in srgb, var(--gf-accent) 6%, transparent);
+  --games-home-showcase-tag-text: var(--gf-text-muted);
+  --games-home-showcase-note-border: var(--gf-border-strong);
+  --games-home-showcase-note-text: var(--gf-text-muted);
+  --games-home-showcase-control-text: var(--gf-text-muted);
+  --games-home-showcase-control-bg: transparent;
+  --games-home-showcase-control-hover-bg: var(--gf-surface-hover);
+  --games-home-showcase-control-disabled: var(--gf-text-soft);
+  --games-home-showcase-secondary-link: var(--gf-accent);
+  --games-home-showcase-secondary-link-hover: var(--gf-text-main);
+  --games-home-showcase-media-fallback-bg: color-mix(in srgb, var(--gf-text-muted) 8%, transparent);
+}
+
+html.dark .games-page {
+  /* Slate stays light in weight; artwork supplies contrast, not heavy elevation. */
+  --games-home-showcase-shadow: none;
+}
+
+.game-home-showcase {
+  border: 1px solid var(--games-home-showcase-border);
+  border-radius: var(--gf-radius-lg);
+  background: var(--games-home-showcase-surface);
+  box-shadow: var(--games-home-showcase-shadow);
+}
+
+.game-home-showcase__artwork {
+  background: var(--games-home-showcase-media-fallback-bg);
+}
+
+.game-home-showcase__image {
+  // The unlayered global img reset owns height:auto; this media surface must
+  // explicitly fill its responsive frame before object-fit can crop it.
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.game-home-showcase__content {
+  padding: 1rem;
+}
+
+.game-home-showcase__context {
+  color: var(--games-home-showcase-context);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.game-home-showcase__meta {
+  color: var(--games-home-showcase-meta);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.game-home-showcase__title {
+  color: var(--games-home-showcase-title);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.game-home-showcase__title a {
+  color: inherit;
+}
+
+.game-home-showcase__summary {
+  color: var(--games-home-showcase-summary);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.game-home-showcase__tags li {
+  border-radius: var(--gf-radius-sm);
+  padding: 0.1rem 0.4rem;
+  background: var(--games-home-showcase-tag-bg);
+  color: var(--games-home-showcase-tag-text);
+  font-size: 0.6875rem;
+  line-height: 1.5;
+}
+
+.game-home-showcase__note {
+  border-left: 2px solid var(--games-home-showcase-note-border);
+  padding-left: 0.6rem;
+  color: var(--games-home-showcase-note-text);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.game-home-showcase__secondary {
+  color: var(--games-home-showcase-secondary-link);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.game-home-showcase__secondary:hover {
+  color: var(--games-home-showcase-secondary-link-hover);
+}
+
+.game-home-showcase__count {
+  padding-right: 0.2rem;
+  color: var(--games-home-showcase-meta);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-home-showcase__controls button {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: var(--gf-radius-sm);
+  background: var(--games-home-showcase-control-bg);
+  color: var(--games-home-showcase-control-text);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.game-home-showcase__controls button:hover:enabled {
+  background: var(--games-home-showcase-control-hover-bg);
+}
+
+.game-home-showcase__controls button:disabled {
+  color: var(--games-home-showcase-control-disabled);
+  cursor: default;
+}
+
+.game-home-showcase__artwork:focus-visible,
+.game-home-showcase__title a:focus-visible,
+.game-home-showcase__secondary:focus-visible,
+.game-home-showcase__controls button:focus-visible {
+  outline: 2px solid var(--gf-focus-ring);
+  outline-offset: -2px;
+}
+
+@media (min-width: 1024px) {
+  .game-home-showcase__title { font-size: 1.625rem; }
+  .game-home-showcase__controls button { width: 2rem; height: 2.35rem; }
+}
+
 // Existing Home/Search/Detail compatibility palette; new surfaces own their domain tokens.
 .games-page {
   --games-item-hover-bg: rgba(255, 235, 205, 0.82);

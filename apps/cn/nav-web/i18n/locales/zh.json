@@ -1,4 +1,44 @@
 {
+  "gameShowcase": {
+    "label": "首页精选",
+    "context": {
+      "editorial": "GoFurry 精选",
+      "upcoming": "即将发售",
+      "newRelease": "新作推荐",
+      "trending": "热度上升",
+      "sponsored": {
+        "game": "游戏 · 推广",
+        "crowdfunding": "众筹项目 · 推广",
+        "tabletop": "桌面游戏 · 推广",
+        "merchandise": "收藏周边 · 推广",
+        "other": "推广"
+      }
+    },
+    "action": {
+      "game": "查看游戏",
+      "project": "查看项目",
+      "product": "查看产品",
+      "website": "访问官网"
+    },
+    "secondary": {
+      "steam": "Steam",
+      "kickstarter": "Kickstarter",
+      "website": "官方网站",
+      "other": "外部链接"
+    },
+    "release": {
+      "expected": "预计 {date}",
+      "released": "发行于 {date}"
+    },
+    "control": {
+      "previous": "上一项精选",
+      "next": "下一项精选"
+    },
+    "live": {
+      "slide": "{current} / {total} · {title}"
+    }
+  },
+
   "siteIntelligence": {
     "scope": "站点级生态数据 · 不受当前目标切换影响。",
     "ecosystem": "全站生态",

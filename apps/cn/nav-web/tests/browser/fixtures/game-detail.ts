@@ -2,6 +2,7 @@ import { test as base, expect, type Page } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import { mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
+import { emptyGameShowcase } from '../../../app/utils/gameShowcasePresentation'
 import { STEAM_SHARED_CDN_GROUP_PREFIXES } from '../../../app/utils/steamAssets'
 import { STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 
@@ -43,6 +44,7 @@ export const test = base.extend<{ game: GameFixture }, { gameApp: GameFixture }>
         } : catalogGame }
       }
       if (url.pathname.endsWith('/game/home')) return { data: mockGameHome(media) }
+      if (url.pathname.endsWith('/game/home/showcase')) return { data: emptyGameShowcase() }
       if (url.pathname.endsWith('/games/82/insights')) return { data: {
         game: { id: 82, name: catalogGame.name },
         state: { free: null, windows: null, mac: null, linux: null, release: null, as_of: null },

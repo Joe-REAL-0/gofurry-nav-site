@@ -10,6 +10,7 @@ export const regressionGroups = Object.freeze({
     'game-detail.spec.ts',
     'game-review-dialog.spec.ts',
     'games-home-closure.spec.ts',
+    'games-home-showcase.spec.ts',
     'games-home.spec.ts',
     'games-search-contract.spec.ts',
     'games-search-interactions.spec.ts',

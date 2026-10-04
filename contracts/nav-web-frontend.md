@@ -1720,3 +1720,48 @@ historical viewport/marker assumptions above. Generate only this authorized spec
 in the pinned runner, then compare separately. No unrelated golden may change.
 Remote acceptance uses #134 Fast, Manual Full and Manual Visual independently;
 maintainer Admin/Index/Article review remains explicit, not inferred from pixels.
+
+## Games Home Showcase runtime (#119-C)
+
+`/games` and `/en/games` load Home and the independent optional Showcase through
+one SSR async-data owner: exactly two parallel GETs, `/game/home` and
+`/game/home/showcase`, each with normalized `lang` and `region=CN`. Hydration
+reuses both payloads without browser GETs; tests assert the exact unordered set,
+not arrival order. Showcase failure/empty hides the entire surface and its margin
+without affecting Home. Neither the Home DTO/cache nor page SEO changes.
+
+`GameHomeShowcase` renders before Recently Released inside GameInfoPanel, in
+Composer order. Desktop uses 64/36 at 320px, Tablet stacks 2:1 artwork, Mobile
+stacks 16:9 with two tags/two summary lines and no Editorial Note. Fixed localized
+context/action copy surrounds strict backend-locale content. Sponsored never shows
+an Editorial Note. Managed/Steam images use their existing routing components;
+the managed resolver accepts only the frozen Showcase AVIF key grammar. Mobile
+artwork falls back to the desktop key when absent. Exhausted images retain the
+slide, count, text and actions on a neutral surface. No CDN URLs are constructed
+in business components.
+
+One item has no controls/count; two to four use native, non-circular Prev/Next.
+Index lives only in the page instance and resets on snapshot change. Switching is
+instant, with no initial animation, autoplay, swipe, keyboard-shell capture or
+focus movement. The polite live region is initially empty and updates only after
+an explicit switch. Internal actions use localized Game routes; external HTTPS
+actions use `noopener noreferrer` in a new tab. Artwork/title/actions are separate
+links, not one clickable Hero. Appearance belongs to `games.less` under
+`--games-home-showcase-*`; Tailwind owns structure. Existing style debt and goldens
+cannot be increased or updated by this implementation.
+
+Tracking requires the active item, >=50% root intersection, a visible document
+and a continuous 1000ms interval. Leaving visibility, switching items/snapshots
+or unmounting cancels that timer. Page-local snapshot/item dedupe supplements the
+server authority. Lazy UUIDv4 identity uses sessionStorage only, with page-memory
+fallback when blocked; missing crypto.randomUUID disables tracking. Click sources
+are artwork/title/primary/secondary, sent without awaiting or blocking navigation.
+Direct best-effort `$fetch<void>` accepts the event endpoint's empty 204, with no
+useApi envelope, retry, toast or analytics-driven UI state. Browser accounting
+separates these POSTs from forbidden hydration refetches.
+
+The existing Games Home fixture defaults to empty Showcase and owns deterministic
+populated/failure scenarios. `games-home-showcase.spec.ts` is explicitly assigned
+to the existing Full Games regression group. Runtime/Functional completion is
+separate from maintainer Desktop/Tablet/Mobile review, new Visual acceptance and
+issue closure. No accepted Visual spec or snapshot changes in this first pass.

@@ -14,6 +14,8 @@ import type {
   GameTagRecord,
   GameTagCategory,
   GameHomeApiResponse,
+  GameShowcaseSnapshot,
+  GameShowcaseEvent,
   GameViewTouchResponse,
   LatestNewsRecord,
   LotteryReq,
@@ -73,6 +75,33 @@ export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
     },
     latestReviews: payload.latest_reviews,
   }
+}
+
+export function getGameHomeShowcase(lang = 'zh'): Promise<GameShowcaseSnapshot> {
+  return useApi('gameV2')('/game/home/showcase', {
+    query: { lang: normalizeGameLang(lang), region: 'CN' },
+    timeout: 8000,
+    retry: 0,
+  })
+}
+
+// This endpoint deliberately returns an empty 204, not the useApi envelope.
+// Navigation never waits for analytics, including configuration/network failures.
+export async function submitGameShowcaseEvent(event: GameShowcaseEvent): Promise<void> {
+  if (!import.meta.client) return
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- This endpoint is HTTP 204; no response envelope/body exists.
+    await $fetch<void>('/game/home/showcase/events', {
+      baseURL: useRuntimeConfig().public.gameV2ApiBase,
+      method: 'POST', body: event, credentials: 'include', keepalive: true,
+      retry: 0, timeout: 5000,
+      // ofetch skips null-body status parsing. Drain the empty stream so the
+      // browser completes the request instead of cancelling an unread response.
+      async onResponse({ response }) {
+        if (response.status === 204) await response.text()
+      },
+    })
+  } catch { /* Optional analytics must never affect navigation or UI. */ }
 }
 
 // Insights needs the same prewarmed panel as Game Home. The uncached panel

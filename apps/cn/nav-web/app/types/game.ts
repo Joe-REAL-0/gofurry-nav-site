@@ -445,6 +445,64 @@ export interface GameHomeApiResponse {
     latest_reviews: AnonymousReviewModel[]
 }
 
+// Independent optional Home slice. IDs and signed tokens stay opaque strings.
+export interface GameShowcaseAction {
+    type: 'game' | 'project' | 'product' | 'website'
+    game_id?: string
+    target?: string
+}
+
+export interface GameShowcaseSecondaryAction {
+    type: 'steam' | 'kickstarter' | 'website' | 'other'
+    target?: string
+}
+
+export interface GameShowcaseArtwork {
+    kind: 'managed' | 'steam'
+    url?: string
+    desktop_object_key?: string
+    mobile_object_key?: string
+    focal_x?: number
+    focal_y?: number
+}
+
+export type GameShowcaseRelease = Pick<GameV2Release, 'availability' | 'precision' | 'exact_date'
+    | 'year' | 'month' | 'quarter' | 'window_start' | 'window_end'>
+
+export interface GameShowcaseItem {
+    key: string
+    source: 'managed' | 'automatic'
+    reason: 'editorial' | 'sponsored' | 'upcoming' | 'new_release' | 'trending'
+    content_type: 'game' | 'crowdfunding' | 'tabletop' | 'merchandise' | 'other'
+    sponsored: boolean
+    campaign_id?: string
+    game_id?: string
+    title: string
+    summary: string
+    tags: string[]
+    editorial_note?: string
+    artwork: GameShowcaseArtwork
+    primary_action: GameShowcaseAction
+    secondary_action?: GameShowcaseSecondaryAction
+    release?: GameShowcaseRelease
+    position: number
+    tracking_token: string
+}
+
+export interface GameShowcaseSnapshot {
+    schema_version: 1
+    snapshot_id: string
+    generated_at: string
+    valid_until: string
+    items: GameShowcaseItem[]
+}
+
+export type GameShowcaseClickSource = 'artwork' | 'title' | 'primary' | 'secondary'
+export type GameShowcaseEvent = {
+    tracking_token: string
+    session_id: string
+} & ({ event: 'impression'; source?: never } | { event: 'click'; source: GameShowcaseClickSource })
+
 export interface GameViewTouchResponse {
     game_id: number
     view_count: number

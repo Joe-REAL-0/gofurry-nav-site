@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import { mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
+import { emptyGameShowcase } from '../../../app/utils/gameShowcasePresentation'
 import { STEAM_SHARED_CDN_GROUP_PREFIXES } from '../../../app/utils/steamAssets'
 
 export const origins = { primary: 'https://primary.example', mirror: 'https://mirror.example' }
@@ -55,6 +56,7 @@ export const test = base.extend<{ routing: RoutingScenario }, { routingApp: Rout
       if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: {
         schema_version: 1, patterns: [{ id: '1', name: 'Fixture pattern', name_en: 'Fixture pattern', object_key: patternKey, light_color: '#123456', dark_color: '#abcdef', light_opacity: .12, dark_opacity: .08, default_size_px: 120 }],
       } }
+      if (url.pathname.endsWith('/game/home/showcase')) return { data: emptyGameShowcase() }
       if (url.pathname.endsWith('/game/home')) {
         const home = mockGameHome()
         for (const game of home.panel.latest_games) game.header_url = steamSource + '?id=' + game.id

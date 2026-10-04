@@ -1,8 +1,8 @@
 # Game Showcase backend contract (#119-A)
 
 Stage A owns the backend contracts below. Stage B's React Admin operations consume
-them through `/game/showcase` and `/game/showcase/:id`; Public Nav Web consumption
-belongs to Stage C. Showcase is a separate optional slice; the existing
+them through `/game/showcase` and `/game/showcase/:id`; Stage C adds the optional
+Public Nav Web runtime described below. Showcase is a separate optional slice; the existing
 `GET /api/v2/game/home` payload and its long-lived cache remain unchanged.
 
 ## Durable ownership
@@ -190,3 +190,30 @@ The Game read-model integration additionally checks Adult code, strict locale,
 canonical dates, preferred Steam assets and current-period/finalization boundaries.
 `TestShowcaseAdditiveMigration` and fresh/baseline adoption verify schema semantics.
 Real cloud publication is separate acceptance; these tests perform no cloud writes.
+
+## Public Nav Web runtime (#119-C, before Visual acceptance)
+
+Games Home requests Home and Showcase concurrently during SSR, with exactly one
+GET per slice and no hydration GET. A failed Showcase read renders no Hero and
+preserves catalog/News/statistics/sidebar. A valid empty slice also preserves the
+existing Home layout. The public contract, Composer and backend analytics remain
+unchanged; the frontend never reorders, selects or filters returned items.
+
+The native Showcase surface precedes Recently Released. It uses 64/36 Desktop,
+stacked 2:1 Tablet and 16:9 Mobile artwork; existing Managed/Steam components own
+provider routing and fallback. UI text/action labels are localized, while content
+uses the backend's exact locale. Index is page-local, controls are non-circular,
+and transitions are instant. No autoplay/swipe or whole-Hero link is introduced.
+
+An impression candidate requires >=50% viewport visibility in a visible tab for
+one uninterrupted second. A page-local Set dedupes snapshot/item impressions.
+Anonymous UUIDv4 sessions live in sessionStorage (memory only if blocked); clicks
+send artwork/title/primary/secondary without awaiting the POST. Event errors are
+silent and cannot stop navigation. The backend still owns qualification, implicit
+impressions and authoritative dedupe.
+
+Pure/Nuxt tests and the extended Games Home production fixture cover DTOs, asset
+keys, session/visibility lifecycle, SSR/network budgets, media failures, navigation,
+responsive semantics and event failure isolation. This first implementation does
+not accept new Visual snapshots or close #119. Desktop/Tablet/Mobile maintainer
+review precedes separately authorized pinned Visual generation and comparison.

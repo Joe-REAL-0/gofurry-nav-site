@@ -12,6 +12,7 @@
             :initial-raw-data="gamesPageData.mainInfo"
             :initial-panel-data="gamesPageData.panelData"
             :initial-news-record="gamesPageData.latestNews"
+            :showcase="data?.showcase"
           />
         </section>
 
@@ -31,7 +32,9 @@ import { useI18n } from 'vue-i18n'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
-import { getGameHomeData, type GameHomeData } from '~/services/game'
+import { getGameHomeData, getGameHomeShowcase, type GameHomeData } from '~/services/game'
+import { emptyGameShowcase } from '~/utils/gameShowcasePresentation'
+import type { GameShowcaseSnapshot } from '~/types/game'
 
 const { locale } = useI18n()
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
@@ -48,18 +51,27 @@ const gamesPageSeo = computed(() => locale.value === 'en'
     }
 )
 
-const { data } = await useAsyncData<GameHomeData | null>(
+interface GamesPageData { home: GameHomeData | null; showcase: GameShowcaseSnapshot }
+
+const { data } = await useAsyncData<GamesPageData>(
   () => `games-page:${lang.value}`,
   async () => {
-    return getGameHomeData(lang.value).catch(() => null)
+    const [home, showcase] = await Promise.allSettled([
+      getGameHomeData(lang.value),
+      getGameHomeShowcase(lang.value),
+    ])
+    return {
+      home: home.status === 'fulfilled' ? home.value : null,
+      showcase: showcase.status === 'fulfilled' ? showcase.value : emptyGameShowcase(),
+    }
   },
   {
     watch: [lang],
-    default: () => null,
+    default: () => ({ home: null, showcase: emptyGameShowcase() }),
   }
 )
 
-const gamesPageData = computed<GameHomeData>(() => data.value ?? {
+const gamesPageData = computed<GameHomeData>(() => data.value?.home ?? {
   mainInfo: nullGameGroups(),
   panelData: nullGamePanel(),
   latestNews: { news_zh: [], news_en: [] },

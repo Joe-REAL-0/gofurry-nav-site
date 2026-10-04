@@ -19,6 +19,37 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## Games Home Showcase (#119-C, Functional first pass)
+
+`games-home-showcase.spec.ts` extends the existing production Games Home fixture,
+which defaults to an empty optional slice. Its SSR response barrier proves both
+reads start concurrently. Every case checks the unordered exact Home/Showcase GET
+set and locale/region, zero hydration GET, and separately recorded event POSTs.
+Populated cases exercise cardinality, SSR content, strict locale, navigation,
+media routing/exhaustion, responsive overflow and tracking/error isolation.
+Faults have exact asset/event diagnostics; no general browser-error exemption is
+added. Save-Data isolates image-fallback tests from unrelated provider probes.
+
+Pure presentation/key tests and real Nuxt service/component/tracking tests own
+canonical dates, destination safety, empty 204, snapshot/page index reset, UUIDv4,
+blocked storage, continuous 1000ms visibility, interruption, dedupe and cleanup.
+After the full install/static/Unit/Nuxt/typecheck/production build sequence, run:
+
+```sh
+pnpm exec playwright test tests/browser/regression/games-home.spec.ts tests/browser/regression/games-home-closure.spec.ts tests/browser/regression/games-home-showcase.spec.ts --workers=1
+```
+
+Related Home consumers retain their existing assertions with an empty Showcase
+response and the additional explicit read budget. The new spec is registered in
+the Full Games inventory; run its repository inventory guard. Local Functional
+passes do not imply remote Fast/Full/Visual or maintainer UI acceptance. This pass
+does not create/update accepted Visual files. Desktop/Tablet/Mobile review must
+precede separately authorized pinned Showcase golden generation.
+
+Optional `GOFURRY_SHOWCASE_REVIEW_DIR` writes temporary reviewer screenshots from
+these same Functional cases. Choose an ignored local directory; these images are
+not goldens and carry no visual approval.
+
 ## CI tiers (#134)
 
 | Tier | Trigger | Required work |
@@ -42,7 +73,7 @@ their existing owners. `pnpm run test:browser:smoke --workers=1` runs this tier 
 after a production build; do not use the dev fixture for CI acceptance.
 
 Full uses `.github/scripts/nav-web-regression-groups.mjs` as the authoritative
-explicit inventory: Games 12 specs (~298s supplied test-time estimate), Sites + Other
+explicit inventory: Games 13 specs (including Showcase; the previous 12-spec estimate was ~298s), Sites + Other
 15 (~277s), Insights + Nav 18 (~252s). These are planning estimates, not measured
 new job durations. The inventory guard rejects unassigned/new, missing and duplicate
 specs. Workflows run the CLI-produced file list with one worker; no `--shard`,

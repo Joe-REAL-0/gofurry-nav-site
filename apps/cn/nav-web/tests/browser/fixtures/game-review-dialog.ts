@@ -3,6 +3,7 @@ import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.
 import { mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
 import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
 import { captureBrowserErrors } from './browser-errors'
+import { emptyGameShowcase } from '../../../app/utils/gameShowcasePresentation'
 
 type Host = 'home' | 'search' | 'detail'
 type Language = 'zh' | 'en'
@@ -31,7 +32,7 @@ const evidence = (path: string, query: Record<string, string> = {}, body: unknow
 const searchBody = () => ({ pageNum: 1, pageSize: 20, content: '', availability: 'available', score: false,
   remark_order: false, time_order: true, tag_list: [], lang: 'zh' })
 function expectedReads(host: Host, lang: Language): Evidence[] {
-  if (host === 'home') return [evidence('/api/v2/game/home', { lang, region: 'CN' })]
+  if (host === 'home') return [evidence('/api/v2/game/home', { lang, region: 'CN' }), evidence('/api/v2/game/home/showcase', { lang, region: 'CN' })]
   if (host === 'search') return [evidence('/api/v2/game/tag-categories', { lang: 'zh' }), evidence('/api/v2/game/search/page', {}, searchBody())]
   return [evidence('/api/v2/game/info', { id: '82', lang: 'zh', region: 'CN', news_limit: '20' }),
     evidence('/api/v2/game/reviews', { id: '82', page: '1', limit: '5' }),
@@ -49,6 +50,7 @@ function detailData() {
     developers: [], publishers: [], media: { screenshots: [], movies: [], assets: [] }, requirements: {}, support_info: {}, extra: {} }
 }
 function responseFor(path: string, media: string) {
+  if (path === '/api/v2/game/home/showcase') return emptyGameShowcase()
   if (path === '/api/v2/game/home') return mockGameHome(media)
   if (path === '/api/v2/game/search/page') return { total: 1, list: [{ id: '83', appid: 83, name: 'Review search fixture', info: 'A fixed search result',
     cover: `${media}/game-83.svg`, update_time: '2026-09-01', release_date: '2026-08-28', remark_count: 0, avg_score: 0,

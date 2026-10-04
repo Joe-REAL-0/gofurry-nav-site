@@ -1,4 +1,44 @@
 {
+  "gameShowcase": {
+    "label": "Home Showcase",
+    "context": {
+      "editorial": "GoFurry Pick",
+      "upcoming": "Upcoming",
+      "newRelease": "New Release Pick",
+      "trending": "Trending",
+      "sponsored": {
+        "game": "Game · Sponsored",
+        "crowdfunding": "Crowdfunding · Sponsored",
+        "tabletop": "Tabletop · Sponsored",
+        "merchandise": "Merchandise · Sponsored",
+        "other": "Sponsored"
+      }
+    },
+    "action": {
+      "game": "View Game",
+      "project": "View Project",
+      "product": "View Product",
+      "website": "Visit Website"
+    },
+    "secondary": {
+      "steam": "Steam",
+      "kickstarter": "Kickstarter",
+      "website": "Website",
+      "other": "External Link"
+    },
+    "release": {
+      "expected": "Expected {date}",
+      "released": "Released {date}"
+    },
+    "control": {
+      "previous": "Previous showcase item",
+      "next": "Next showcase item"
+    },
+    "live": {
+      "slide": "{current} / {total} · {title}"
+    }
+  },
+
   "siteIntelligence": {
     "scope": "Site-wide data · independent of the current target.",
     "ecosystem": "Ecosystem-wide",
