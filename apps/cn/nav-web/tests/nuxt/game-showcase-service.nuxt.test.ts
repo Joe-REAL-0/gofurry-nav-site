@@ -12,7 +12,7 @@ it('reads an independent localized slice with bounded optional failure and leave
   for (const [input, lang] of [['en', 'en'], ['zh', 'zh'], ['bad', 'zh']]) {
     const result = await useNuxtApp().runWithContext(() => getGameHomeShowcase(input))
     expect(result).toBe(snapshot)
-    expect(fetcher).toHaveBeenLastCalledWith('/game/home/showcase', expect.objectContaining({ query: { lang, region: 'CN' }, retry: 0, timeout: 8000 }))
+    expect(fetcher).toHaveBeenLastCalledWith('/game/home/showcase', expect.objectContaining({ query: { lang, region: 'CN' }, retry: 0, timeout: 1000 }))
   }
 })
 

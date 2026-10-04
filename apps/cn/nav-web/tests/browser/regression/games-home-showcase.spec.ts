@@ -53,6 +53,33 @@ test('Showcase 503 is optional and leaves catalog, statistics, News and sidebar 
   scene.assertQuiet()
 })
 
+test('Slow Showcase cannot block Home SSR or retry during hydration or after a late response', async ({ gamesHome, page }) => {
+  const scene = await gamesHome.open({ showcase: 'slow-showcase', dataset: 'news-populated' })
+  expect(scene.snapshot.items).toHaveLength(1)
+  expect(scene.showcasePending, 'Home rendered before the gated Showcase response').toBe(true)
+  expect(scene.rendered).not.toContain('game-home-showcase')
+  await expect(scene.showcase).toHaveCount(0)
+  await expect(scene.group(0).getByRole('heading', { name: '最近发售', exact: true })).toBeVisible()
+  await expect(scene.groups).toHaveCount(4)
+  await expect(scene.stats).toBeVisible()
+  await expect(scene.stats.locator('.game-stats-row:not(.game-stats-row--placeholder)')).toHaveCount(16)
+  await expect(scene.sidebar).toBeVisible()
+  await expect(scene.dock).toBeVisible()
+  await expect(scene.news.locator('.news-card')).toHaveCount(3)
+  await scene.news.getByRole('button', { name: '下一条情报', exact: true }).click()
+  await expect(scene.news.locator('.news-pager__count')).toHaveText('2/3')
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  scene.assertQuiet()
+
+  scene.releaseShowcase()
+  await expect.poll(() => scene.showcasePending).toBe(false)
+  await scene.settle(scene.root)
+  await expect(scene.showcase).toHaveCount(0)
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  expect(scene.events).toEqual([])
+  scene.assertQuiet()
+})
+
 for (const locale of ['zh', 'en'] as const) {
   test(`Single editorial SSR and hydrated first item, strict locale and no controls (${locale})`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ showcase: 'single-editorial', locale })

@@ -80,7 +80,7 @@ export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
 export function getGameHomeShowcase(lang = 'zh'): Promise<GameShowcaseSnapshot> {
   return useApi('gameV2')('/game/home/showcase', {
     query: { lang: normalizeGameLang(lang), region: 'CN' },
-    timeout: 8000,
+    timeout: 1000,
     retry: 0,
   })
 }

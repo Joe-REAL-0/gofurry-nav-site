@@ -109,7 +109,8 @@ function cover(id: string) {
 type Theme = 'light' | 'dark'
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type State = { data: GameHomeApiResponse, upstream: URL[], lang: Language, showcase: GameShowcaseSnapshot, scenario: ShowcaseScenario,
-  events: GameShowcaseEvent[], parallel: Promise<void>, releaseReads(): void, destination?: string }
+  events: GameShowcaseEvent[], parallel: Promise<void>, releaseReads(): void, destination?: string,
+  showcaseHold: Promise<void>, releaseShowcase(): void, showcasePending: boolean }
 type Worker = { app: App, current: State | null }
 export type GamesHomeScene = {
   page: Page, root: Locator, groups: Locator, stats: Locator, sidebar: Locator, dock: Locator, theme: Theme,
@@ -118,6 +119,7 @@ export type GamesHomeScene = {
   news: Locator, reviews: Locator, rendered: string, locale: Language,
   expectNewsPopup(url: string): void,
   showcase: Locator, snapshot: GameShowcaseSnapshot, events: GameShowcaseEvent[], assets: string[],
+  readonly showcasePending: boolean, releaseShowcase(): void,
   expectShowcasePopup(url: string): void, expectGameDestination(id: string): void,
   holdArtwork(url: string): { requested: Promise<void>; release(): void },
   closureClip(target: Locator): Promise<{ x: number, y: number, width: number, height: number }>,
@@ -146,6 +148,11 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         && url.searchParams.get('lang') === state.lang && url.searchParams.get('region') === 'CN') return { data: state.data }
       if (url.pathname === showcasePath && url.searchParams.size === 2
         && url.searchParams.get('lang') === state.lang && url.searchParams.get('region') === 'CN') {
+        if (state.scenario === 'slow-showcase') {
+          state.showcasePending = true
+          await state.showcaseHold
+          state.showcasePending = false
+        }
         return state.scenario === 'showcase-failure' ? { status: 503 } : { data: state.showcase }
       }
       if (url.pathname === eventPath && body) {
@@ -177,7 +184,10 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     const { app } = gamesHomeApp
     let releaseReads!: () => void
     const parallel = new Promise<void>(resolve => { releaseReads = resolve })
-    const state: State = { data: makeHome(), upstream: [], lang: 'zh', showcase: makeShowcase('empty', 'zh'), scenario: 'empty', events: [], parallel, releaseReads }
+    let releaseShowcase!: () => void
+    const showcaseHold = new Promise<void>(resolve => { releaseShowcase = resolve })
+    const state: State = { data: makeHome(), upstream: [], lang: 'zh', showcase: makeShowcase('empty', 'zh'), scenario: 'empty', events: [], parallel, releaseReads,
+      showcaseHold, releaseShowcase, showcasePending: false }
     gamesHomeApp.current = state
     const upstreamStart = app.requests.length
     const expectedMediaFailures = new Set<string>()
@@ -296,7 +306,11 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
           localStorage.setItem(steamKey, JSON.stringify({ version: 1, selected: 'china', checkedAt, sample,
             china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' } }))
         }, { origin: app.base, theme, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0], mediaFailure: expectedMediaFailures.size > 0 })
-        const response = await page.goto(locale === 'en' ? '/en/games' : '/games', { waitUntil: 'load' })
+        // The real Nitro fetch must time out while its upstream gate stays held.
+        // Fail before the old eight-second budget; do not fake browser time for SSR.
+        const response = await page.goto(locale === 'en' ? '/en/games' : '/games', {
+          waitUntil: 'load', ...(showcase === 'slow-showcase' ? { timeout: 4000 } : {}),
+        })
         expect(response?.status()).toBe(200)
         const ssr = await response!.text()
         const rendered = ssr.slice(ssr.indexOf('<body'), ssr.indexOf('</body>')).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '')
@@ -321,6 +335,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         return { page, root, groups, stats, sidebar, dock, theme, data: state.data, group, cards, settle, assertQuiet,
           rendered, locale, news: root.locator('.game-news-panel'),
           showcase: root.locator('.game-home-showcase'), snapshot: state.showcase, events: state.events, assets,
+          get showcasePending() { return state.showcasePending }, releaseShowcase,
           expectShowcasePopup(url) {
             expect(state.showcase.items.flatMap(item => [item.primary_action.target, item.secondary_action?.target])).toContain(url)
             expectedPopups.push(url)
@@ -371,6 +386,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       assertQuiet()
     } finally {
       releaseReads()
+      releaseShowcase()
       for (const gate of artworkGates.values()) gate.release()
       await testInfo.attach('games-home-network.json', { contentType: 'application/json', body: JSON.stringify({
         upstream: state.upstream.map(String), browserAPI, events: state.events, assets, external, failed, errors, diagnostics, popupErrors, expectedPopups, popupRequests,
