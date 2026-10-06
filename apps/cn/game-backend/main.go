@@ -89,6 +89,7 @@ func (gf *goFurry) InitOnStart() error {
 	reviewService := reviewservice.New(reviewdao.New(gf.pool))
 	insightsService := v2service.NewInsightsService(v2dao.NewInsightsDAO(gamesqlc.New(gf.pool)))
 	gf.gameAPI = v2controller.New(gf.readDAO, gf.viewSvc, reviewService, insightsService)
+	gf.gameAPI.WithCollections(v2service.NewCollectionService(gf.readDAO, cs.GetRedisService()))
 	showcaseService := showcase.New(showcase.SQLReader{Pool: gf.pool}, cs.GetRedisService())
 	signer := showcase.Signer{TrackingSecret: cfg.Game.ShowcaseTrackingSecret, HashSecret: cfg.Game.ShowcaseAnalyticsHashSecret}
 	analytics := showcase.NewAnalytics(cs.GetRedisService(), gamesqlc.New(gf.pool), signer, strings.Split(cfg.Middleware.Cors.AllowOrigins, ","))

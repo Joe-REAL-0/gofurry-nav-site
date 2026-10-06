@@ -382,6 +382,58 @@ type GfgGameAsset struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 人工策展的游戏分区；只定义发展谱系与公开生命周期，不承担标签、推荐算法或成员排序。
+type GfgGameCollection struct {
+	// 分区内部主键，用于成员关系和首页槽位引用；不进入公开分区 DTO。
+	ID int64 `json:"id"`
+	// 公开路由使用的小写连字符标识，最长 64 字符；创建后由运营写入层禁止修改。
+	Code string `json:"code"`
+	// 分区中文名称；公开中文读取优先使用，英文为空时也可用于回退。
+	Name string `json:"name"`
+	// 分区英文名称；公开英文读取优先使用，中文为空时也可用于回退。
+	NameEn string `json:"name_en"`
+	// 分区中文策展简介，不用于推导成员资格或时间线顺序。
+	Info string `json:"info"`
+	// 分区英文策展简介；缺失时公开读取可回退中文简介。
+	InfoEn string `json:"info_en"`
+	// 运营生命周期：draft 草稿、published 公开发布、archived 归档；公开 API 只读取 published。
+	Status string `json:"status"`
+	// 运营写入的乐观并发版本，从 1 开始；后续写入层以版本校验防止覆盖并发编辑。
+	Version int64 `json:"version"`
+	// 最近一次成功发布的时刻，也是公开分区列表倒序依据；撤回草稿后可保留历史值。
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	// 当前归档的时刻，仅 archived 状态必须有值；恢复草稿时由写入层清空。
+	ArchivedAt pgtype.Timestamptz `json:"archived_at"`
+	// 人工创建该分区的时刻，与成员游戏的发行时间无关。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 分区运营资料最近一次修改时刻，由写入层维护。
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 首页人工策展分区的五个固定槽位；公开读取仅保留已发布且当前浏览模式有可见成员的分区。
+type GfgGameCollectionHomeSlot struct {
+	// 首页展示槽位，范围 1 至 5 并按升序展示；全部分区入口不入库。
+	Slot int16 `json:"slot"`
+	// 槽位引用的分区，同一分区只能占一个槽位；删除分区时级联移除槽位。
+	CollectionID int64 `json:"collection_id"`
+	// 该首页槽位记录创建的时刻，不代表分区发布时间。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 该槽位的分区指派最近一次修改时刻，由运营写入层维护。
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 人工维护的分区与游戏成员关系；不存人工顺序、权重或成人标记，公开时间线由游戏发行事实派生。
+type GfgGameCollectionItem struct {
+	// 所属人工策展分区；分区删除时级联删除成员关系，不删除游戏。
+	CollectionID int64 `json:"collection_id"`
+	// 成员游戏主档案；游戏删除时级联移除关系，成人语义始终读取关联标签 code=adult。
+	GameID int64 `json:"game_id"`
+	// 人工将游戏纳入分区的时刻，不作为公开时间线排序依据。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 成员关系最近一次维护时刻，由运营写入层维护，不改变发行事实。
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 // GoFurry 用户游戏评论及评分；来源位置与上游 Steam 评价分别持有
 type GfgGameComment struct {
 	// GoFurry 用户游戏评论及评分的行身份；用于稳定引用该记录

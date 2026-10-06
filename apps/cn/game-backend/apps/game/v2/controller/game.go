@@ -16,6 +16,7 @@ import (
 )
 
 type GameV2API struct {
+	collections       *v2service.CollectionService
 	showcaseService   *showcase.Service
 	showcaseAnalytics *showcase.Analytics
 	showcaseSigner    showcase.Signer

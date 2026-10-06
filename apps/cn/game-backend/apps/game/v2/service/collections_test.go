@@ -1,0 +1,420 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"math"
+	"reflect"
+	"strings"
+	"sync"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
+	"github.com/redis/go-redis/v9"
+)
+
+type collectionReaderFake struct {
+	records []v2models.CollectionRecord
+	batch   v2models.CollectionGames
+	err     error
+	reads   atomic.Int64
+	loads   atomic.Int64
+	entered chan string
+	release chan struct{}
+}
+
+func (r *collectionReaderFake) CountPublishedCollections(context.Context) (int64, error) {
+	return int64(len(r.records)), r.err
+}
+func (r *collectionReaderFake) ListPublishedCollections(_ context.Context, limit, offset int64) ([]v2models.CollectionRecord, error) {
+	r.reads.Add(1)
+	if offset >= int64(len(r.records)) {
+		return nil, r.err
+	}
+	return r.records[offset:min(offset+limit, int64(len(r.records)))], r.err
+}
+func (r *collectionReaderFake) GetPublishedCollection(ctx context.Context, code string) (*v2models.CollectionRecord, error) {
+	r.reads.Add(1)
+	if r.entered != nil {
+		r.entered <- code
+		select {
+		case <-r.release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	for _, record := range r.records {
+		if record.Code == code {
+			return &record, r.err
+		}
+	}
+	return nil, r.err
+}
+func (r *collectionReaderFake) ListPublishedCollectionHomeSlots(context.Context) ([]v2models.CollectionRecord, error) {
+	r.reads.Add(1)
+	return r.records, r.err
+}
+func (r *collectionReaderFake) LoadCollectionGames(_ context.Context, ids []int64, _ string) (v2models.CollectionGames, error) {
+	r.loads.Add(1)
+	result := v2models.CollectionGames{Games: r.batch.Games}
+	for _, m := range r.batch.Memberships {
+		for _, id := range ids {
+			if m.CollectionID == id {
+				result.Memberships = append(result.Memberships, m)
+			}
+		}
+	}
+	return result, r.err
+}
+
+type collectionCacheEntry struct {
+	data  string
+	until time.Time
+}
+type collectionCacheFake struct {
+	mu      sync.Mutex
+	entries map[string]collectionCacheEntry
+	now     time.Time
+	err     error
+	writes  int
+	ttls    []time.Duration
+}
+
+func (c *collectionCacheFake) Get(_ context.Context, key string) *redis.StringCmd {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.err != nil {
+		return redis.NewStringResult("", c.err)
+	}
+	entry, ok := c.entries[key]
+	if !ok || !c.now.Before(entry.until) {
+		return redis.NewStringResult("", redis.Nil)
+	}
+	return redis.NewStringResult(entry.data, nil)
+}
+func (c *collectionCacheFake) Set(_ context.Context, key string, value interface{}, ttl time.Duration) *redis.StatusCmd {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.writes++
+	c.ttls = append(c.ttls, ttl)
+	if c.err == nil {
+		c.entries[key] = collectionCacheEntry{string(value.([]byte)), c.now.Add(ttl)}
+	}
+	return redis.NewStatusResult("OK", c.err)
+}
+
+func collectionFixture() (*collectionReaderFake, *collectionCacheFake, *CollectionService) {
+	now := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	r := &collectionReaderFake{records: []v2models.CollectionRecord{
+		{ID: 1, Code: "mixed", Name: "中文", NameEn: "English", Info: "中文简介", PublishedAt: now, Slot: 1},
+		{ID: 2, Code: "adult-only", Name: "纯成人", NameEn: "Adults", PublishedAt: now, Slot: 2},
+		{ID: 3, Code: "empty", Name: "空", NameEn: "Empty", PublishedAt: now, Slot: 3},
+	}}
+	for id := int64(1); id <= 5; id++ {
+		g := v2models.GameV2Aggregate{Site: v2models.GameV2SiteRecord{ID: id, Name: "游戏", NameEn: "Game", Info: "简介", InfoEn: "Summary", Header: "https://example.test/header.jpg"}}
+		if id == 2 {
+			g.Tags = []v2models.GameV2Tag{{ID: "7", Code: "adult"}}
+		}
+		if id == 1 {
+			g.Tags = []v2models.GameV2Tag{{ID: "1014", Code: "adventure", Name: "adult"}}
+		}
+		r.batch.Games = append(r.batch.Games, g)
+		r.batch.Memberships = append(r.batch.Memberships, v2models.CollectionMembership{CollectionID: 1, GameID: id})
+	}
+	r.batch.Memberships = append(r.batch.Memberships, v2models.CollectionMembership{CollectionID: 2, GameID: 2})
+	c := &collectionCacheFake{now: now, entries: map[string]collectionCacheEntry{}}
+	s := NewCollectionService(r, c)
+	s.Now = func() time.Time { return c.now }
+	return r, c, s
+}
+
+func TestCollectionVisibilityAndBatchProjection(t *testing.T) {
+	r, _, s := collectionFixture()
+	ctx := context.Background()
+	index, err := s.List(ctx, v2models.CollectionQuery{})
+	if err != nil || index.Total != 3 || len(index.Items) != 3 || index.Items[0].VisibleGameCount != 4 || index.Items[1].VisibleGameCount != 0 || index.Items[1].PreviewGames == nil {
+		t.Fatalf("index=%+v err=%v", index, err)
+	}
+	if r.loads.Load() != 1 {
+		t.Fatal("must load all collection games once")
+	}
+	want := []string{"1", "4", "5"}
+	got := []string{}
+	for _, p := range index.Items[0].PreviewGames {
+		got = append(got, p.GameID)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatal("preview must use filtered timeline", got)
+	}
+	for _, mode := range []string{"sfw", "nsfw"} {
+		q := v2models.CollectionQuery{Mode: mode, Lang: "en"}
+		detail, e := s.Detail(ctx, "mixed", q)
+		wantCount := 4
+		if mode == "nsfw" {
+			wantCount = 5
+		}
+		if e != nil || len(detail.Items) != wantCount || detail.Collection.VisibleGameCount != wantCount || detail.Collection.Name != "English" || detail.Collection.Info != "中文简介" {
+			t.Fatalf("detail=%+v err=%v", detail, e)
+		}
+		if detail.Items[0].GameID != "1" || detail.Items[0].Name != "Game" || detail.Items[0].Summary != "Summary" {
+			t.Fatal("numeric adult ID or V2 localization drift", detail.Items[0])
+		}
+		adult, e := s.Detail(ctx, "adult-only", q)
+		adultCount := 0
+		if mode == "nsfw" {
+			adultCount = 1
+		}
+		if e != nil || adult.Items == nil || len(adult.Items) != adultCount || adult.Collection.VisibleGameCount != adultCount {
+			t.Fatalf("adult-only=%+v err=%v", adult, e)
+		}
+		home, e := s.Home(ctx, q)
+		slots := 1
+		if mode == "nsfw" {
+			slots = 2
+		}
+		if e != nil || len(home.Slots) != slots || home.Slots[0].Slot != 1 {
+			t.Fatalf("home=%+v err=%v", home, e)
+		}
+		body, _ := json.Marshal(detail)
+		for _, forbidden := range []string{"hidden_adult_count", "raw_count", "archived_at", "\"status\"", "\"version\"", "\"id\""} {
+			if strings.Contains(string(body), forbidden) {
+				t.Fatal("private metadata leaked", forbidden)
+			}
+		}
+	}
+	for _, code := range []string{"missing", "draft", "archived", "a--b", "A", "../bad", "", strings.Repeat("a", 65)} {
+		if _, err := s.Detail(ctx, code, v2models.CollectionQuery{}); !errors.Is(err, ErrCollectionNotFound) {
+			t.Fatalf("%q err=%v", code, err)
+		}
+	}
+	page, err := s.List(ctx, v2models.CollectionQuery{Page: 2, PageSize: 1})
+	if err != nil || page.Items[0].Code != "adult-only" || page.Total != 3 || !page.HasMore {
+		t.Fatalf("page=%+v %v", page, err)
+	}
+	page, _ = s.List(ctx, v2models.CollectionQuery{Page: 4, PageSize: 1})
+	if page.Items == nil || len(page.Items) != 0 || page.HasMore {
+		t.Fatalf("out of range=%+v", page)
+	}
+	// Defensive collection locale fallback, including data that future publication validation will reject.
+	for _, lang := range []string{"zh", "en"} {
+		record := v2models.CollectionRecord{Name: " ", NameEn: "Fallback", Info: "中文"}
+		if got := collectionInfo(record, lang, 0); got.Name != "Fallback" || got.Info != "中文" {
+			t.Fatal("locale fallback", got)
+		}
+	}
+}
+
+func TestCollectionQueryNormalization(t *testing.T) {
+	for _, q := range []v2models.CollectionQuery{{}, {Lang: "fr", Mode: "NSFW", Page: -1, PageSize: -2}, {Page: math.MaxInt64, PageSize: 24}} {
+		got := NormalizeCollectionQuery(q)
+		if got.Lang != "zh" || got.Mode != "sfw" || got.Page != 1 || got.PageSize != 24 {
+			t.Fatalf("query=%+v", got)
+		}
+	}
+	if got := NormalizeCollectionQuery(v2models.CollectionQuery{Lang: "en", Mode: "nsfw", Page: 2, PageSize: 100}); got.PageSize != 60 || got.Page != 2 || got.Lang != "en" || got.Mode != "nsfw" {
+		t.Fatal(got)
+	}
+}
+
+func TestCollectionCacheKeysAndTTL(t *testing.T) {
+	r, c, s := collectionFixture()
+	ctx := context.Background()
+	first, err := s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first.Items[0].Name = "mutated by caller"
+	second, err := s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if err != nil || r.reads.Load() != 1 || second.Items[0].Name == first.Items[0].Name {
+		t.Fatal("cache miss or shared mutation", err)
+	}
+	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{Lang: "en"})
+	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{Mode: "nsfw"})
+	_, _ = s.Detail(ctx, "empty", v2models.CollectionQuery{})
+	_, _ = s.List(ctx, v2models.CollectionQuery{})
+	_, _ = s.List(ctx, v2models.CollectionQuery{Page: 2})
+	_, _ = s.List(ctx, v2models.CollectionQuery{PageSize: 1})
+	_, _ = s.Home(ctx, v2models.CollectionQuery{})
+	for _, key := range []string{
+		"detail:2026-10-06:zh:sfw:mixed", "detail:2026-10-06:en:sfw:mixed", "detail:2026-10-06:zh:nsfw:mixed", "detail:2026-10-06:zh:sfw:empty",
+		"list:2026-10-06:zh:sfw:1:24", "list:2026-10-06:zh:sfw:2:24", "list:2026-10-06:zh:sfw:1:1", "home:2026-10-06:zh:sfw",
+	} {
+		if _, ok := c.entries["game:v2:collections:v1:"+key]; !ok {
+			t.Fatal("missing key", key)
+		}
+	}
+	for _, ttl := range c.ttls {
+		if ttl != 5*time.Minute {
+			t.Fatal("TTL", ttl)
+		}
+	}
+	before := r.reads.Load()
+	c.now = c.now.Add(5*time.Minute - time.Nanosecond)
+	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if r.reads.Load() != before {
+		t.Fatal("expired too early")
+	}
+	c.now = c.now.Add(time.Nanosecond)
+	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if r.reads.Load() != before+1 {
+		t.Fatal("TTL did not expire")
+	}
+	c.now = time.Date(2026, 10, 6, 23, 59, 0, 0, time.UTC)
+	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	c.now = c.now.Add(time.Minute)
+	before = r.reads.Load()
+	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if r.reads.Load() != before+1 {
+		t.Fatal("new UTC day reused previous cache")
+	}
+	if _, ok := c.entries["game:v2:collections:v1:detail:2026-10-07:zh:sfw:mixed"]; !ok {
+		t.Fatal("missing new date key")
+	}
+}
+
+func TestCollectionCacheFailureFallback(t *testing.T) {
+	for _, body := range []string{"broken json", "null", "{}", `{"schema_version":99,"as_of_date":"2026-10-06","items":[]}`, `{"schema_version":1,"generated_at":"2026-10-06T00:00:00Z","as_of_date":"2026-10-05","items":[]}`} {
+		r, c, s := collectionFixture()
+		c.entries["game:v2:collections:v1:detail:2026-10-06:zh:sfw:mixed"] = collectionCacheEntry{body, c.now.Add(time.Hour)}
+		if _, e := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); e != nil || r.reads.Load() != 1 || c.writes != 1 {
+			t.Fatalf("malformed fallback %q: %v", body, e)
+		}
+	}
+	r, c, s := collectionFixture()
+	c.err = errors.New("redis unavailable")
+	for i := 0; i < 2; i++ {
+		if _, err := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if r.reads.Load() != 2 {
+		t.Fatal("Redis failure didn't use DB")
+	}
+	c.err = nil
+	r.err = errors.New("database unavailable")
+	before := c.writes
+	if _, err := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); err == nil || c.writes != before {
+		t.Fatal("DB error cached")
+	}
+	s.cache = nil
+	r.err = nil
+	if _, err := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); err != nil {
+		t.Fatal("nil Redis", err)
+	}
+}
+
+func TestCollectionSingleflightAndIndependentKeys(t *testing.T) {
+	r, _, s := collectionFixture()
+	r.entered = make(chan string, 32)
+	r.release = make(chan struct{})
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	results := make(chan error, 33)
+	for i := 0; i < 32; i++ {
+		go func() {
+			v, e := s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+			if e == nil && v.Collection.Code != "mixed" {
+				e = errors.New("wrong shared payload")
+			}
+			results <- e
+		}()
+	}
+	select {
+	case <-r.entered:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	go func() {
+		v, e := s.Detail(ctx, "empty", v2models.CollectionQuery{})
+		if e == nil && v.Collection.Code != "empty" {
+			e = errors.New("different key shared payload")
+		}
+		results <- e
+	}()
+	select {
+	case code := <-r.entered:
+		if code != "empty" {
+			t.Fatal("duplicate same-key DB build", code)
+		}
+	case <-ctx.Done():
+		t.Fatal("different key blocked by same-key flight")
+	}
+	close(r.release)
+	for i := 0; i < 33; i++ {
+		select {
+		case err := <-results:
+			if err != nil {
+				t.Fatal(err)
+			}
+		case <-ctx.Done():
+			t.Fatal(ctx.Err())
+		}
+	}
+	if r.reads.Load() != 2 {
+		t.Fatalf("DB builds=%d", r.reads.Load())
+	}
+}
+
+func TestCollectionEmptyResponses(t *testing.T) {
+	r, _, s := collectionFixture()
+	r.records = nil
+	home, e := s.Home(context.Background(), v2models.CollectionQuery{})
+	if e != nil || home.Slots == nil || len(home.Slots) != 0 {
+		t.Fatalf("home=%+v %v", home, e)
+	}
+	index, e := s.List(context.Background(), v2models.CollectionQuery{})
+	if e != nil || index.Items == nil || len(index.Items) != 0 || index.Total != 0 {
+		t.Fatalf("index=%+v %v", index, e)
+	}
+}
+
+func TestCollectionRedisClientOutageAndNil(t *testing.T) {
+	r, _, _ := collectionFixture()
+	var absent *redis.Client
+	closed := redis.NewClient(&redis.Options{Addr: "127.0.0.1:1"})
+	_ = closed.Close()
+	for _, client := range []*redis.Client{absent, closed} {
+		s := NewCollectionService(r, client)
+		if _, err := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); err != nil {
+			t.Fatal("unavailable Redis prevented database read", err)
+		}
+	}
+}
+
+func TestCollectionCanceledWaiterDoesNotCancelSharedBuild(t *testing.T) {
+	r, _, s := collectionFixture()
+	r.entered = make(chan string, 1)
+	r.release = make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	result := make(chan error, 1)
+	go func() { _, e := s.Detail(ctx, "mixed", v2models.CollectionQuery{}); result <- e }()
+	select {
+	case <-r.entered:
+	case <-time.After(3 * time.Second):
+		t.Fatal("build did not start")
+	}
+	cancel()
+	if e := <-result; !errors.Is(e, context.Canceled) {
+		t.Fatal("waiter ignored cancellation", e)
+	}
+	// Register a second waiter while the first build is still blocked. The
+	// singleflight callback below must never execute; it observes the same work.
+	key := collectionCacheKey("detail", s.metadata(), NormalizeCollectionQuery(v2models.CollectionQuery{})) + ":mixed"
+	joined := s.flights.DoChan(key, func() (any, error) { return nil, errors.New("first caller canceled shared work") })
+	close(r.release)
+	select {
+	case out := <-joined:
+		if out.Err != nil || !out.Shared {
+			t.Fatal("shared build failed", out.Err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("shared build did not finish")
+	}
+	if _, e := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); e != nil || r.reads.Load() != 1 {
+		t.Fatal("completed cache missing", e)
+	}
+}

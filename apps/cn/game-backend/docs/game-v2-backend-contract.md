@@ -266,6 +266,9 @@ collector v2 已定义的 PostgreSQL 表：
 | `GET` | `/api/v2/game/news` | 单游戏新闻列表，参数 `id` 或 `appid`、`lang`、`limit`、`offset` |
 | `GET` | `/api/v2/game/news/latest` | 全站最新游戏新闻 |
 | `GET` | `/api/v2/game/panel/main` | 首页或游戏页聚合面板 |
+| `GET` | `/api/v2/game/collections/home` | 独立分区首页槽位；按当前 mode 过滤零可见成员分区 |
+| `GET` | `/api/v2/game/collections` | published 分区列表，支持 lang/mode/page/page_size |
+| `GET` | `/api/v2/game/collections/:code` | published 分区完整一维 chronology timeline，不分页 |
 | `GET` | `/api/v2/game/prizes` | 抽奖页展示数据 |
 | `POST` | `/api/v2/game/prizes/participation` | 提交抽奖参与申请 |
 | `GET` | `/api/v2/game/prizes/participation/activation` | 邮件激活抽奖参与申请 |
@@ -288,6 +291,16 @@ collector v2 已定义的 PostgreSQL 表：
 邮件激活链接必须指向 `/api/v2/game/prizes/participation/activation`，不再发送 v1 API URL。
 
 ## PostgreSQL 查询策略
+
+Game Collection Stage A 合同见 [Game Collections](../../../../docs/game-collections.md)。
+三个独立端点均使用现有 envelope，data `schema_version=1`，带 UTC `generated_at/as_of_date`。
+lang 非法默认 zh，mode 非法默认 sfw；page 默认 1，page_size 默认 24、上限 60。
+Draft/Archived/不存在统一 404；成人专属分区在 SFW Index/Detail 仍为 200、零可见成员。
+First Available 优先于 current upcoming；保留精度与 inferred，Collection chronology 的 source
+仅为 first_available/release，不透传详情兼容 DTO 的 maintenance source。
+成人按 Tag code=adult 过滤后派生 count/preview/timeline。复用 V2 batch aggregate 与媒体回退，无 N+1。
+独立 `game:v2:collections:v1:*` cache 按 UTC 日期/lang/mode/端点及分页或 code 分键，TTL 5 分钟；
+Redis 错误/损坏回 DB，DB 错误不缓存，同 key singleflight。与 `/game/home` 长缓存无关。
 
 详情页建议聚合：
 

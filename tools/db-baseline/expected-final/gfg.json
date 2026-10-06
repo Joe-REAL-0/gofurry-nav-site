@@ -56,6 +56,18 @@
       "owned_column": "id"
     },
     {
+      "name": "gfg_game_collection_id_seq",
+      "data_type": "bigint",
+      "start": 1,
+      "increment": 1,
+      "minimum": 1,
+      "maximum": 9223372036854775807,
+      "cache": 1,
+      "cycle": false,
+      "owned_table": "gfg_game_collection",
+      "owned_column": "id"
+    },
+    {
       "name": "gfg_game_detail_snapshots_id_seq",
       "data_type": "bigint",
       "start": 1,
@@ -2460,6 +2472,333 @@
         {
           "name": "uq_gfg_game_assets_item",
           "definition": "CREATE UNIQUE INDEX uq_gfg_game_assets_item ON public.gfg_game_assets USING btree (game_id, asset_type, lang, media_key)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_collection",
+      "comment": "人工策展的游戏分区；只定义发展谱系与公开生命周期，不承担标签、推荐算法或成员排序。",
+      "columns": [
+        {
+          "name": "id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "identity": "d",
+          "comment": "分区内部主键，用于成员关系和首页槽位引用；不进入公开分区 DTO。"
+        },
+        {
+          "name": "code",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": false,
+          "comment": "公开路由使用的小写连字符标识，最长 64 字符；创建后由运营写入层禁止修改。"
+        },
+        {
+          "name": "name",
+          "data_type": "character varying(160)",
+          "not_null": true,
+          "has_default": false,
+          "comment": "分区中文名称；公开中文读取优先使用，英文为空时也可用于回退。"
+        },
+        {
+          "name": "name_en",
+          "data_type": "character varying(160)",
+          "not_null": true,
+          "has_default": false,
+          "comment": "分区英文名称；公开英文读取优先使用，中文为空时也可用于回退。"
+        },
+        {
+          "name": "info",
+          "data_type": "character varying(500)",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::character varying",
+          "comment": "分区中文策展简介，不用于推导成员资格或时间线顺序。"
+        },
+        {
+          "name": "info_en",
+          "data_type": "character varying(500)",
+          "not_null": true,
+          "has_default": true,
+          "default": "''::character varying",
+          "comment": "分区英文策展简介；缺失时公开读取可回退中文简介。"
+        },
+        {
+          "name": "status",
+          "data_type": "text",
+          "not_null": true,
+          "has_default": true,
+          "default": "'draft'::text",
+          "comment": "运营生命周期：draft 草稿、published 公开发布、archived 归档；公开 API 只读取 published。"
+        },
+        {
+          "name": "version",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": true,
+          "default": "1",
+          "comment": "运营写入的乐观并发版本，从 1 开始；后续写入层以版本校验防止覆盖并发编辑。"
+        },
+        {
+          "name": "published_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "comment": "最近一次成功发布的时刻，也是公开分区列表倒序依据；撤回草稿后可保留历史值。"
+        },
+        {
+          "name": "archived_at",
+          "data_type": "timestamp with time zone",
+          "not_null": false,
+          "has_default": false,
+          "comment": "当前归档的时刻，仅 archived 状态必须有值；恢复草稿时由写入层清空。"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "人工创建该分区的时刻，与成员游戏的发行时间无关。"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "分区运营资料最近一次修改时刻，由写入层维护。"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_collection_archive_state_check",
+          "definition": "CHECK ((status = 'archived'::text) = (archived_at IS NOT NULL))"
+        },
+        {
+          "name": "gfg_game_collection_code_check",
+          "definition": "CHECK (length(code) \u003e= 1 AND length(code) \u003c= 64 AND code ~ '^[a-z0-9]+(-[a-z0-9]+)*$'::text)"
+        },
+        {
+          "name": "gfg_game_collection_code_key",
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "name": "gfg_game_collection_code_not_null",
+          "definition": "NOT NULL code"
+        },
+        {
+          "name": "gfg_game_collection_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_collection_id_not_null",
+          "definition": "NOT NULL id"
+        },
+        {
+          "name": "gfg_game_collection_info_en_not_null",
+          "definition": "NOT NULL info_en"
+        },
+        {
+          "name": "gfg_game_collection_info_not_null",
+          "definition": "NOT NULL info"
+        },
+        {
+          "name": "gfg_game_collection_name_check",
+          "definition": "CHECK (btrim(name::text) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_game_collection_name_en_check",
+          "definition": "CHECK (btrim(name_en::text) \u003c\u003e ''::text)"
+        },
+        {
+          "name": "gfg_game_collection_name_en_not_null",
+          "definition": "NOT NULL name_en"
+        },
+        {
+          "name": "gfg_game_collection_name_not_null",
+          "definition": "NOT NULL name"
+        },
+        {
+          "name": "gfg_game_collection_pkey",
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "name": "gfg_game_collection_publish_state_check",
+          "definition": "CHECK (status \u003c\u003e 'published'::text OR published_at IS NOT NULL)"
+        },
+        {
+          "name": "gfg_game_collection_status_check",
+          "definition": "CHECK (status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text]))"
+        },
+        {
+          "name": "gfg_game_collection_status_not_null",
+          "definition": "NOT NULL status"
+        },
+        {
+          "name": "gfg_game_collection_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        },
+        {
+          "name": "gfg_game_collection_version_check",
+          "definition": "CHECK (version \u003e 0)"
+        },
+        {
+          "name": "gfg_game_collection_version_not_null",
+          "definition": "NOT NULL version"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gfg_game_collection_public_index",
+          "definition": "CREATE INDEX gfg_game_collection_public_index ON public.gfg_game_collection USING btree (status, published_at DESC, id DESC)"
+        }
+      ],
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_collection_home_slot",
+      "comment": "首页人工策展分区的五个固定槽位；公开读取仅保留已发布且当前浏览模式有可见成员的分区。",
+      "columns": [
+        {
+          "name": "slot",
+          "data_type": "smallint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "首页展示槽位，范围 1 至 5 并按升序展示；全部分区入口不入库。"
+        },
+        {
+          "name": "collection_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "槽位引用的分区，同一分区只能占一个槽位；删除分区时级联移除槽位。"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "该首页槽位记录创建的时刻，不代表分区发布时间。"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "该槽位的分区指派最近一次修改时刻，由运营写入层维护。"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_collection_home_slot_collection_id_fkey",
+          "definition": "FOREIGN KEY (collection_id) REFERENCES gfg_game_collection(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_collection_id_key",
+          "definition": "UNIQUE (collection_id)"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_collection_id_not_null",
+          "definition": "NOT NULL collection_id"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_pkey",
+          "definition": "PRIMARY KEY (slot)"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_range_check",
+          "definition": "CHECK (slot \u003e= 1 AND slot \u003c= 5)"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_slot_not_null",
+          "definition": "NOT NULL slot"
+        },
+        {
+          "name": "gfg_game_collection_home_slot_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": null,
+      "triggers": null
+    },
+    {
+      "name": "gfg_game_collection_item",
+      "comment": "人工维护的分区与游戏成员关系；不存人工顺序、权重或成人标记，公开时间线由游戏发行事实派生。",
+      "columns": [
+        {
+          "name": "collection_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "所属人工策展分区；分区删除时级联删除成员关系，不删除游戏。"
+        },
+        {
+          "name": "game_id",
+          "data_type": "bigint",
+          "not_null": true,
+          "has_default": false,
+          "comment": "成员游戏主档案；游戏删除时级联移除关系，成人语义始终读取关联标签 code=adult。"
+        },
+        {
+          "name": "created_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "人工将游戏纳入分区的时刻，不作为公开时间线排序依据。"
+        },
+        {
+          "name": "updated_at",
+          "data_type": "timestamp with time zone",
+          "not_null": true,
+          "has_default": true,
+          "default": "now()",
+          "comment": "成员关系最近一次维护时刻，由运营写入层维护，不改变发行事实。"
+        }
+      ],
+      "constraints": [
+        {
+          "name": "gfg_game_collection_item_collection_id_fkey",
+          "definition": "FOREIGN KEY (collection_id) REFERENCES gfg_game_collection(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_collection_item_collection_id_not_null",
+          "definition": "NOT NULL collection_id"
+        },
+        {
+          "name": "gfg_game_collection_item_created_at_not_null",
+          "definition": "NOT NULL created_at"
+        },
+        {
+          "name": "gfg_game_collection_item_game_id_fkey",
+          "definition": "FOREIGN KEY (game_id) REFERENCES gfg_game(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "gfg_game_collection_item_game_id_not_null",
+          "definition": "NOT NULL game_id"
+        },
+        {
+          "name": "gfg_game_collection_item_pkey",
+          "definition": "PRIMARY KEY (collection_id, game_id)"
+        },
+        {
+          "name": "gfg_game_collection_item_updated_at_not_null",
+          "definition": "NOT NULL updated_at"
+        }
+      ],
+      "indexes": [
+        {
+          "name": "gfg_game_collection_item_game_index",
+          "definition": "CREATE INDEX gfg_game_collection_item_game_index ON public.gfg_game_collection_item USING btree (game_id, collection_id)"
         }
       ],
       "triggers": null

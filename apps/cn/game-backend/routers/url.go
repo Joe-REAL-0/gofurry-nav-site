@@ -14,6 +14,9 @@ import (
 
 func gameV2Api(g fiber.Router, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeAPI) {
 	registerGameInsightRoutes(g, gameAPI)
+	g.Get("/collections/home", gameAPI.GetCollectionHome)
+	g.Get("/collections", gameAPI.GetCollections)
+	g.Get("/collections/:code", gameAPI.GetCollection)
 	g.Get("/list", gameAPI.GetGameList)
 	g.Get("/info", gameAPI.GetGameInfo)
 	g.Get("/tags", gameAPI.GetTags)

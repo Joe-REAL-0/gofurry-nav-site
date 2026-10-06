@@ -52,3 +52,16 @@ Current Game Daily uses projection version 2; carry-forward retains its source
 fact version. Historical primary/secondary/tag IDs and Metric dimensions remain
 valid historical facts and must not be rewritten. The tag-domain migration is
 irreversible; test recovery uses disposable database restore/recreation.
+
+## Game Collection domain
+
+`gfg_game_collection` owns curated collection metadata and lifecycle;
+`gfg_game_collection_item(collection_id,game_id)` alone owns manual membership;
+`gfg_game_collection_home_slot` owns five distinct homepage slots. Items have no
+position/weight/sort_order, and neither collections nor items store NSFW.
+Public chronology is derived by Game Backend from canonical First Available
+(highest priority) and Release State; SFW uses only related Tag code `adult`,
+including archived Tags. Public counts and previews are computed after filtering.
+Migration `20261006020000` creates these objects with Chinese comments and no seed;
+its Down rejects destructive rollback. Stage A adds read-only published APIs,
+not Admin mutation or frontend work. See [Game Collections](../docs/game-collections.md).
