@@ -2,6 +2,24 @@
 
 The sole Admin frontend is `apps/cn/admin/react`. It owns content workspaces and all operational/system workflows and is the production entrypoint embedded by the Go binary.
 
+## IME-safe searches (#141)
+
+`useCompositionSafeSearch` separates displayed IME drafts from committed search
+text. Content ideas commit the final keyword to the URL with replace and page 1;
+GlobalSearch keeps its two-character minimum and clears both values on every
+dialog close. RemoteSelect and Board IdeaPicker debounce committed text only.
+RemoteSelect leaves IME Enter/arrow/Escape handling to the input method and retains
+the selected option through composing/blur. DataTable keeps its existing IME
+implementation. Vitest covers composition, trailing changes, URL synchronization,
+0/300 ms remote searches, keyboard selection and dialog reset. Debounce timing uses
+fake timers.
+
+The four owners above are covered by #141. Existing technical filters in Collection
+(job key and run-result IDs/target/protocol), Changes (event code), and Metrics
+(dimension value) still commit on each change; they are identified follow-up gaps,
+not silently included in this patch. Ordinary form inputs and TagMultiSelect's
+local filtering are unchanged.
+
 ## Showcase operations (#119-B)
 
 `src/features/showcase` owns `/game/showcase` (current composition, Campaigns,

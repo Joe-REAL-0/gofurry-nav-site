@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -24,7 +24,31 @@ const edge: BoardEdge = { id: 5, source_id: 1, target_id: 2, source_handle: 'rig
 const document: BoardDocument = { nodes: [node, { ...node, id: 2 }], edges: [], references: [] }
 function setup(element: ReactNode) { const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); render(<QueryClientProvider client={client}><MemoryRouter>{element}</MemoryRouter></QueryClientProvider>); return client }
 beforeEach(() => { runtime.writable = true; vi.mocked(getJSON).mockResolvedValue(document) })
-afterEach(() => { cleanup(); vi.resetAllMocks() })
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.resetAllMocks() })
+
+it('starts the idea-picker debounce only after IME commits the final keyword', async () => {
+  vi.mocked(getJSON).mockResolvedValue({ list: [], total: 0 })
+  const card = { ...node, kind: 'card' as const, reference_kind: 'idea' as const, reference_id: 0 }
+  const client = setup(<BoardNodeDialog initial={nodeInput(card)} close={vi.fn()} />)
+  await screen.findByText('无匹配想法')
+  vi.useFakeTimers()
+  vi.mocked(getJSON).mockClear()
+  const input = screen.getByLabelText('搜索想法卡片')
+  fireEvent.compositionStart(input)
+  for (const value of ['xiang', '想法ka']) {
+    fireEvent.change(input, { target: { value } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(500) })
+    expect(input).toHaveValue(value)
+    expect(getJSON).not.toHaveBeenCalled()
+  }
+  fireEvent.compositionEnd(input, { target: { value: '想法卡片' } })
+  fireEvent.change(input, { target: { value: '想法卡片' } })
+  await act(async () => { await vi.advanceTimersByTimeAsync(299) })
+  expect(getJSON).not.toHaveBeenCalled()
+  await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+  expect(getJSON).toHaveBeenCalledExactlyOnceWith(`${base}/ideas?status=all&page_size=10&keyword=${encodeURIComponent('想法卡片')}`)
+  client.clear()
+})
 
 it('persists a drag only on pointer release and retains the local position after 409', async () => {
   vi.mocked(sendJSON).mockRejectedValue(new ApiError('stale', 409))

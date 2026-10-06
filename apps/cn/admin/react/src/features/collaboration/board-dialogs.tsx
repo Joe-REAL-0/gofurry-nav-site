@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button'
 import { Dialog } from '../../components/ui/dialog'
 import { Input, Textarea } from '../../components/ui/input'
 import { Select } from '../../components/ui/select'
+import { useCompositionSafeSearch } from '../../hooks/use-composition-safe-search'
 import { getJSON, sendJSON } from '../../lib/api'
 import type { OptionItem, PageResult } from '../../lib/types'
 import { useAuth } from '../auth/auth-context'
@@ -16,9 +17,10 @@ import { statusLabels, type Idea } from './types'
 
 function IdeaPicker({ onChange }: { onChange: (item: OptionItem) => void }) {
   const [search, setSearch] = useState(''), [keyword, setKeyword] = useState('')
+  const input = useCompositionSafeSearch({ value: search, onCommit: setSearch })
   useEffect(() => { const timer = window.setTimeout(() => setKeyword(search), 300); return () => window.clearTimeout(timer) }, [search])
   const query = useQuery({ queryKey: ['collaboration', 'board-idea-picker', keyword], queryFn: () => getJSON<PageResult<Idea>>(`${base}/ideas?status=all&page_size=10&keyword=${encodeURIComponent(keyword)}`) })
-  return <div className="grid gap-2"><Input aria-label="搜索想法卡片" placeholder="搜索内容想法…" value={search} onChange={(event) => setSearch(event.target.value)} /><div className="admin-scroll max-h-40 overflow-auto rounded-md border p-1" role="listbox" aria-label="内容想法">{query.isLoading ? <p className="p-2 text-sm">加载中…</p> : query.error ? <p className="p-2 text-sm text-danger">{query.error.message}</p> : !query.data?.list.length ? <p className="p-2 text-sm text-muted-foreground">无匹配想法</p> : query.data.list.map((idea) => <button className="block w-full rounded px-2 py-2 text-left hover:bg-surface-muted" type="button" role="option" aria-selected={false} key={idea.id} onClick={() => onChange({ id: String(idea.id), label: idea.title || idea.source || `想法 #${idea.id}` })}><span className="block truncate text-sm">{idea.title || idea.source}</span><span className="text-xs text-muted-foreground">{idea.kind} · {statusLabels[idea.status]}</span></button>)}</div></div>
+  return <div className="grid gap-2"><Input aria-label="搜索想法卡片" placeholder="搜索内容想法…" {...input.inputProps} /><div className="admin-scroll max-h-40 overflow-auto rounded-md border p-1" role="listbox" aria-label="内容想法">{query.isLoading ? <p className="p-2 text-sm">加载中…</p> : query.error ? <p className="p-2 text-sm text-danger">{query.error.message}</p> : !query.data?.list.length ? <p className="p-2 text-sm text-muted-foreground">无匹配想法</p> : query.data.list.map((idea) => <button className="block w-full rounded px-2 py-2 text-left hover:bg-surface-muted" type="button" role="option" aria-selected={false} key={idea.id} onClick={() => onChange({ id: String(idea.id), label: idea.title || idea.source || `想法 #${idea.id}` })}><span className="block truncate text-sm">{idea.title || idea.source}</span><span className="text-xs text-muted-foreground">{idea.kind} · {statusLabels[idea.status]}</span></button>)}</div></div>
 }
 
 export function BoardNodeDialog({ node, initial, close }: { node?: BoardNode; initial: BoardNodeInput; close: () => void }) {

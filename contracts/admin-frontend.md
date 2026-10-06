@@ -19,6 +19,16 @@ components/ui -> components/admin -> features
 
 TanStack Query owns server state. Route filters, search, pagination, sorting, and workspace tabs use URL state where practical. React local state owns transient UI. Do not introduce a second server-state copy or a role-based client store.
 
+Search inputs that update URL state, remote queries/options, or selection/submit
+actions must be IME composition-safe. Composition start and intermediate changes
+update local displayed text only; composition end commits the final text once,
+including browsers that emit a trailing change. External values synchronize only
+outside composition. Keyboard selection must not consume IME confirmation or
+navigation keys while the composing ref or native `isComposing` is true. Debounce
+starts from committed text and is not a substitute for this boundary. Use the small
+`useCompositionSafeSearch` hook for these owners; DataTable retains its equivalent
+contract. Ordinary local form fields and local-only filters do not need this guard.
+
 Admin business forms use the shared Base UI-backed Select, DatePicker, and DateTimePicker controls rather than browser-native select/date controls. Shared controls own the common height, focus treatment, and popup behavior.
 
 Themes default to the system preference. The shared header exposes a single Light/Dark toggle; the first manual choice becomes an explicit persisted `light` or `dark` preference. Business components consume semantic tokens: background, surface, surface-muted, foreground, muted-foreground, border, primary, success, warning, danger, and info.
