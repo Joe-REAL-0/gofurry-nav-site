@@ -1,5 +1,35 @@
 import { test, expect, groupNames, assertGamesHomeAppearance, assertCardHover, assertStatsAppearance } from '../fixtures/games-home'
 
+for (const width of [390, 1024, 1440]) {
+  test(`Collections 5+1 shortcuts and SFW-only Home at ${width}`, async ({ gamesHome }) => {
+    const scene = await gamesHome.open({ width, mode: 'nsfw', showcase: 'two-managed' })
+    const shortcuts = scene.page.locator('.game-collection-shortcuts:visible')
+    await expect(shortcuts.getByRole('link')).toHaveText(['森林故事 1', '森林故事 2', '森林故事 3', '森林故事 4', '森林故事 5', '全部分区'])
+    await expect(shortcuts.getByRole('link').last()).toHaveAttribute('href', '/games/collections')
+    expect(await shortcuts.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(width >= 1280 ? 3 : 2)
+    if (width < 1280) {
+      const showcase = await scene.showcase.boundingBox(), collection = await shortcuts.boundingBox(), recent = await scene.group(0).boundingBox()
+      expect(collection!.y).toBeGreaterThanOrEqual(showcase!.y + showcase!.height)
+      expect(recent!.y).toBeGreaterThan(collection!.y)
+    }
+    await scene.page.evaluate(() => window.dispatchEvent(new CustomEvent('mode-change', { detail: { mode: 'sfw' } })))
+    await scene.settle(scene.root)
+    scene.assertQuiet()
+  })
+}
+for (const collections of ['empty', 'failure', 'slow'] as const) {
+  test(`Optional Collections ${collections} preserves Home without hydration retry`, async ({ gamesHome }) => {
+    const scene = await gamesHome.open({ collections, dataset: 'news-populated' })
+    await expect(scene.group(0)).toBeVisible()
+    await expect(scene.stats).toBeVisible()
+    await expect(scene.sidebar).toBeVisible()
+    await expect(scene.news).toBeAttached()
+    await expect(scene.page.locator('.game-collection-shortcuts:visible a')).toHaveCount(collections === 'empty' ? 1 : 0)
+    await expect(scene.page.locator('[role="alert"]')).toHaveCount(0)
+    scene.assertQuiet()
+  })
+}
+
 for (const theme of ['light', 'dark'] as const) {
   test(`Games Home SSR, local pagination, statistics and consumers (${theme})`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ theme })

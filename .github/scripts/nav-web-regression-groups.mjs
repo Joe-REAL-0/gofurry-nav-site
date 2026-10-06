@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 // Explicit membership: new specs must be reviewed and assigned, never auto-binned.
 export const regressionGroups = Object.freeze({
   games: Object.freeze([
+    'game-collections.spec.ts',
     'game-detail-content.spec.ts',
     'game-detail-insights.spec.ts',
     'game-detail-interactions.spec.ts',

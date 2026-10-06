@@ -4,6 +4,34 @@ Stage A（#140-A）建立人工策展游戏分区及 Game Backend 公开读模�
 人工只决定成员，公开顺序由 Canonical First Available / Release Facts 派生。
 Collection 不是 Tag、Showcase、Recommendation，也不使用 `gfg_game.groups`。
 
+## Stage C：Public Discovery 与 Timeline
+
+Nav Web 提供 `/games/collections` 和 `/games/collections/:code`（以及 `/en` 对应路由）。
+首页通过一次 `Promise.allSettled` 并行读取 Home、Showcase、Collections Home；两个可选 slice 各有 1 秒预算、无重试。
+Collections Home 永远请求 SFW，失败时整个快捷入口 owner 缺席；合法空 slots 仍显示“全部分区”。
+同一个快捷入口组件在 Desktop Sidebar 使用三列，在小于 xl 的内容区位于 Showcase 与最近发售之间，使用两列。
+后端给出的非空 slots 按 slot 升序压缩展示，最后追加固定的全部分区入口。
+
+Index 只提供简介、预览卡片和手动加载更多；0/1/2/3 张 preview 原样消费，不复制图片。
+Detail 的单一时间线由后端排序，前端仅稳定分组：已发布、已发布但日期待考、NOW、未来、TBA、未知。
+过去和未来各自复用 `serpentineSequence` 几何，900px 以上三列蛇形，以下单列；DOM 顺序始终不变。
+日期待考、TBA、未知没有 connector，只有未知作品时不显示 NOW。NOW 取后端 `as_of_date`。
+显示保留 day/month/quarter/year 与 inferred 精度，不暴露内部 First Available 来源，也不在前端过滤 Adult Tag。
+
+两个分区页面 SSR 一律 SFW。挂载读取本地模式：SFW 零补请求，NSFW 恰好一次刷新。
+页面实例独占 `useGameCollectionModeRefresh`，响应按 generation 接受，模式更新成功才整体替换内容；失败保留上次内容和局部重试。
+Index 模式更新成功回到第一页，过期的 Load More 响应不能追加进新模式。模式不写 URL。
+Detail 初始/刷新 404 使用真实 Nuxt 404；初始服务失败返回 HTTP 503 与可重试 surface，不伪装空分区。
+adult-only 的 SFW Detail 仍为 200，零作品使用中性空态。所有图片复用 SteamAssetImage。
+
+Stage C 不修改 Stage A 缓存、数据库或 Admin。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
+新增六张分区截图与首页四张变更须人工接受后才构成 Visual PASS，代码完成不代表 #140 已关闭。
+
+2026-10-06 本地验证：Unit 366、Nuxt 64、focused Browser 76、受影响的既有消费者回归 38 项通过；
+lint/stylelint/style:policy/typecheck/build、SEO/Insights guards 与 repository policy 通过。
+固定 Playwright image 中六张新分区快照已生成并完成 6/6 复比，仍等待维护者接受。
+首页四张旧快照未改，比较出现预期的快捷入口差异；最终 Public 视觉/模式人工验收与 Visual Closure 尚未完成。
+
 ## Schema ownership
 
 Goose migration `db/game/migrations/20261006020000_game_collection_foundation.sql`
@@ -113,7 +141,7 @@ Stage A 不做跨服务精确失效或 stale fallback；后续运营修改最多
 - `task check:db-readability`、`task check:sqlc`、`task check:policy` 保持静态治理。
 
 Stage A 的交付包含 GFG migration 与 Game Backend；Collector 仅新增 generated schema model，不要求单独发布。
-Stage B 见下文。Nav Web Collection UI、SEO、Timeline Vue、SSR mode hydration、Visual Golden 和 Games Home 5+1 均属于尚未实现的 Stage C。
+Stage A 不包含 Admin 与 Public UX。Stage B 运营合同见下文；Stage C 的 Nav Web 页面、模式与时间线合同及待完成人工验收状态见本文开头。
 
 ## Stage B：Admin 运营闭环
 

@@ -689,3 +689,24 @@ export interface GameTagCategory {
     name: string
     tags: GameTagRecord[]
 }
+// Collection schema v1: order, visibility and chronology are Backend-owned.
+export type GameCollectionMode = 'sfw' | 'nsfw'
+export type GameCollectionPhase = 'released' | 'released_unknown' | 'upcoming_overdue' | 'upcoming' | 'upcoming_tba' | 'unknown'
+export interface GameCollectionMetadata { schema_version: 1; generated_at: string; as_of_date: string }
+export interface GameCollectionInfo { code: string; name: string; info: string; visible_game_count: number; published_at: string }
+export interface GameCollectionPreviewGame { game_id: string; name: string; header_url: string }
+export interface GameCollectionSummary extends GameCollectionInfo { preview_games: GameCollectionPreviewGame[] }
+export interface GameCollectionHome extends GameCollectionMetadata { slots: { slot: number; collection: GameCollectionSummary }[] }
+export interface GameCollectionIndex extends GameCollectionMetadata { page: number; page_size: number; total: number; has_more: boolean; items: GameCollectionSummary[] }
+export interface GameCollectionChronology {
+  source: 'first_available' | 'release'
+  precision: 'day' | 'month' | 'quarter' | 'year'
+  window_start: string
+  window_end: string
+  inferred: boolean
+}
+export interface GameCollectionTimelineItem {
+  game_id: string; name: string; summary: string; header_url: string
+  phase: GameCollectionPhase; chronology: GameCollectionChronology | null
+}
+export interface GameCollectionDetail extends GameCollectionMetadata { collection: GameCollectionInfo; items: GameCollectionTimelineItem[] }

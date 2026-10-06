@@ -658,6 +658,27 @@ and remote results separately from explicit maintainer approval of the eight PNG
 Until that approval, the new baselines are review candidates, not accepted design.
 After approval #109 is closure-ready; subsequent product work uses a new task, not P9.
 
+## Game Collection Public ownership (#140-C)
+
+Home has exactly three concurrent SSR GETs: Home, Showcase and Collections Home.
+Collections Home is always SFW, optional, timeout 1000ms and retry 0; failure omits
+its owner, while valid empty slots retain the All Collections link. Hydration and
+mode changes never refetch this Home slice. One shortcuts component owns both
+responsive placements. Existing Showcase runtime/tracking remains independent.
+
+Collection Index/Detail SSR must be SFW. The page-lifetime mode refresh owner reads
+local storage only after mount, issues no extra SFW request, and one NSFW request
+when needed. Latest response wins; ready content survives pending/error, old-mode
+pagination cannot append, and successful Index mode refresh resets page one.
+No URL mode, frontend adult filtering, or frontend chronology sort is allowed.
+Detail partitions Backend order without changing it; past/future independently
+reuse compactPlacement/connector and retain chronological DOM order at every width.
+Only those two groups have connectors. Date-only facts use UTC/component formatting
+and retain precision/inferred; NOW uses the response as_of_date. Missing Detail is
+404, initial upstream failure is HTTP 503 with Retry, adult-only SFW is neutral 200.
+Collections use existing Games/global tokens and SteamAssetImage. New copy belongs
+to game.collections. Visual acceptance is separate from Functional completion.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**

@@ -5,6 +5,9 @@
     </div>
 
     <GameSidebarActions>
+      <template #collection-shortcuts>
+        <GameCollectionShortcuts v-if="collections" :collections="collections" class="mt-3" />
+      </template>
       <template #default-sites>
         <GameSiteItem href="https://store.steampowered.com" :icon="icons.steam" title="Steam" subtitle="steam" />
         <GameSiteItem href="https://itch.io" :icon="icons.itch" title="itch.io" subtitle="itch" />
@@ -35,7 +38,8 @@
 </template>
 
 <script setup lang="ts">
-import type { AnonymousReviewModel } from '~/types/game'
+import type { AnonymousReviewModel, GameCollectionHome } from '~/types/game'
+import GameCollectionShortcuts from '~/components/game/collections/GameCollectionShortcuts.vue'
 import GameSidebarActions from '@/components/game/main/sidebar/GameSidebarActions.vue'
 import GameSidebarSearch from '@/components/game/main/sidebar/GameSidebarSearch.vue'
 import GameSidebarLatestReviews from '@/components/game/main/sidebar/GameSidebarLatestReviews.vue'
@@ -43,6 +47,7 @@ import GameSiteItem from '@/components/game/main/sidebar/GameSiteItem.vue'
 
 defineProps<{
   initialReviews?: AnonymousReviewModel[]
+  collections?: GameCollectionHome | null
 }>()
 
 const LOGO_PREFIX = '/web/platform-icons/'

@@ -19,12 +19,44 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## Game Collections (#140-C)
+
+The Games Home fixture now gates all three SSR reads before releasing any response:
+Home, Showcase, Collections Home. Exact unordered set/query/count assertions cover
+hydration and local NSFW storage. Collection failure/empty and a held upstream
+prove optional isolation with the real 1-second timeout, without fixed sleeps.
+Other fixtures that navigate to Home explicitly include the third read.
+
+`game-collections.ts` reuses the production Nitro/runtime fixture with date-only
+`as_of_date=2026-10-06`, local media, complete chronology phases and controlled mode/
+pagination faults and gates. Its regression owner covers SFW SSR, NSFW hydration,
+latest-mode wins, retained ready content, load-more dedupe/reset, initial HTTP
+404/503, neutral zero-visible detail, responsive geometry and western timezone.
+Unit/Nuxt tests cover presentation, shared geometry consumption, endpoint budgets,
+mode lifecycle and cleanup. New Collection endpoints also disable Nitro proxy
+retries, so an injected 503 is one upstream request until the user retries.
+
+Run the normal frozen install/static/Unit/Nuxt/typecheck/build sequence, then:
+
+```sh
+pnpm exec playwright test tests/browser/regression/games-home.spec.ts tests/browser/regression/games-home-showcase.spec.ts tests/browser/regression/game-collections.spec.ts --workers=1
+```
+
+`visual/game-collections.spec.ts` owns six new Index/Timeline Light/Dark Desktop/
+Mobile captures. The existing four root Home images now include populated 5+1
+shortcuts; existing News/Reviews goldens are outside this update scope. Use the
+pinned runner with `--config playwright.visual.config.ts` (the Functional config
+intentionally excludes Visual). Missing/different baselines remain pending human
+acceptance; never use a blanket update. Register the new regression in the existing
+explicit Full Games inventory; no runner or CI job is added.
+
 ## Games Home Showcase (#119-C, Functional first pass)
 
 `games-home-showcase.spec.ts` extends the existing production Games Home fixture,
-which defaults to an empty optional slice. Its SSR response barrier proves both
-reads start concurrently. Every case checks the unordered exact Home/Showcase GET
-set and locale/region, zero hydration GET, and separately recorded event POSTs.
+which defaults to an empty Showcase slice. After #140-C its SSR barrier proves all
+three Home/Showcase/Collections reads start concurrently. Every case checks their
+unordered exact GET set and locale/region/mode, zero hydration GET, and separately
+recorded event POSTs.
 Populated cases exercise cardinality, SSR content, strict locale, navigation,
 media routing/exhaustion, responsive overflow and tracking/error isolation.
 Faults have exact asset/event diagnostics; no general browser-error exemption is
@@ -102,7 +134,7 @@ their existing owners. `pnpm run test:browser:smoke --workers=1` runs this tier 
 after a production build; do not use the dev fixture for CI acceptance.
 
 Full uses `.github/scripts/nav-web-regression-groups.mjs` as the authoritative
-explicit inventory: Games 13 specs (including Showcase; the previous 12-spec estimate was ~298s), Sites + Other
+explicit inventory: Games 14 specs (including Showcase and Collections; the previous 12-spec estimate was ~298s), Sites + Other
 15 (~277s), Insights + Nav 18 (~252s). These are planning estimates, not measured
 new job durations. The inventory guard rejects unassigned/new, missing and duplicate
 specs. Workflows run the CLI-produced file list with one worker; no `--shard`,

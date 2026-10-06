@@ -1,3 +1,4 @@
+import { collectionMetadata } from './game-collections-data'
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -56,6 +57,7 @@ export const test = base.extend<{ routing: RoutingScenario }, { routingApp: Rout
       if (url.pathname === '/api/v2/nav/appearance/patterns') return { data: {
         schema_version: 1, patterns: [{ id: '1', name: 'Fixture pattern', name_en: 'Fixture pattern', object_key: patternKey, light_color: '#123456', dark_color: '#abcdef', light_opacity: .12, dark_opacity: .08, default_size_px: 120 }],
       } }
+      if (url.pathname.endsWith('/game/collections/home')) return { data: { ...collectionMetadata, slots: [] } }
       if (url.pathname.endsWith('/game/home/showcase')) return { data: emptyGameShowcase() }
       if (url.pathname.endsWith('/game/home')) {
         const home = mockGameHome()

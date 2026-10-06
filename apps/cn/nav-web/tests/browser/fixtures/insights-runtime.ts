@@ -41,7 +41,7 @@ export function runtimeTest<S>(
   allowed: (url: URL) => boolean,
   respond: (url: URL, media: string, body: unknown, state: S) => Reply | Promise<Reply>,
   runtimeOverrides: Record<string, string> = {},
-  options: { fixedTime?: string } = {},
+  options: { fixedTime?: string; expectedStatuses?: number[] } = {},
 ) {
   return base.extend<{ runtime: Runtime<S> }, { runtimeApp: Worker<S> }>({
     // eslint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture arguments.
@@ -128,7 +128,7 @@ export function runtimeTest<S>(
       })
       context.on('response', response => {
         if (response.status() < 400) return
-        if (response.status() === 503 && runtime.expectedURLs.has(response.url())) received.add(response.request())
+        if ((options.expectedStatuses ?? [503]).includes(response.status()) && runtime.expectedURLs.has(response.url())) received.add(response.request())
         else unexpectedHTTP.push(response.status() + ' ' + response.url())
       })
       await context.addInitScript(({ origin, steamKey, sample, fixedTime }) => {
@@ -186,6 +186,7 @@ export function runtimeTest<S>(
         for (const diagnostic of raw) {
           const text = diagnostic.text
           expect(text === 'Failed to load resource: net::ERR_FAILED'
+            || ((options.expectedStatuses ?? []).includes(404) && text === 'Failed to load resource: the server responded with a status of 404 (Not Found)')
             || text === 'Failed to load resource: the server responded with a status of 503 (Service Unavailable)').toBe(true)
           expect(expected.some(request => request.url() === diagnostic.url)).toBe(true)
         }

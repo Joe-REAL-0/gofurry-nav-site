@@ -1,6 +1,7 @@
 import { test as base, expect, type Locator, type Page } from '@playwright/test'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import type { GameHomeApiResponse, GameV2ListItem, GameV2NewsItem, GameV2PriceView, GameShowcaseSnapshot, GameShowcaseEvent } from '../../../app/types/game'
+import { collectionHome } from './game-collections-data'
 import { makeShowcase, showcaseOrigins, type ShowcaseScenario } from './games-home-showcase-data'
 import { steamSharedAssetCandidates } from '../../../app/utils/steamAssets'
 import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/steamAssetRouting'
@@ -9,6 +10,8 @@ import { captureBrowserErrors } from './browser-errors'
 const assetOrigin = 'https://games-home-assets.example'
 const homePath = '/api/v2/game/home'
 const showcasePath = `${homePath}/showcase`
+const collectionsPath = '/api/v2/game/collections/home'
+type CollectionsScenario = 'populated' | 'empty' | 'failure' | 'slow'
 const eventPath = `${showcasePath}/events`
 const collectedAt = '2026-09-18T04:40:00Z'
 export const groupNames = ['最近发售', '最近收录', '免费专区', '热门排行'] as const
@@ -53,7 +56,7 @@ function makeHome(): GameHomeApiResponse {
 
 type Dataset = 'core' | 'news-single' | 'news-populated' | 'reviews-populated' | 'layout-stress'
 type Language = 'zh' | 'en'
-type OpenOptions = { width?: number, height?: number, theme?: Theme, locale?: Language, dataset?: Dataset, showcase?: ShowcaseScenario }
+type OpenOptions = { width?: number, height?: number, theme?: Theme, locale?: Language, dataset?: Dataset, showcase?: ShowcaseScenario, collections?: CollectionsScenario, mode?: string }
 
 function makeNews(lang: Language): GameV2NewsItem[] {
   const titles = lang === 'zh'
@@ -110,7 +113,7 @@ type Theme = 'light' | 'dark'
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type State = { data: GameHomeApiResponse, upstream: URL[], lang: Language, showcase: GameShowcaseSnapshot, scenario: ShowcaseScenario,
   events: GameShowcaseEvent[], parallel: Promise<void>, releaseReads(): void, destination?: string,
-  showcaseHold: Promise<void>, releaseShowcase(): void, showcasePending: boolean }
+  showcaseHold: Promise<void>, releaseShowcase(): void, showcasePending: boolean, collections: CollectionsScenario, collectionsHold: Promise<void>, releaseCollections(): void }
 type Worker = { app: App, current: State | null }
 export type GamesHomeScene = {
   page: Page, root: Locator, groups: Locator, stats: Locator, sidebar: Locator, dock: Locator, theme: Theme,
@@ -139,9 +142,9 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       const state = worker.current
       if (!state) throw new Error('Games Home API requires an active scenario')
       state.upstream.push(url)
-      if ([homePath, showcasePath].includes(url.pathname)) {
-        // Neither response can complete until both reads start: prove parallel SSR.
-        if (state.upstream.filter(value => [homePath, showcasePath].includes(value.pathname)).length === 2) state.releaseReads()
+      if ([homePath, showcasePath, collectionsPath].includes(url.pathname)) {
+        // No response can complete until all three reads start: prove parallel SSR.
+        if (state.upstream.filter(value => [homePath, showcasePath, collectionsPath].includes(value.pathname)).length === 3) state.releaseReads()
         await state.parallel
       }
       if (url.pathname === homePath && url.searchParams.size === 2
@@ -154,6 +157,10 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
           state.showcasePending = false
         }
         return state.scenario === 'showcase-failure' ? { status: 503 } : { data: state.showcase }
+      }
+      if (url.pathname === collectionsPath && url.searchParams.size === 2 && url.searchParams.get('lang') === state.lang && url.searchParams.get('mode') === 'sfw') {
+        if (state.collections === 'slow') await state.collectionsHold
+        return state.collections === 'failure' ? { status: 503 } : { data: { ...collectionHome(assetOrigin, state.lang), ...(state.collections === 'empty' ? { slots: [] } : {}) } }
       }
       if (url.pathname === eventPath && body) {
         state.events.push(body)
@@ -186,8 +193,10 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     const parallel = new Promise<void>(resolve => { releaseReads = resolve })
     let releaseShowcase!: () => void
     const showcaseHold = new Promise<void>(resolve => { releaseShowcase = resolve })
+    let releaseCollections!: () => void
+    const collectionsHold = new Promise<void>(resolve => { releaseCollections = resolve })
     const state: State = { data: makeHome(), upstream: [], lang: 'zh', showcase: makeShowcase('empty', 'zh'), scenario: 'empty', events: [], parallel, releaseReads,
-      showcaseHold, releaseShowcase, showcasePending: false }
+      showcaseHold, releaseShowcase, showcasePending: false, collections: 'populated', collectionsHold, releaseCollections }
     gamesHomeApp.current = state
     const upstreamStart = app.requests.length
     const expectedMediaFailures = new Set<string>()
@@ -226,15 +235,15 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     })
     const assertQuiet = () => {
       expect(app.requests.slice(upstreamStart)).toEqual(state.upstream)
-      const reads = state.upstream.filter(url => [homePath, showcasePath].includes(url.pathname))
-      expect(reads.map(url => url.pathname).sort()).toEqual([homePath, showcasePath].sort())
-      for (const url of reads) expect(Object.fromEntries(url.searchParams)).toEqual({ lang: state.lang, region: 'CN' })
-      const detail = state.upstream.filter(url => ![homePath, showcasePath, eventPath].includes(url.pathname))
+      const reads = state.upstream.filter(url => [homePath, showcasePath, collectionsPath].includes(url.pathname))
+      expect(reads.map(url => url.pathname).sort()).toEqual([homePath, showcasePath, collectionsPath].sort())
+      for (const url of reads) expect(Object.fromEntries(url.searchParams)).toEqual(url.pathname === collectionsPath ? { lang: state.lang, mode: 'sfw' } : { lang: state.lang, region: 'CN' })
+      const detail = state.upstream.filter(url => ![homePath, showcasePath, collectionsPath, eventPath].includes(url.pathname))
       const detailPaths = state.destination ? ['/api/v2/game/info', '/api/v2/game/reviews', '/api/v2/game/recommend/similar',
         `/api/v2/game/games/${state.destination}/insights`, `/api/v2/game/games/${state.destination}/view`] : []
       expect(detail.map(url => url.pathname).sort()).toEqual([...detailPaths].sort())
       const sideEffects = state.events.map(() => `POST ${eventPath}`)
-      expect(browserAPI.filter(call => !detail.some(url => call.endsWith(url.pathname + url.search))), 'No browser GET for Home/Showcase, including hydration').toEqual(sideEffects)
+      expect(browserAPI.filter(call => !detail.some(url => call.endsWith(url.pathname + url.search))), 'No browser GET for Home/Showcase/Collections, including hydration').toEqual(sideEffects)
       for (const event of state.events) {
         expect(Object.keys(event).sort()).toEqual((event.event === 'click' ? ['tracking_token', 'session_id', 'event', 'source'] : ['tracking_token', 'session_id', 'event']).sort())
         expect(state.showcase.items.map(item => item.tracking_token)).toContain(event.tracking_token)
@@ -272,10 +281,11 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       }
     }
     try {
-      await use({ async open({ width = 1440, height = 900, theme = 'light', locale = 'zh', dataset = 'core', showcase = 'empty' } = {}) {
+      await use({ async open({ width = 1440, height = 900, theme = 'light', locale = 'zh', dataset = 'core', showcase = 'empty', collections = 'populated', mode = 'sfw' } = {}) {
         expect(state.upstream, 'Each scenario opens once').toHaveLength(0)
         state.lang = locale
         state.data = makeDataset(dataset, locale)
+        state.collections = collections
         state.scenario = showcase
         state.showcase = makeShowcase(showcase, locale)
         for (const item of state.showcase.items) {
@@ -295,21 +305,22 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         if (dataset === 'reviews-populated') expect(gamesHomeFixedNow, 'Reviews need the shared SSR/browser clock').toBeDefined()
         if (gamesHomeFixedNow !== undefined) await page.clock.setFixedTime(new Date(gamesHomeFixedNow))
         await page.setViewportSize({ width, height })
-        await context.addInitScript(({ origin, theme, steamKey, sample, mediaFailure }) => {
+        await context.addInitScript(({ origin, theme, steamKey, sample, mediaFailure, mode }) => {
           if (location.origin !== origin) return
           // Real fallback, with Save-Data excluding unrelated failure-triggered probes.
           if (mediaFailure) Object.defineProperty(navigator, 'connection', { value: { saveData: true }, configurable: true })
           localStorage.setItem('theme', theme)
+          localStorage.setItem('mode', mode)
           const checkedAt = Date.now()
           localStorage.setItem('gf_asset_cdn_diagnostics', JSON.stringify({ selected: 'primary', checkedAt,
             primaryMs: 10, mirrorMs: 20, primaryState: 'success', mirrorState: 'success' }))
           localStorage.setItem(steamKey, JSON.stringify({ version: 1, selected: 'china', checkedAt, sample,
             china: { ms: 30, state: 'success' }, global: { ms: 60, state: 'success' } }))
-        }, { origin: app.base, theme, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0], mediaFailure: expectedMediaFailures.size > 0 })
+        }, { origin: app.base, theme, steamKey: STEAM_DIAGNOSTICS_KEY, sample: STEAM_PROBE_PATHS[0], mediaFailure: expectedMediaFailures.size > 0, mode })
         // The real Nitro fetch must time out while its upstream gate stays held.
         // Fail before the old eight-second budget; do not fake browser time for SSR.
         const response = await page.goto(locale === 'en' ? '/en/games' : '/games', {
-          waitUntil: 'load', ...(showcase === 'slow-showcase' ? { timeout: 4000 } : {}),
+          waitUntil: 'load', ...(showcase === 'slow-showcase' || collections === 'slow' ? { timeout: 4000 } : {}),
         })
         expect(response?.status()).toBe(200)
         const ssr = await response!.text()
@@ -387,6 +398,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     } finally {
       releaseReads()
       releaseShowcase()
+      releaseCollections()
       for (const gate of artworkGates.values()) gate.release()
       await testInfo.attach('games-home-network.json', { contentType: 'application/json', body: JSON.stringify({
         upstream: state.upstream.map(String), browserAPI, events: state.events, assets, external, failed, errors, diagnostics, popupErrors, expectedPopups, popupRequests,

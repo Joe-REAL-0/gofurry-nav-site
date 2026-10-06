@@ -773,6 +773,36 @@
     }
   },
   "game": {
+    "collections": {
+      "heading": "Game Collections",
+      "all": "All collections",
+      "intro": "Explore curated themes and series through the release history of their games.",
+      "back": "Back to collections",
+      "count": "{count} games",
+      "empty": "No game collections yet",
+      "emptyWorks": "No games to display right now",
+      "unavailable": "Game collections are temporarily unavailable. Please try again.",
+      "refreshFailed": "The update is unavailable. Your previous content is still here.",
+      "retry": "Retry",
+      "loadMore": "Load more",
+      "loading": "Loading…",
+      "loadFailed": "Could not load more collections. Please try again.",
+      "now": "Now",
+      "sections": {
+        "past": "Released games",
+        "releasedUnknown": "Released · date unknown",
+        "future": "Future games",
+        "tba": "Release date to be announced",
+        "unknown": "Status unknown"
+      },
+      "time": {
+        "released_unknown": "Released · date unknown",
+        "upcoming_tba": "Release date to be announced",
+        "unknown": "Status unknown",
+        "inferred": "Approx. {time}",
+        "overdue": "Planned for {time} · still upcoming"
+      }
+    },
     "panel": {
       "playerCount": "Player Count",
       "playerCountTop15": "Player Count Top 15",

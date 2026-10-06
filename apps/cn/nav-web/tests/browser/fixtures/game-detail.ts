@@ -1,3 +1,4 @@
+import { collectionMetadata } from './game-collections-data'
 import { test as base, expect, type Page } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
@@ -44,6 +45,7 @@ export const test = base.extend<{ game: GameFixture }, { gameApp: GameFixture }>
         } : catalogGame }
       }
       if (url.pathname.endsWith('/game/home')) return { data: mockGameHome(media) }
+      if (url.pathname.endsWith('/game/collections/home')) return { data: { ...collectionMetadata, slots: [] } }
       if (url.pathname.endsWith('/game/home/showcase')) return { data: emptyGameShowcase() }
       if (url.pathname.endsWith('/games/82/insights')) return { data: {
         game: { id: 82, name: catalogGame.name },

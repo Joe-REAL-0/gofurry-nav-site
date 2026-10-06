@@ -1,4 +1,8 @@
 import type {
+  GameCollectionHome,
+  GameCollectionIndex,
+  GameCollectionDetail,
+  GameCollectionMode,
   AnonymousReviewModel,
   CommentReq,
   GameBaseInfoResponse,
@@ -27,6 +31,7 @@ import type {
   SearchPageQueryRequest,
   SearchPageResponse
 } from '~/types/game'
+
 import type { ApiResult } from '~/types/api'
 import type {
   GameInsightChangeCategory,
@@ -61,6 +66,24 @@ export interface GameHomeData {
 
 export function getGameList() {
   return useApi('gameV2')<GameV2ListItem[]>('/game/list')
+}
+
+export function getGameCollectionHome(lang = 'zh') {
+  return useApi('gameV2')<GameCollectionHome>('/game/collections/home', {
+    query: { lang: normalizeGameLang(lang), mode: 'sfw' }, timeout: 1000, retry: 0,
+  })
+}
+
+export function getGameCollections(lang: string, mode: GameCollectionMode, page = 1, pageSize = 24) {
+  return useApi('gameV2')<GameCollectionIndex>('/game/collections', {
+    query: { lang: normalizeGameLang(lang), mode, page, page_size: pageSize }, timeout: 8000, retry: 0,
+  })
+}
+
+export function getGameCollectionDetail(code: string, lang: string, mode: GameCollectionMode) {
+  return useApi('gameV2')<GameCollectionDetail>(`/game/collections/${encodeURIComponent(code)}`, {
+    query: { lang: normalizeGameLang(lang), mode }, timeout: 8000, retry: 0,
+  })
 }
 
 export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {

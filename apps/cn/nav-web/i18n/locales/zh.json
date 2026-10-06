@@ -773,6 +773,36 @@
     }
   },
   "game": {
+    "collections": {
+      "heading": "游戏分区",
+      "all": "全部分区",
+      "intro": "沿着作品的发行脉络，发现人工整理的游戏主题与系列。",
+      "back": "返回分区",
+      "count": "{count} 部作品",
+      "empty": "当前暂无游戏分区",
+      "emptyWorks": "当前暂无可展示作品",
+      "unavailable": "暂时无法加载游戏分区，请稍后重试。",
+      "refreshFailed": "更新暂时不可用，仍为你保留上次加载的内容。",
+      "retry": "重试",
+      "loadMore": "加载更多",
+      "loading": "正在加载…",
+      "loadFailed": "更多分区加载失败，请重试。",
+      "now": "现在",
+      "sections": {
+        "past": "已发布作品",
+        "releasedUnknown": "已发布 · 日期待考",
+        "future": "未来作品",
+        "tba": "发售时间待定",
+        "unknown": "状态待考"
+      },
+      "time": {
+        "released_unknown": "已发布 · 日期待考",
+        "upcoming_tba": "发售时间待定",
+        "unknown": "状态待考",
+        "inferred": "约 {time}",
+        "overdue": "原计划 {time} · 当前仍未发售"
+      }
+    },
     "panel": {
       "playerCount": "在线人数",
       "playerCountTop15": "在线人数 Top 15",

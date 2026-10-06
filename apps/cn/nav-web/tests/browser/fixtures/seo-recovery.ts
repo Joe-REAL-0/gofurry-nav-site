@@ -1,3 +1,4 @@
+import { collectionMetadata } from './game-collections-data'
 import { runtimeTest, type Reply } from './insights-runtime'
 import { mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
 import { emptyGameShowcase } from '../../../app/utils/gameShowcasePresentation'
@@ -8,7 +9,7 @@ export const seoState = (): SEOState => ({ failure: '', siteInsightsFailure: fal
 export const allowedSEO = (url: URL) => [
   '/api/v2/nav/home', '/api/v2/nav/sites/index', '/api/v2/nav/site-groups', '/api/v2/game/list',
   '/api/v2/nav/updates',
-  '/api/v2/game/info', '/api/v2/game/home', '/api/v2/game/home/showcase', '/api/v2/game/reviews', '/api/v2/game/recommend/similar',
+  '/api/v2/game/info', '/api/v2/game/home', '/api/v2/game/home/showcase', '/api/v2/game/collections/home', '/api/v2/game/reviews', '/api/v2/game/recommend/similar',
 ].includes(url.pathname) || /^\/api\/v2\/nav\/sites\/(41|42|999999999)\/(detail|insights|recommendations|view)$/.test(url.pathname)
   || /^\/api\/v2\/game\/games\/(82|83|999999999)\/(insights(?:\/(players|prices))?|view|daily)$/.test(url.pathname)
   || url.pathname === '/api/v2/nav/site-groups/12/sites' || isSiteTrend(url)
@@ -50,6 +51,7 @@ export function seoResponse(url: URL, media: string, state: SEOState): Reply {
   } }
   if (path.endsWith('/view')) return { data: { site_id: Number(siteID), game_id: 82, view_count: 2 } }
   if (path === '/api/v2/game/home') return { data: mockGameHome(media) }
+  if (path === '/api/v2/game/collections/home') return { data: { ...collectionMetadata, slots: [] } }
   if (path === '/api/v2/game/home/showcase') return { data: emptyGameShowcase() }
   if (path === '/api/v2/game/info') {
     if (state.failure === 'game') return { status: 503 }

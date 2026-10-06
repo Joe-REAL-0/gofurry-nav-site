@@ -37,7 +37,7 @@ export async function assertGameHomeShowcaseAppearance(scene: GamesHomeScene) {
 }
 
 test('Empty and failed optional slices keep the original Home content first', async ({ gamesHome }) => {
-  const scene = await gamesHome.open()
+  const scene = await gamesHome.open({ collections: 'failure' })
   await expect(scene.showcase).toHaveCount(0)
   await expect(scene.root.locator('.game-info-shell > :first-child')).toHaveClass('game-info-group')
   scene.assertQuiet()
@@ -260,7 +260,9 @@ for (const source of ['artwork', 'title', 'primary'] as const) {
 }
 
 test('Secondary external popup still opens when analytics returns 500', async ({ gamesHome }) => {
-  const scene = await gamesHome.open({ showcase: 'tracking-failure' })
+  // This case owns click failure. Keep the Hero below qualified visibility so
+  // a concurrent impression cannot race its request/response accounting.
+  const scene = await gamesHome.open({ showcase: 'tracking-failure', height: 120 })
   const url = scene.snapshot.items[0]!.secondary_action!.target!
   scene.expectShowcasePopup(url)
   const popup = scene.page.waitForEvent('popup')

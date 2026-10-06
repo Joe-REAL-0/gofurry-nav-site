@@ -13,11 +13,12 @@
             :initial-panel-data="gamesPageData.panelData"
             :initial-news-record="gamesPageData.latestNews"
             :showcase="data?.showcase"
+            :collections="data?.collections"
           />
         </section>
 
         <aside class="hidden xl:block xl:w-[25%]">
-          <SideBarPanel :initial-reviews="gamesPageData.latestReviews" />
+          <SideBarPanel :initial-reviews="gamesPageData.latestReviews" :collections="data?.collections" />
         </aside>
       </div>
     </main>
@@ -32,9 +33,9 @@ import { useI18n } from 'vue-i18n'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
-import { getGameHomeData, getGameHomeShowcase, type GameHomeData } from '~/services/game'
+import { getGameHomeData, getGameHomeShowcase, getGameCollectionHome, type GameHomeData } from '~/services/game'
 import { emptyGameShowcase } from '~/utils/gameShowcasePresentation'
-import type { GameShowcaseSnapshot } from '~/types/game'
+import type { GameShowcaseSnapshot, GameCollectionHome } from '~/types/game'
 
 const { locale } = useI18n()
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
@@ -51,23 +52,25 @@ const gamesPageSeo = computed(() => locale.value === 'en'
     }
 )
 
-interface GamesPageData { home: GameHomeData | null; showcase: GameShowcaseSnapshot }
+interface GamesPageData { home: GameHomeData | null; showcase: GameShowcaseSnapshot; collections: GameCollectionHome | null }
 
 const { data } = await useAsyncData<GamesPageData>(
   () => `games-page:${lang.value}`,
   async () => {
-    const [home, showcase] = await Promise.allSettled([
+    const [home, showcase, collections] = await Promise.allSettled([
       getGameHomeData(lang.value),
       getGameHomeShowcase(lang.value),
+      getGameCollectionHome(lang.value),
     ])
     return {
       home: home.status === 'fulfilled' ? home.value : null,
       showcase: showcase.status === 'fulfilled' ? showcase.value : emptyGameShowcase(),
+      collections: collections.status === 'fulfilled' ? collections.value : null,
     }
   },
   {
     watch: [lang],
-    default: () => ({ home: null, showcase: emptyGameShowcase() }),
+    default: () => ({ home: null, showcase: emptyGameShowcase(), collections: null }),
   }
 )
 

@@ -1,3 +1,4 @@
+import { collectionMetadata } from './game-collections-data'
 import { test as base, expect, type Locator, type Page, type Request } from '@playwright/test'
 import { startInsightsFixtureApp } from '../../../scripts/fixtures/insights-app.mjs'
 import { mockGameHome } from '../../../scripts/fixtures/insights-overview.mjs'
@@ -5,7 +6,7 @@ import { STEAM_DIAGNOSTICS_KEY, STEAM_PROBE_PATHS } from '../../../app/utils/ste
 import { captureBrowserErrors } from './browser-errors'
 import { emptyGameShowcase } from '../../../app/utils/gameShowcasePresentation'
 
-type Kind = 'advanced' | 'simple' | 'tags' | 'home' | 'showcase' | 'detail' | 'reviews' | 'insights' | 'daily' | 'similar' | 'view'
+type Kind = 'advanced' | 'simple' | 'tags' | 'home' | 'collections' | 'showcase' | 'detail' | 'reviews' | 'insights' | 'daily' | 'similar' | 'view'
 type Body = Record<string, unknown>
 type Call = { kind: Kind, path: string, query: Record<string, string>, body?: Body }
 type BrowserCall = Call & { method: string, request: Request, reply?: Reply }
@@ -19,7 +20,7 @@ type State = { calls: Call[], gates: Gate[], scripts: Script[], unexpected: stri
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type Worker = { app: App, current: State | null }
 const paths: Record<Kind, string> = { advanced: '/api/v2/game/search/page', simple: '/api/v2/game/search/simple',
-  tags: '/api/v2/game/tag-categories', home: '/api/v2/game/home', showcase: '/api/v2/game/home/showcase', detail: '/api/v2/game/info',
+  tags: '/api/v2/game/tag-categories', home: '/api/v2/game/home', showcase: '/api/v2/game/home/showcase', collections: '/api/v2/game/collections/home', detail: '/api/v2/game/info',
   reviews: '/api/v2/game/reviews', insights: '/api/v2/game/games/7100/insights', daily: '/api/v2/game/games/7100/insights/daily',
   similar: '/api/v2/game/recommend/similar', view: '/api/v2/game/games/7100/view' }
 const kindFor = (path: string) => (Object.keys(paths) as Kind[]).find(kind => paths[kind] === path)
@@ -30,6 +31,7 @@ const game = (index: number, media: string, name: string) => ({ id: String(7100 
   primary_tag: '', secondary_tag: '', release: null, first_available: null })
 function responseFor(call: Call, media: string, legacyTags: boolean) {
   if (call.kind === 'home') return mockGameHome(media)
+  if (call.kind === 'collections') return { ...collectionMetadata, slots: [] }
   if (call.kind === 'showcase') return emptyGameShowcase()
   if (call.kind === 'similar') return []
   if (call.kind === 'view') return { view_count: 1 }
@@ -193,14 +195,17 @@ export const test = base.extend<{ search: SearchScene }, { searchApp: Worker }>(
       // The real Nitro proxy retries a failing GET once, independently of the browser's
       // ofetch retry. Preserve and account for both transport layers exactly.
       const wire = (call: Call) => JSON.stringify({ path: call.path, query: call.query, body: call.body })
-      const mounted = state.calls.filter(call => !['home', 'showcase'].includes(call.kind))
-      expect(browserCalls.filter(call => !['home', 'showcase'].includes(call.kind)).flatMap(call =>
+      const mounted = state.calls.filter(call => !['home', 'showcase', 'collections'].includes(call.kind))
+      expect(browserCalls.filter(call => !['home', 'showcase', 'collections'].includes(call.kind)).flatMap(call =>
         call.kind === 'tags' && call.reply === 503 ? [wire(call), wire(call)] : [wire(call)],
       ).sort()).toEqual(mounted.map(wire).sort())
       expect(state.calls.filter(call => call.kind === 'home')).toHaveLength(expectedHomeCalls)
       expect(browserCalls.filter(call => call.kind === 'home')).toHaveLength(expectedBrowserHomeCalls)
       expect(state.calls.filter(call => call.kind === 'showcase')).toHaveLength(expectedHomeCalls)
       expect(browserCalls.filter(call => call.kind === 'showcase')).toHaveLength(expectedBrowserHomeCalls)
+      expect(state.calls.filter(call => call.kind === 'collections')).toHaveLength(expectedHomeCalls)
+      expect(browserCalls.filter(call => call.kind === 'collections')).toHaveLength(expectedBrowserHomeCalls)
+      for (const call of state.calls.filter(item => item.kind === 'collections')) expect(call.query).toEqual({ lang: 'zh', mode: 'sfw' })
       for (const call of state.calls.filter(item => item.kind === 'showcase')) expect(call.query).toEqual({ lang: 'zh', region: 'CN' })
       for (const call of state.calls.filter(item => item.kind === 'home')) expect(call.query).toEqual({ lang: 'zh', region: 'CN' })
       for (const gate of state.gates) { expect(gate.received).toBeDefined(); expect(gate.completed).toBe(true) }
