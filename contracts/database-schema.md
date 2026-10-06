@@ -95,6 +95,11 @@ comments removed, protecting structure and function/trigger definitions. sqlc
 is generated normally; propagated model comments are documentation changes,
 not runtime behavior changes.
 
+When adding a migration, also synchronize Admin DataOps' compiled
+`expectedRepoMigrations` inventory. Validate it without cached test results:
+`go -C apps/cn/admin test ./internal/app/dataops -run TestExpectedRepositoryMigrationVersions -count=1`.
+Otherwise a correctly migrated database may be incorrectly reported as ahead.
+
 ## Non-goals
 
 No ER diagrams, dictionary UI, Admin schema browser, automatic translation,
