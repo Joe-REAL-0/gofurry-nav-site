@@ -47,7 +47,8 @@ func TestReleaseNotesMigrationPreservesLegacyAndGuardsDown(t *testing.T) {
 		return value
 	}
 	before := snapshot()
-	if err = goose.UpContext(ctx, db, dir); err != nil {
+	// This test owns the Release Notes Down contract, not later migrations.
+	if err = goose.UpToContext(ctx, db, dir, 20260928010000); err != nil {
 		t.Fatal(err)
 	}
 	if snapshot() != before {
@@ -91,7 +92,7 @@ func TestReleaseNotesMigrationPreservesLegacyAndGuardsDown(t *testing.T) {
 	if snapshot() != before {
 		t.Fatal("safe rollback changed old data")
 	}
-	if err = goose.UpContext(ctx, db, dir); err != nil {
+	if err = goose.UpToContext(ctx, db, dir, 20260928010000); err != nil {
 		t.Fatal(err)
 	}
 	if snapshot() != before {

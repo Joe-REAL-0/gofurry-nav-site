@@ -269,7 +269,7 @@ jobs:
         run: node --test .github/scripts/nav-web-regression-groups.test.mjs
       - name: Tooling contract tests
         working-directory: tools
-        run: go test ./check-production-policy ./check-sqlc ./check-gofmt
+        run: go test ./check-production-policy ./check-sqlc ./check-gofmt ./internal/schema ./db-baseline
       - working-directory: tools
         run: go run ./check-production-policy
 
@@ -333,7 +333,7 @@ jobs:
           go run ./check-sqlc
       - name: Goose fresh, adoption, drift and cleanup checks
         working-directory: tools
-        run: go test ./db-baseline -run TestPostgresFreshAndBaselineAdoption -count=1 -v
+        run: go test ./db-baseline -run 'Test(PostgresFreshAndBaselineAdoption|ReadabilityBackfillsPreserveSchema)$' -count=1 -v
 
   postgres-integration:
     needs: detect-changes

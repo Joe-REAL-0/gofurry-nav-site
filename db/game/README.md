@@ -1,5 +1,9 @@
 # Game database (`gfg`)
 
+Current tables, columns, functions and triggers follow the
+[Chinese schema readability contract](../../contracts/database-schema.md).
+Applied migrations and historical adoption snapshots remain immutable.
+
 This directory exclusively owns `gfg` schema migrations. The current-state
 baseline contains the audited 22-table schema, six sequences, the `pg_trgm`
 extension, the snapshot-pruning function, all constraints, indexes, defaults,

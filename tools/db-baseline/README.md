@@ -1,5 +1,13 @@
 # Baseline adoption utility
 
+Current final schemas also follow the
+[database readability contract](../../contracts/database-schema.md).
+`task check:db-readability` validates committed `expected-final` snapshots
+without a database. Existing foundation tests validate actual fresh PostgreSQL
+18 schemas after Goose. `expected` remains the immutable historical adoption
+contract; do not update it for comment backfills. Use only the documented fresh
+database snapshot-generation path to update `expected-final`.
+
 This one-time utility marks an existing, exact pre-Goose database as having the
 audited baseline. It does not execute business DDL or attempt repair.
 

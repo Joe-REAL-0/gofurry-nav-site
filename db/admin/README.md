@@ -1,5 +1,9 @@
 # Admin database (`gfa`)
 
+Current tables, columns, functions and triggers follow the
+[Chinese schema readability contract](../../contracts/database-schema.md).
+Applied migrations and historical adoption snapshots remain immutable.
+
 This directory exclusively owns the PostgreSQL `gfa` schema migrations. The
 current-state baseline contains `gfa_admin_account`, `gfa_admin_audit_log`, and
 their two sequences.
