@@ -463,4 +463,4 @@ jobs:
         working-directory: apps/cn/admin
         env:
           GOFURRY_ADMIN_INTEGRATION_CONFIG: /tmp/gofurry-admin-integration.yaml
-        run: go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade|CollaborationThreeDatabase|ShowcaseThreeDatabase)' -count=1 -v
+        run: go test ./internal/bootstrap -run 'TestAdmin(ThreeDatabasePersistence|IdentityAuthorizationPersistence|LegacyIdentityUpgrade|CollaborationThreeDatabase|ShowcaseThreeDatabase|GameCollectionThreeDatabase)' -count=1 -v

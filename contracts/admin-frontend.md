@@ -178,6 +178,27 @@ nullable primary/secondary IDs, the complete Tag set and independent
 `PUT /api/v1/game/games/:id/classification` request; content saves do not overwrite
 classification. The returned workspace includes the role union and resets the form.
 
+## Game Collection curation
+
+`/game/collections`, `/game/collections/new`, `/game/collections/:id` and
+`/game/collections/home-curation` are native content workspaces, separate from
+the singular `/collection` Collector Control Plane. Use backend `content.read/write`
+and `audit.read`; no new capability. Existing Code is read-only. Members are an
+unordered complete set selected through the existing games RemoteSelect, with
+code-based Adult badges for inspection only. No upload, NSFW setting or item order.
+
+Content and membership share a baseVersion. Own successful writes advance it while
+preserving other local edits; background updates cannot overwrite dirty drafts or
+silently rebase them. HTTP 409 retains the draft, presents an Alert and requires
+explicit reload. All lifecycle writes require ConfirmAction and are disabled while
+dirty. Archived content remains inspectable and only Restore is writable. Protect
+content, members and Home drafts with useUnsavedChanges. Home sends all five slots
+and its original placement revision; the fixed sixth entry is never in the payload.
+Home pickers request published + home_eligible=true and exclude duplicate selections.
+Keep all search owners IME-safe. Public refresh remains eventual (at most about five
+minutes), with explicit feedback if a save removes a Home entry. Stage C public UI
+is outside this contract. See [Game Collections](../docs/game-collections.md).
+
 ## Collaboration Center
 
 `/collaboration` has exactly two internal tabs: content ideas and one shared canvas, guarded by independent `collaboration.read/write`. Inventory lives only in GFA; formal content must never be created by batch import. The browser parses explicit `title | source | note` lines, while Go owns canonicalization and soft duplicate checks (maximum 500 candidates). All updates carry the displayed version; HTTP 409 requires explicit reload.

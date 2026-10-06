@@ -112,6 +112,71 @@ Stage A 不做跨服务精确失效或 stale fallback；后续运营修改最多
 - `TestPostgresFreshAndBaselineAdoption` 验证 PG18 fresh/adoption/drift/readability；`expected-final/gfg.json` 从实际库生成。
 - `task check:db-readability`、`task check:sqlc`、`task check:policy` 保持静态治理。
 
-本阶段未实现 Admin Collection API/UI、Nav Web Collection UI、SEO、Timeline Vue、SSR mode hydration、Visual Golden 或 Games Home 5+1。
-生产审核后需执行待应用的 GFG migration 并部署 Game Backend；同窗口更新 Admin 可同步 DataOps migration inventory。
-Collector 仅新增 generated schema model 不要求单独发布。本阶段验证仅使用 disposable PostgreSQL，不迁移共享开发或生产。
+Stage A 的交付包含 GFG migration 与 Game Backend；Collector 仅新增 generated schema model，不要求单独发布。
+Stage B 见下文。Nav Web Collection UI、SEO、Timeline Vue、SSR mode hydration、Visual Golden 和 Games Home 5+1 均属于尚未实现的 Stage C。
+
+## Stage B：Admin 运营闭环
+
+Admin 独立拥有 `/api/v1/game/collections`，与 `/api/v1/collection` 的采集控制面无关。
+所有 GET 使用现有 `content.read`，所有写操作使用 `content.write`，不新增能力。
+
+| 方法与路径（上述前缀内） | 行为 |
+| --- | --- |
+| GET / | 按 keyword（code/name/name_en）、status、home_eligible 筛选；page_num 默认 1、page_size 默认 50、上限 200；updated_at DESC、id DESC |
+| POST / | 创建 version=1 的草稿；双语名称必填，简介及 0/1 个成员允许暂缺 |
+| GET /:id | 完整 Admin DTO：基本内容、状态、版本、生命周期时间、总成员/SFW 数、home_slot |
+| PUT /:id | 携带 version 更新双语名称/简介；Code 不可更改 |
+| GET /:id/members | 同一只读快照内返回 collection_id、version、完整成员及 Adult 标记 |
+| PUT /:id/members | 携带 version 与完整 game_ids 集合；正整数、去重、数值排序、批量检查存在性后替换 |
+| POST /:id/publish、unpublish、archive、restore | 携带 version 执行显式生命周期转换 |
+| GET /home-curation | 固定五位及 canonical placement revision；空位 collection=null |
+| PUT /home-curation | 携带 revision，完整提交第 1–5 位各一次；非空分区不可重复 |
+
+静态 `/home-curation` 先于 `/:id` 注册。Code 使用 1–64 位小写 kebab-case；重复返回 409。
+名称最多 160、简介最多 500 个 Unicode 字符。未知写入字段被拒绝，不能变相写入 Code、排序或 NSFW。
+
+### 版本、事务与生命周期
+
+所有写操作先取得 GFG transaction advisory lock `gfg.game-collection-domain`，再锁定 Collection 行、比较 version、执行依赖修改。
+内容、成员及生命周期成功后 version+1；真正相同的内容/成员集合不改变 version，也不写 Audit。
+旧 version 返回 409：`此游戏分区已被其他操作修改，请重新加载后重试。`；客户端不得自动重试 mutation。
+
+- Publish：draft→published；双语名称/简介非空、总成员至少两个；published_at=now。
+- Unpublish：published→draft；保留 published_at，同事务移除首页入口。
+- Archive：draft/published→archived；archived_at=now，保留 published_at/成员并移除入口。
+- Restore：archived→draft；清空 archived_at，保留 published_at，不恢复发布或首页入口。
+- Archived 拒绝内容及成员修改；Published 直接编辑仍须满足双语内容和至少两个成员的不变量。
+
+Adult 唯一按 Tag code=`adult`，包括已归档 Tag 的现有关系；ID 1014 不具有特殊意义。
+成人限定分区可发布，但首页资格必须是 published 且 sfw_member_count>0。
+Published 成员保存移除最后一个 SFW 游戏时，同一 GFG 事务自动移除 Home Slot；分区仍可维持 Published。
+
+### 首页与 Audit
+
+revision 只对第 1–5 位 Collection ID/null 的 canonical placement 计算 SHA-256；名称、version、count 不影响 revision。
+完整替换在领域锁下校验旧 revision 和当前资格，原子删除/插入；显式首页编排不增加 Collection.version。
+第六个“全部分区”是固定产品入口，只在 Admin 说明，不进入 API 或数据库。
+
+Collection Audit resource 为 `gfg_game_collection`，action 为 create/update/members_update/publish/unpublish/archive/restore。
+快照仅含有界业务字段，成员保存附带 canonical game ID 集合；自动撤下入口体现在同条记录的 home_slot before→null。
+首页显式编排使用 `gfg_game_collection_home_slot` / `home_curation_update`，记录五个 placement。
+沿用现有 GFG business transaction + 独立 GFA Audit；审计失败阻止 GFG 提交，但这不是跨库 ACID。
+
+### React Workspace 与刷新
+
+路由：`/game/collections`、`/new`、`/:id`、`/home-curation`（后三者均在相同前缀下）。
+列表搜索使用 IME-safe helper 并将 keyword/status/page_num 保存在 URL。
+单页 Workspace 包含基本内容、收录游戏、公开刷新说明；成员只做添加/移除，不提供顺序编辑或 Timeline Preview。
+Game options 与 Home eligibility 搜索复用 RemoteSelect，不消费 IME 确认键。
+
+内容与成员草稿共享 baseVersion；本页保存成功可推进版本并保留另一份草稿，背景刷新不得覆盖脏草稿或提升其版本。
+409 保留草稿并要求显式重新加载。草稿通过 useUnsavedChanges 保护导航，生命周期操作在 dirty 时禁用且全部要求确认。
+只读用户可查看完整内容；归档后仅 Restore 可写。Audit 入口仅对 audit.read 显示，使用 resource 过滤而不假装支持 target_id。
+Home 草稿同样绑定原 revision，背景刷新不会覆盖它。
+
+Stage B 没有新迁移，也不变更 Stage A cache：不 purge Redis、不新增内部失效接口或 Pub/Sub。
+成功提示为“已保存；公开页面将在最多约5分钟内刷新。”；自动撤下首页入口时另行说明。
+
+验证包含 Controller/route 单测、`TestAdminGameCollectionThreeDatabase` 的隔离 PG18 并发/约束/Audit 集成测试，
+以及 React 列表 IME、共享版本、冲突保留、生命周期、只读、五位完整编排和未保存保护测试。
+集成测试接入既有 postgres-integration gate，不对共享开发或生产库执行 Goose。

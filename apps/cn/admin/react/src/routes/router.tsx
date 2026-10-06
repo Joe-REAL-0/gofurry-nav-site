@@ -15,6 +15,10 @@ const HeroAssetsPage = lazy(() => import('../features/assets/asset-pages').then(
 const BackgroundPatternsPage = lazy(() => import('../features/assets/asset-pages').then((module) => ({ default: module.BackgroundPatternsPage })))
 const GameListPage = lazy(() => import('../features/games/game-pages').then((module) => ({ default: module.GameListPage })))
 const GameWorkspacePage = lazy(() => import('../features/games/game-pages').then((module) => ({ default: module.GameWorkspacePage })))
+const CollectionListPage = lazy(() => import('../features/game-collections/collection-list-page').then(module => ({ default: module.CollectionListPage })))
+const CreateCollectionPage = lazy(() => import('../features/game-collections/collection-workspace-page').then(module => ({ default: module.CreateCollectionPage })))
+const CollectionWorkspacePage = lazy(() => import('../features/game-collections/collection-workspace-page').then(module => ({ default: module.CollectionWorkspacePage })))
+const CollectionHomeCurationPage = lazy(() => import('../features/game-collections/home-curation-page').then(module => ({ default: module.CollectionHomeCurationPage })))
 const ShowcasePage = lazy(() => import('../features/showcase/showcase-page').then((module) => ({ default: module.ShowcasePage })))
 const ShowcaseCampaignPage = lazy(() => import('../features/showcase/showcase-campaign-page').then((module) => ({ default: module.ShowcaseCampaignPage })))
 const ReleaseNoteListPage = lazy(() => import('../features/release-notes/release-note-pages').then((module) => ({ default: module.ReleaseNoteListPage })))
@@ -49,6 +53,10 @@ export const router = createBrowserRouter([
           { path: 'nav/:resource', element: <ResourceEngineBoundary section="nav" /> },
           { path: 'game/games', element: <GameListPage /> },
           { path: 'game/games/:id', element: <GameWorkspacePage /> },
+          { path: 'game/collections', element: <CollectionListPage /> },
+          { path: 'game/collections/new', element: <CreateCollectionPage /> },
+          { path: 'game/collections/home-curation', element: <CollectionHomeCurationPage /> },
+          { path: 'game/collections/:id', element: <CollectionWorkspacePage /> },
           { path: 'game/showcase', element: <ShowcasePage /> },
           { path: 'game/showcase/:id', element: <ShowcaseCampaignPage /> },
           { path: 'game/:resource', element: <ResourceEngineBoundary section="game" /> },

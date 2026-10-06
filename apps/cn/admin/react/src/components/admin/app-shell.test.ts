@@ -12,6 +12,7 @@ describe('capability-aware navigation', () => {
     const entries = capabilityAwareNavigation((capability) => capabilities.has(capability)).flatMap((group) => group.entries)
     expect(entries.map((entry) => entry.href)).toContain('/nav/sites')
     expect(entries.map((entry) => entry.href)).toContain('/collection')
+    expect(entries.map((entry) => entry.href)).toContain('/game/collections')
     expect(entries.map((entry) => entry.href)).not.toContain('/system/accounts')
   })
 
