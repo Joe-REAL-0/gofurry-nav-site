@@ -464,18 +464,15 @@ export interface NavUpdateDetailResponse {
     next: NavUpdateNeighbor | null;
 }
 
-export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili' | 'duckduckgo';
-export type NavSearchSuggestionsState = 'ready' | 'empty' | 'error';
+export type NavSearchSuggestionsState = 'ready' | 'empty' | 'unavailable';
 
 export interface NavSearchSuggestionsResponse {
-    schema_version: number;
+    schema_version: 2;
     generated_at: string;
     state: NavSearchSuggestionsState;
-    engine: NavSearchSuggestionEngine | '';
     query: string;
     suggestions: string[];
     cache_state: 'hit' | 'miss';
-    reason_messages?: string[];
 }
 
 // Entity-level discovery; Target/workspace/display mode never enter its identity.

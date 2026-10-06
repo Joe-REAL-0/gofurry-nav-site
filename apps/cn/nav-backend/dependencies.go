@@ -27,6 +27,7 @@ import (
 	updatesservice "github.com/gofurry/gofurry-nav-backend/apps/nav/updates/service"
 	"github.com/gofurry/gofurry-nav-backend/apps/schedule/task"
 	navsqlc "github.com/gofurry/gofurry-nav-backend/internal/db/nav/sqlc"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
 	"github.com/gofurry/gofurry-nav-backend/routers"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -49,7 +50,7 @@ func newApplicationDependencies(pool *pgxpool.Pool) applicationDependencies {
 	detailService := detailservice.New(detaildao.New(queries), summaryService, readModelService)
 	sitePageStore := sitepagedao.New(queries)
 	sitePageService := sitepageservice.New(sitePageStore)
-	searchService := searchservice.New(navService)
+	searchService := searchservice.New(env.GetServerConfig().Proxy.Url)
 
 	return applicationDependencies{
 		routes: routers.NavDependencies{

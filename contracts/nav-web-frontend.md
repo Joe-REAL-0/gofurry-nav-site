@@ -1397,6 +1397,17 @@ The shared fixture keeps real SSR/hydration/Hero rendering, exact local asset
 boundaries and one SSR Home request; it does not supersede Hero lifecycle or
 Nav Shell contracts. The chip transition's actual Less cascade (background,
 box-shadow and color, 500ms each) takes precedence over utility-name inference.
+Issue #123 separates Suggestion provider from Search destination. SearchBox calls
+`GET /api/v2/nav/search/suggestions?q=...` for non-empty Search-category input,
+regardless of platform. Schema 2 has no engine; ready renders suggestions, empty
+renders the existing empty state, unavailable/network/429 silently closes the
+optional dropdown without retry. Existing doSearch/platform URLs remain unchanged.
+Keep 600ms debounce, AbortController and stale-response protection. Composition
+updates local display only; compositionend schedules final text once. While the
+composition lifecycle or native isComposing flag is active, Enter/Arrow keys/Escape
+must not select, navigate or prevent IME confirmation. Render provider text with
+interpolation and highlighted segments, never v-html or manually escaped HTML.
+
 P5.2.2 keeps Header, Search, QuickAccess and Quick Sites appearance in
 `pages/nav.less`, with `--nav-home-*` declarations on `.nav-home-page`; do not split
 out a Header stylesheet. These Hero-backed semantics remain theme-independent,

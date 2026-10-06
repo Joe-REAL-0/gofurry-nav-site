@@ -6,7 +6,8 @@ import { assertHeroHydration } from './hero-lifecycle'
 
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type Gate = { promise: Promise<void>, release(): void }
-type Scenario = { requests: URL[], gate?: Gate }
+type Suggestion = { state?: 'ready' | 'empty' | 'unavailable', items?: string[], failure?: 429 | 503 | 'network' }
+type Scenario = { requests: URL[], gates: Map<string, Gate>, responses: Map<string, Suggestion> }
 type Worker = { app: App, current: Scenario | null }
 type Clip = { x: number, y: number, width: number, height: number }
 type Header = {
@@ -18,12 +19,15 @@ type Header = {
   quick: Locator
   modal: Locator
   open(width?: number): Promise<void>
-  holdSuggestions(): void
-  releaseSuggestions(): void
+  holdSuggestions(query?: string): void
+  releaseSuggestions(query?: string): void
+  suggestion(query: string, response: Suggestion): void
+  requestQueries(): string[]
+  expectAborted(query: string): Promise<void>
   expectSuggestionRequest(query: string): Promise<void>
   showSuggestions(): Promise<void>
   allowExampleIcon(): void
-  allowSearchPopup(): void
+  allowSearchPopup(url?: string): void
   assertQuiet(): void
   settle(target: Locator): Promise<void>
   headerClip(): Promise<Clip>
@@ -68,22 +72,26 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
         saying: { author: 'GoFurry', content: '探索更多兽人世界', language: 'zh' }, ping: {},
         hero: { desktop: { id: '1', object_key: desktopKey }, mobile: { id: '2', object_key: mobileKey } },
       } }
-      if (url.pathname === '/api/v2/nav/search/suggestions' && url.searchParams.get('engine') === 'bing'
-        && ['wolf', 'noresult'].includes(url.searchParams.get('q') ?? '')) {
-        await state.gate?.promise
+      if (url.pathname === '/api/v2/nav/search/suggestions' && state.responses.has(url.searchParams.get('q') ?? '')) {
         const query = url.searchParams.get('q')!
-        return { data: { schema_version: 1, generated_at: '2026-09-18T12:40:00Z',
-          state: query === 'wolf' ? 'ready' : 'empty', engine: 'bing', query,
-          suggestions: query === 'wolf' ? ['wolf furry', 'wolf art', 'wolf game'] : [], cache_state: 'hit' } }
+        await state.gates.get(query)?.promise
+        const response = state.responses.get(query)!
+        if (typeof response.failure === 'number') return { status: response.failure }
+        return { data: { schema_version: 2, generated_at: '2026-09-18T12:40:00Z',
+          state: response.state ?? 'ready', query,
+          suggestions: response.items ?? [], cache_state: 'hit' } }
       }
       return { status: 500 }
     }, { NUXT_PUBLIC_ASSET_PRIMARY_BASE: primary, NUXT_PUBLIC_ASSET_MIRROR_BASE: 'https://header-mirror.example' })
     try { await use(worker) }
-    finally { worker.current?.gate?.release(); await worker.app.close() }
+    finally { worker.current?.gates.forEach(gate => gate.release()); await worker.app.close() }
   }, { scope: 'worker' }],
   baseURL: async ({ headerApp }, use) => { await use(headerApp.app.base) },
   header: async ({ page, context, headerApp }, use, testInfo) => {
-    const state: Scenario = { requests: [] }
+    const state: Scenario = { requests: [], gates: new Map(), responses: new Map([
+      ['wolf', { items: ['wolf furry', 'wolf art', 'wolf game'] }],
+      ['noresult', { state: 'empty' }],
+    ]) }
     headerApp.current = state
     const { app } = headerApp
     const upstreamStart = app.requests.length
@@ -93,10 +101,13 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     const popupErrors: string[][] = []
     const external: string[] = [], unexpectedFailed: string[] = [], injectedFailed: string[] = []
     const managed: string[] = [], icons: string[] = [], weather: string[] = [], popups: string[] = [], browserAPI: string[] = []
-    let exampleAllowed = false, popupAllowed = false
+    let exampleAllowed = false
+    const allowedPopups: string[] = [], expectedAborts = new Set<string>(), aborted: string[] = []
+    const suggestionURL = (query: string) => app.base + '/api/v2/nav/search/suggestions?' + new URLSearchParams({ q: query })
     context.on('page', popup => { if (popup !== page) popupErrors.push(captureBrowserErrors(popup)) })
     context.on('requestfailed', request => {
-      if (expectedFailures.has(request.url()) && request.failure()?.errorText === 'net::ERR_FAILED') injectedFailed.push(request.url())
+      if (expectedAborts.has(request.url()) && request.failure()?.errorText === 'net::ERR_ABORTED') aborted.push(request.url())
+      else if (expectedFailures.has(request.url()) && request.failure()?.errorText === 'net::ERR_FAILED') injectedFailed.push(request.url())
       else unexpectedFailed.push(`${request.url()}: ${request.failure()?.errorText}`)
     })
     page.on('request', request => {
@@ -105,6 +116,9 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     })
     await context.route('**/*', async route => {
       const url = route.request().url()
+      const parsed = new URL(url)
+      if (parsed.origin === app.base && parsed.pathname === '/api/v2/nav/search/suggestions'
+        && state.responses.get(parsed.searchParams.get('q') ?? '')?.failure === 'network') return route.abort('failed')
       if (new URL(url).origin === app.base || /^(data|blob):/.test(url)) return route.continue()
       if (heroURLs.includes(url)) {
         managed.push(url)
@@ -123,9 +137,9 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
         weather.push(url)
         return route.fulfill({ contentType: 'text/html', body: '' })
       }
-      if (popupAllowed && url === searchPopupURL && route.request().isNavigationRequest()) {
+      if (allowedPopups.includes(url) && route.request().isNavigationRequest()) {
         popups.push(url)
-        return route.fulfill({ contentType: 'text/html', body: '<title>Local Bing navigation boundary</title>' })
+        return route.fulfill({ contentType: 'text/html', body: '<title>Local search navigation boundary</title>' })
       }
       external.push(url)
       await route.abort('blockedbyclient')
@@ -137,7 +151,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     const items = suggestions.locator('.search-suggestion-item')
     const quick = root.locator('.quick-access-grid')
     const modal = root.locator('.quick-modal-panel')
-    const releaseSuggestions = () => { state.gate?.release(); state.gate = undefined }
+    const releaseSuggestions = (query = 'wolf') => { state.gates.get(query)?.release(); state.gates.delete(query) }
     const assertQuiet = () => {
       expect(app.requests.slice(upstreamStart), 'No unaccounted fixture media/business upstream calls').toEqual(state.requests)
       const home = state.requests.filter(url => url.pathname === '/api/v2/nav/home')
@@ -146,10 +160,10 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       expect(state.requests.filter(url => !['/api/v2/nav/home', '/api/v2/nav/search/suggestions'].includes(url.pathname))).toEqual([])
       expect(browserAPI.every(path => path.startsWith('/api/v2/nav/search/suggestions?')), 'Home is SSR-only; no hydration refetch or secondary Home API').toBe(true)
       for (const url of state.requests.filter(url => url.pathname.endsWith('/suggestions'))) {
-        expect([...url.searchParams.keys()].sort()).toEqual(['engine', 'q'])
-        expect(url.searchParams.get('engine')).toBe('bing')
-        expect(['wolf', 'noresult']).toContain(url.searchParams.get('q'))
+        expect([...url.searchParams.keys()]).toEqual(['q'])
+        expect(state.responses.has(url.searchParams.get('q')!)).toBe(true)
       }
+      for (const path of browserAPI) expect([...new URL(path, app.base).searchParams.keys()]).toEqual(['q'])
       expect(managed).toEqual([heroURLs[page.viewportSize()!.width < 768 ? 1 : 0]])
       expect(weather).toEqual([weatherURL])
       expect(external).toEqual([])
@@ -158,7 +172,7 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       // verified by the existing helper; any later error (even identical) fails.
       expect(errors.slice(knownHydration.length)).toEqual([])
       expect(popupErrors.flat()).toEqual([])
-      expect(popups).toEqual(popupAllowed ? [searchPopupURL] : [])
+      expect(popups).toEqual(allowedPopups)
     }
     const settle = async (target: Locator) => {
       // Preserve intentional input focus in suggestion/modal visual states.
@@ -189,20 +203,29 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
     }
     const expectSuggestionRequest = async (query: string) => {
       await expect.poll(() => state.requests.filter(url => url.pathname.endsWith('/suggestions')
-        && url.searchParams.get('engine') === 'bing' && url.searchParams.get('q') === query).length).toBeGreaterThan(0)
+        && url.searchParams.get('q') === query).length).toBeGreaterThan(0)
     }
     try {
       await use({
         root, search, input, suggestions, items, quick, modal, assertQuiet, settle,
         releaseSuggestions, expectSuggestionRequest,
-        holdSuggestions() {
-          expect(state.gate).toBeUndefined()
+        suggestion(query, response) {
+          state.responses.set(query, response)
+          if (response.failure) expectedFailures.add(suggestionURL(query))
+        },
+        requestQueries() { return browserAPI.map(path => new URL(path, app.base).searchParams.get('q')!) },
+        async expectAborted(query) {
+          await expect.poll(() => aborted).toContain(suggestionURL(query))
+        },
+        holdSuggestions(query = 'wolf') {
+          expect(state.gates.has(query)).toBe(false)
           let release!: () => void
           const promise = new Promise<void>(resolve => { release = resolve })
-          state.gate = { promise, release }
+          state.gates.set(query, { promise, release })
+          expectedAborts.add(suggestionURL(query))
         },
         allowExampleIcon() { exampleAllowed = true },
-        allowSearchPopup() { popupAllowed = true },
+        allowSearchPopup(url = searchPopupURL) { allowedPopups.push(url) },
         async open(width = 1440) {
           await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
           await context.addCookies(['gf_asset_cdn_mode=primary', 'gf_asset_cdn=primary', 'gf_hero_mode=random'].map(pair => {
@@ -302,10 +325,10 @@ export const test = base.extend<{ header: Header }, { headerApp: Worker }>({
       })
       assertQuiet()
     } finally {
-      releaseSuggestions()
+      state.gates.forEach(gate => gate.release())
       await testInfo.attach('header-network-evidence', { contentType: 'application/json', body: JSON.stringify({
         upstream: state.requests.map(String), browserAPI, managed, icons, injectedFailed, weather, popups,
-        external, unexpectedFailed, errors, knownHydration, popupErrors,
+        external, unexpectedFailed, aborted, errors, knownHydration, popupErrors,
       }, null, 2) })
       headerApp.current = null
       // Playwright owns the context and routes. Never await unrouteAll(wait)

@@ -42,17 +42,6 @@
       "count": 4
     }
   },
-  "app/components/nav/SearchBox.vue": {
-    "@typescript-eslint/no-explicit-any": {
-      "count": 1
-    },
-    "@typescript-eslint/no-unsafe-function-type": {
-      "count": 1
-    },
-    "vue/no-v-html": {
-      "count": 1
-    }
-  },
   "app/composables/useSiteDetailPage.ts": {
     "@typescript-eslint/no-explicit-any": {
       "count": 2

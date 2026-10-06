@@ -25,12 +25,11 @@
       <input
           ref="inputRef"
           type="text"
-          v-model="keyword"
-          @keydown.enter.prevent="handleEnterKey"
-          @keydown.down.prevent="handleArrowDown"
-          @keydown.up.prevent="handleArrowUp"
-          @keydown.esc.prevent.stop="closeSearchSuggestions"
-          @input="debouncedFetch"
+          :value="keyword"
+          @keydown="handleKeyDown"
+          @input="handleInput"
+          @compositionstart="handleCompositionStart"
+          @compositionend="handleCompositionEnd"
           @focus="handleInputFocus"
           @blur="handleInputBlur"
           placeholder="搜索站点或内容..."
@@ -73,7 +72,7 @@
               :class="hoveredIndex === index ? 'search-suggestion-item-active' : ''"
           >
             <!-- 关键词高亮 -->
-            <span v-html="highlightKeyword(item)"></span>
+            <span><template v-for="(segment, part) in highlightSegments(item)" :key="part"><span v-if="part % 2" class="search-highlight">{{ segment }}</span><template v-else>{{ segment }}</template></template></span>
           </li>
         </template>
 
@@ -105,7 +104,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted, onBeforeUnmount, computed } from 'vue'
 import { getSearchSuggestion } from '@/services/nav'
-import type { NavSearchSuggestionEngine } from '@/types/nav'
 import { useI18n } from 'vue-i18n'
 import { setNavPageRevealLock } from '@/utils/navPageReveal'
 
@@ -123,7 +121,6 @@ const categories = computed(() => [
 ])
 
 const selectedCategory = ref('')
-type VisibleSuggestionEngine = Exclude<NavSearchSuggestionEngine, 'baidu'>
 
 // 初始化默认选中类别
 const initDefaultCategory = () => {
@@ -142,7 +139,7 @@ const isLoading = ref(false)
 
 interface Platform {
   name: string
-  type: VisibleSuggestionEngine | 'site'
+  type: 'bing' | 'google' | 'duckduckgo' | 'bilibili' | 'site'
   url?: string
 }
 
@@ -187,10 +184,18 @@ const selectedPlatform = ref<Platform>({ name: '', type: 'site' })
 let timer: number | null = null
 let suggestionAbortController: AbortController | null = null
 let suggestionRequestId = 0
+let composing = false
+let scheduledKeyword: string | null = null
+
+const inputRef = ref<HTMLInputElement | null>(null)
+const searchBoxRef = ref<HTMLElement | null>(null)
+const dropdownRef = ref<HTMLElement | null>(null)
+const dropdownVisible = ref(false)
+const isInputFocused = ref(false)
 
 // 重置默认选中逻辑
 const resetSelection = () => {
-  abortSuggestionRequest()
+  cancelSuggestions()
   initDefaultCategory()
   const defaultPlatform = platforms.value[selectedCategory.value]?.[0]
   selectedPlatform.value = defaultPlatform || { name: '', type: 'site' }
@@ -203,30 +208,16 @@ watch([categories, selectedCategory, platforms], () => {
   resetSelection()
 }, { immediate: true })
 
-const debounce = (fn: Function, delay = 600) => (...args: any[]) => {
-  if (timer) clearTimeout(timer)
-  timer = window.setTimeout(() => fn(...args), delay)
-}
-
-const inputRef = ref<HTMLInputElement | null>(null)
-const searchBoxRef = ref<HTMLElement | null>(null)
-const dropdownRef = ref<HTMLElement | null>(null)
-const dropdownVisible = ref(false)
-const isInputFocused = ref(false)
-
-const highlightKeyword = (item: string) => {
-  if (!keyword.value.trim()) return item
+const highlightSegments = (item: string) => {
+  if (!keyword.value.trim()) return [item]
   const escapedKeyword = keyword.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return item.replace(
-      new RegExp(`(${escapedKeyword})`, 'gi'),
-      '<span class="search-highlight">$1</span>'
-  )
+  return item.split(new RegExp(`(${escapedKeyword})`, 'gi'))
 }
 
 const fetchSuggestions = async () => {
   const searchLabel = t('searchBox.platformCate.search')
   const requestKeyword = keyword.value.trim()
-  if (!requestKeyword || selectedCategory.value !== searchLabel || !isSuggestionEngine(selectedPlatform.value.type)) {
+  if (composing || !requestKeyword || selectedCategory.value !== searchLabel) {
     abortSuggestionRequest()
     suggestions.value = []
     dropdownVisible.value = false
@@ -242,13 +233,19 @@ const fetchSuggestions = async () => {
   suggestionAbortController = controller
 
   try {
-    const response = await getSearchSuggestion(selectedPlatform.value.type, requestKeyword, controller.signal)
+    const response = await getSearchSuggestion(requestKeyword, controller.signal)
     if (requestId !== suggestionRequestId) return
+    if (response.state === 'unavailable') {
+      suggestions.value = []
+      dropdownVisible.value = false
+      return
+    }
     suggestions.value = response.suggestions
     if (response.suggestions.length > 0 && hoveredIndex.value === -1) hoveredIndex.value = 0
   } catch {
     if (controller.signal.aborted || requestId !== suggestionRequestId) return
     suggestions.value = []
+    dropdownVisible.value = false
   } finally {
     if (requestId === suggestionRequestId) {
       isLoading.value = false
@@ -259,7 +256,43 @@ const fetchSuggestions = async () => {
   }
 }
 
-const debouncedFetch = debounce(fetchSuggestions, 600)
+function scheduleSuggestions() {
+  if (composing || scheduledKeyword === keyword.value) return
+  cancelSuggestions()
+  if (!keyword.value.trim() || selectedCategory.value !== t('searchBox.platformCate.search')) return
+  scheduledKeyword = keyword.value
+  timer = window.setTimeout(() => {
+    timer = null
+    void fetchSuggestions()
+  }, 600)
+}
+
+function handleInput(event: Event) {
+  keyword.value = (event.currentTarget as HTMLInputElement).value
+  if (!composing) scheduleSuggestions()
+}
+
+function handleCompositionStart() {
+  composing = true
+  cancelSuggestions()
+}
+
+function handleCompositionEnd(event: CompositionEvent) {
+  composing = false
+  keyword.value = (event.currentTarget as HTMLInputElement).value
+  // A trailing input event with the same final text must not restart the debounce.
+  scheduleSuggestions()
+}
+
+function handleKeyDown(event: KeyboardEvent) {
+  if (composing || event.isComposing) return
+  switch (event.key) {
+    case 'Enter': event.preventDefault(); handleEnterKey(); break
+    case 'ArrowDown': event.preventDefault(); handleArrowDown(); break
+    case 'ArrowUp': event.preventDefault(); handleArrowUp(); break
+    case 'Escape': event.preventDefault(); event.stopPropagation(); closeSearchSuggestions(); break
+  }
+}
 
 const doSearch = () => {
   const kw = encodeURIComponent(keyword.value.trim())
@@ -345,8 +378,8 @@ const scrollToSelectedItem = () => {
 const handleInputFocus = () => {
   isInputFocused.value = true
   if (keyword.value.trim()) {
-    dropdownVisible.value = true
-    debouncedFetch()
+    scheduledKeyword = null
+    scheduleSuggestions()
   }
 }
 
@@ -367,14 +400,19 @@ const handleClickOutside = (e: MouseEvent) => {
 }
 
 const closeSearchSuggestions = () => {
-  abortSuggestionRequest()
-  dropdownVisible.value = false
-  hoveredIndex.value = -1
+  cancelSuggestions()
   isInputFocused.value = false
 }
 
-function isSuggestionEngine(type: Platform['type']): type is VisibleSuggestionEngine {
-  return type === 'bing' || type === 'google' || type === 'bilibili' || type === 'duckduckgo'
+function cancelSuggestions() {
+  if (timer !== null) clearTimeout(timer)
+  timer = null
+  scheduledKeyword = null
+  abortSuggestionRequest()
+  suggestions.value = []
+  dropdownVisible.value = false
+  hoveredIndex.value = -1
+  isLoading.value = false
 }
 
 function abortSuggestionRequest() {
@@ -397,8 +435,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (timer) clearTimeout(timer)
-  abortSuggestionRequest()
+  cancelSuggestions()
   document.removeEventListener('click', handleClickOutside)
   setNavPageRevealLock('search-box', false)
 })

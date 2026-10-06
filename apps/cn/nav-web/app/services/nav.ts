@@ -5,7 +5,6 @@ import type {
   NavHomePingResponse,
   NavHomeResponse,
   NavHomeSayingResponse,
-  NavSearchSuggestionEngine,
   NavSearchSuggestionsResponse,
   NavSiteGroupPageResponse,
   NavSiteIndexResponse,
@@ -74,11 +73,10 @@ export function touchSiteView(siteId: string | number): Promise<SiteViewResponse
 }
 
 export function getSearchSuggestion(
-  engine: NavSearchSuggestionEngine,
   keyword: string,
   signal?: AbortSignal
 ): Promise<NavSearchSuggestionsResponse> {
-  return useApi('navV2')('/nav/search/suggestions', { query: { engine, q: keyword }, signal })
+  return useApi('navV2')('/nav/search/suggestions', { query: { q: keyword }, signal, retry: 0 })
 }
 
 export function getNavUpdates(lang: 'zh' | 'en', page?: { page: number; page_size: number }, signal?: AbortSignal): Promise<NavUpdatesResponse> {

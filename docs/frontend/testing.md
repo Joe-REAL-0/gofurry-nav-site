@@ -980,19 +980,28 @@ exercises the real fallback. The explicit Add action additionally permits its
 known `example.com` favicon. No CDN/favicon-origin wildcard is allowed.
 
 Home is requested exactly once on SSR, with empty groups/spotlights, a non-null
-saying and deterministic Hero. Hydration cannot refetch Home. Only real Bing
-`wolf`/`noresult` suggestion requests may follow, through the production debounce
-and API chain. A response gate exposes loading and releases in failure cleanup.
+saying and deterministic Hero. Hydration cannot refetch Home. Suggestions use only
+q and schema 2 through the production debounce/API chain. Each test explicitly
+registers query responses and per-query gates; gates release in failure cleanup.
 The production exact Tianqi iframe is isolated locally; external traffic and
-unexpected failures/errors must remain zero. Bing popup navigation is allowed
-only at the exact selected-suggestion URL after the real Enter action.
+unexpected failures/errors must remain zero. Search popup navigation is allowed
+only at the exact registered destination after the real Enter action (Bing,
+Google and Xiaohongshu). Provider selection never changes destination semantics.
+
+Issue #123 extends this fixture with controlled-clock 600ms debounce, cancellation
+of gated requests, stale-response isolation, final-only Chinese IME queries and
+unconsumed IME Enter/Arrow/Escape keys. Malicious provider HTML stays literal text
+with safe highlight segments. Empty keeps its empty state; unavailable, injected
+503/429 and one exact network abort silently close the dropdown without retry.
+Expected Chromium network diagnostics are scoped to injected URLs; application
+errors/hydration mismatches still fail. No test sends public provider requests.
 
 Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
 contract, with an observer recording the earliest real SSR Hero. Raw errors stay
 attached; only that verified initial mismatch is consumed. Every later error
 still fails, and Desktop keeps zero browser errors.
 
-Two regressions protect Search typography/theme parity, debounce/loading/empty,
+The original regressions protect Search typography/theme parity, debounce/loading/empty,
 keyboard/popup and reveal lock; plus QuickAccess slots/favicon fallback and
 Modal validation/add/delete/localStorage. The audited chip transition is
 `background, box-shadow, color` at 500ms each: existing unlayered Less overrides
