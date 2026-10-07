@@ -11,6 +11,7 @@ html, body, #app {
 }
 
 html, body {
+  font-family: var(--gf-font-sans);
   -ms-overflow-style: none;
   scrollbar-width: none;
 }

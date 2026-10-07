@@ -8,92 +8,172 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// Admin 本地账号身份、密码凭证与会话撤销版本；权限映射由编译代码持有
 type GfaAdminAccount struct {
-	ID                int64            `json:"id"`
-	PasswordHash      string           `json:"password_hash"`
-	SessionVersion    int64            `json:"session_version"`
-	CreatedAt         pgtype.Timestamp `json:"created_at"`
-	UpdatedAt         pgtype.Timestamp `json:"updated_at"`
+	// Admin 本地账号身份、密码凭证与会话撤销版本的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 登录密码的单向哈希凭证，不保存明文密码
+	PasswordHash string `json:"password_hash"`
+	// 该账号的会话撤销版本；变更后旧版本登录令牌失效
+	SessionVersion int64 `json:"session_version"`
+	// Admin 本地账号身份、密码凭证与会话撤销版本的记录创建时间
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	// Admin 本地账号身份、密码凭证与会话撤销版本的记录最近更新时间
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	// 最近设置或重置密码的时间；历史账号可能为 NULL
 	PasswordUpdatedAt pgtype.Timestamp `json:"password_updated_at"`
-	Username          string           `json:"username"`
-	DisplayName       string           `json:"display_name"`
-	Role              string           `json:"role"`
-	Status            string           `json:"status"`
-	LastLoginAt       pgtype.Timestamp `json:"last_login_at"`
+	// 规范化小写登录名，去除首尾空白且在账号域内唯一
+	Username string `json:"username"`
+	// 后台显示名称；审计记录保存操作发生时的名称快照
+	DisplayName string `json:"display_name"`
+	// 固定角色 owner、developer 或 operator；能力集合由后端策略推导
+	Role string `json:"role"`
+	// 账号可用状态：active 可登录，disabled 禁止登录
+	Status string `json:"status"`
+	// 最后一次成功登录时间；从未登录时为 NULL
+	LastLoginAt pgtype.Timestamp `json:"last_login_at"`
 }
 
+// Admin 操作的持久审计记录，保存操作者身份快照及变更前后内容
 type GfaAdminAuditLog struct {
-	ID                int64            `json:"id"`
-	Action            string           `json:"action"`
-	Resource          string           `json:"resource"`
-	TargetID          *string          `json:"target_id"`
-	Operator          string           `json:"operator"`
-	SessionVersion    int64            `json:"session_version"`
-	RequestID         *string          `json:"request_id"`
-	IpAddress         *string          `json:"ip_address"`
-	UserAgent         *string          `json:"user_agent"`
-	BeforeData        *string          `json:"before_data"`
-	AfterData         *string          `json:"after_data"`
-	CreatedAt         pgtype.Timestamp `json:"created_at"`
-	OperatorAccountID *int64           `json:"operator_account_id"`
-	OperatorName      string           `json:"operator_name"`
-	OperatorRole      string           `json:"operator_role"`
+	// Admin 操作的持久审计记录的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 发生的业务操作代码，用于检索和解释审计事件
+	Action string `json:"action"`
+	// 被操作的资源类型代码；不是数据库连接名
+	Resource string `json:"resource"`
+	// 被操作资源的文本身份；无单一目标的操作可为 NULL
+	TargetID *string `json:"target_id"`
+	// 历史兼容的操作者文本；新身份另由账号、名称和角色快照保存
+	Operator string `json:"operator"`
+	// 操作发生时的会话版本；系统或旧记录可为零
+	SessionVersion int64 `json:"session_version"`
+	// 关联本次 HTTP 请求的追踪标识；未提供时为 NULL
+	RequestID *string `json:"request_id"`
+	// 审计请求来源地址；未取得时为 NULL，不用于重建角色权限
+	IpAddress *string `json:"ip_address"`
+	// 审计请求的 User-Agent；未取得时为 NULL
+	UserAgent *string `json:"user_agent"`
+	// 操作前快照的序列化文本；敏感字段由调用方按审计策略脱敏，无快照时为空串或历史 NULL
+	BeforeData *string `json:"before_data"`
+	// 操作后快照的序列化文本；敏感字段由调用方按审计策略脱敏，无快照时为空串或历史 NULL
+	AfterData *string `json:"after_data"`
+	// Admin 操作的持久审计记录的记录创建时间
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	// 实际操作者账号；历史或系统操作可为 NULL，账号删除受外键限制
+	OperatorAccountID *int64 `json:"operator_account_id"`
+	// 操作发生时的显示名称快照，不随账号改名回写
+	OperatorName string `json:"operator_name"`
+	// 操作发生时的角色快照；系统操作使用 system
+	OperatorRole string `json:"operator_role"`
 }
 
+// 共享画布节点间的连线；节点删除时级联删除关联连线
 type GfaCollaborationBoardEdge struct {
-	ID                 int64            `json:"id"`
-	SourceID           int64            `json:"source_id"`
-	TargetID           int64            `json:"target_id"`
-	SourceHandle       string           `json:"source_handle"`
-	TargetHandle       string           `json:"target_handle"`
-	Routing            string           `json:"routing"`
-	Label              string           `json:"label"`
-	Color              string           `json:"color"`
-	Arrow              bool             `json:"arrow"`
-	CreatedByAccountID int64            `json:"created_by_account_id"`
-	UpdatedByAccountID int64            `json:"updated_by_account_id"`
-	Version            int64            `json:"version"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
+	// 共享画布节点间的连线的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 起点节点身份，引用同一共享画布的节点
+	SourceID int64 `json:"source_id"`
+	// 终点节点身份；不得与起点相同
+	TargetID int64 `json:"target_id"`
+	// 起点连接方位 top、right、bottom 或 left
+	SourceHandle string `json:"source_handle"`
+	// 终点连接方位 top、right、bottom 或 left
+	TargetHandle string `json:"target_handle"`
+	// 连线路径形态：curve 曲线或 step 折线
+	Routing string `json:"routing"`
+	// 连线上的说明文本，不超过 200 字符
+	Label string `json:"label"`
+	// 画布语义色：sand、blue、green、rose 或 slate，不存任意 CSS
+	Color string `json:"color"`
+	// 是否显示连线方向箭头
+	Arrow bool `json:"arrow"`
+	// 创建该协作对象的 Admin 账号身份，引用 gfa_admin_account
+	CreatedByAccountID int64 `json:"created_by_account_id"`
+	// 最近修改该协作对象的 Admin 账号身份，引用 gfa_admin_account
+	UpdatedByAccountID int64 `json:"updated_by_account_id"`
+	// 乐观并发版本；修改时必须匹配旧版本并递增
+	Version int64 `json:"version"`
+	// 共享画布节点间的连线的记录创建时间
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	// 共享画布节点间的连线的记录最近更新时间
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 }
 
+// 协作中心唯一共享画布的节点；位置和尺寸更新也受版本检查
 type GfaCollaborationBoardNode struct {
-	ID                 int64            `json:"id"`
-	Body               string           `json:"body"`
-	X                  int32            `json:"x"`
-	Y                  int32            `json:"y"`
-	Width              int32            `json:"width"`
-	Height             int32            `json:"height"`
-	ZIndex             int32            `json:"z_index"`
-	CreatedByAccountID int64            `json:"created_by_account_id"`
-	UpdatedByAccountID int64            `json:"updated_by_account_id"`
-	Version            int64            `json:"version"`
-	CreatedAt          pgtype.Timestamp `json:"created_at"`
-	UpdatedAt          pgtype.Timestamp `json:"updated_at"`
-	Kind               string           `json:"kind"`
-	Title              string           `json:"title"`
-	Color              string           `json:"color"`
-	Rotation           int32            `json:"rotation"`
-	ReferenceKind      *string          `json:"reference_kind"`
-	ReferenceID        *int64           `json:"reference_id"`
+	// 协作中心唯一共享画布的节点的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 节点正文文本；不作为正式 Game/Nav 内容发布
+	Body string `json:"body"`
+	// 节点在共享画布坐标系中的横向位置
+	X int32 `json:"x"`
+	// 节点在共享画布坐标系中的纵向位置
+	Y int32 `json:"y"`
+	// 节点在画布中的宽度，范围 48..1600
+	Width int32 `json:"width"`
+	// 节点在画布中的高度，范围 40..1600
+	Height int32 `json:"height"`
+	// 节点叠放顺序，数值越大越靠前
+	ZIndex int32 `json:"z_index"`
+	// 创建该协作对象的 Admin 账号身份，引用 gfa_admin_account
+	CreatedByAccountID int64 `json:"created_by_account_id"`
+	// 最近修改该协作对象的 Admin 账号身份，引用 gfa_admin_account
+	UpdatedByAccountID int64 `json:"updated_by_account_id"`
+	// 乐观并发版本；修改时必须匹配旧版本并递增
+	Version int64 `json:"version"`
+	// 协作中心唯一共享画布的节点的记录创建时间
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	// 协作中心唯一共享画布的节点的记录最近更新时间
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	// 节点形态：note、card、text、rectangle、ellipse 或 arrow
+	Kind string `json:"kind"`
+	// 节点标题文本；图形节点允许无标题
+	Title string `json:"title"`
+	// 画布语义色：sand、blue、green、rose 或 slate，不存任意 CSS
+	Color string `json:"color"`
+	// 节点旋转角度，仅允许 0、90、180、270 度
+	Rotation int32 `json:"rotation"`
+	// 卡片引用类型 idea、game 或 site；无引用时与 reference_id 同为 NULL
+	ReferenceKind *string `json:"reference_kind"`
+	// 卡片关联对象身份；正式内容为跨库逻辑引用，不复制其业务数据
+	ReferenceID *int64 `json:"reference_id"`
 }
 
+// 协作中心内容想法池；正式内容仍由 Game/Nav API 创建，落地关联不是跨库事务
 type GfaContentIdea struct {
-	ID                     int64            `json:"id"`
-	Kind                   string           `json:"kind"`
-	Title                  *string          `json:"title"`
-	Source                 *string          `json:"source"`
-	SourceKey              *string          `json:"source_key"`
-	Note                   string           `json:"note"`
-	Priority               string           `json:"priority"`
-	Status                 string           `json:"status"`
-	CreatedByAccountID     int64            `json:"created_by_account_id"`
-	ResearchingByAccountID *int64           `json:"researching_by_account_id"`
-	LinkedKind             *string          `json:"linked_kind"`
-	LinkedResourceID       *int64           `json:"linked_resource_id"`
-	Version                int64            `json:"version"`
-	CreatedAt              pgtype.Timestamp `json:"created_at"`
-	UpdatedAt              pgtype.Timestamp `json:"updated_at"`
-	ResearchingAt          pgtype.Timestamp `json:"researching_at"`
-	LandedAt               pgtype.Timestamp `json:"landed_at"`
+	// 协作中心内容想法池的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 想法类型：game 游戏、site 网站或 other 其它
+	Kind string `json:"kind"`
+	// 运营填写的想法标题；可缺省，但标题与来源不能同时为空
+	Title *string `json:"title"`
+	// 运营记录的原始来源或线索文本；未提供时为 NULL
+	Source *string `json:"source"`
+	// 来源归一键，如 steam:AppID 或 host:域名；仅用于重复提示，不保证唯一
+	SourceKey *string `json:"source_key"`
+	// 调研与协作备注文本，不直接发布到正式内容
+	Note string `json:"note"`
+	// 处理优先级 normal 或 high，不代表正式内容排序
+	Priority string `json:"priority"`
+	// 流转阶段：idea 待研究、researching 研究中、landed 已落地、shelved 已搁置
+	Status string `json:"status"`
+	// 创建该协作对象的 Admin 账号身份，引用 gfa_admin_account
+	CreatedByAccountID int64 `json:"created_by_account_id"`
+	// 研究中阶段的认领账号；其它阶段为 NULL，不是租约
+	ResearchingByAccountID *int64 `json:"researching_by_account_id"`
+	// 落地资源类型 game 或 site；未关联时为 NULL
+	LinkedKind *string `json:"linked_kind"`
+	// 正式 GFG/GFN 内容的逻辑身份；跨库不建外键，重开想法清除此关联
+	LinkedResourceID *int64 `json:"linked_resource_id"`
+	// 乐观并发版本；修改时必须匹配旧版本并递增
+	Version int64 `json:"version"`
+	// 协作中心内容想法池的记录创建时间
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+	// 协作中心内容想法池的记录最近更新时间
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	// 进入当前研究中阶段的时间；其它阶段为 NULL
+	ResearchingAt pgtype.Timestamp `json:"researching_at"`
+	// 本次完成落地的时间；非 landed 阶段为 NULL
+	LandedAt pgtype.Timestamp `json:"landed_at"`
 }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, RouterProvider, useParams } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -101,6 +101,51 @@ it('keeps filters in the URL and uses active inventory by default', async () => 
   await waitFor(() => expect(router.state.location.search).toContain('keyword=Steam'))
 })
 
+it('commits only final IME text to the URL and query, resetting pagination with replace', async () => {
+  vi.mocked(getJSON).mockImplementation(async (url) => url.includes('/ideas?') ? { list: [], total: 200 } : { reserve_count: 200, researching_count: 0, landed_30d: 0 })
+  const { router } = setup(<CollaborationPage />, '/collaboration?keyword=old&page_num=3')
+  await screen.findByText('共 200 条 · 第 3 页')
+  const navigate = vi.spyOn(router, 'navigate')
+  vi.mocked(getJSON).mockClear()
+  const input = screen.getByLabelText('搜索想法')
+  fireEvent.compositionStart(input)
+  for (const value of ['zhong', '中文sou', '中文搜索']) fireEvent.change(input, { target: { value } })
+  expect(input).toHaveValue('中文搜索')
+  expect(navigate).not.toHaveBeenCalled()
+  expect(getJSON).not.toHaveBeenCalled()
+  expect(router.state.location.search).toBe('?keyword=old&page_num=3')
+
+  fireEvent.compositionEnd(input, { data: '中文搜索', target: { value: '中文搜索' } })
+  fireEvent.change(input, { target: { value: '中文搜索' } })
+  await screen.findByText('共 200 条 · 第 1 页')
+  const params = new URLSearchParams(router.state.location.search)
+  expect(params.get('keyword')).toBe('中文搜索')
+  expect(params.get('page_num')).toBe('1')
+  expect(navigate).toHaveBeenCalledTimes(1)
+  expect(router.state.historyAction).toBe('REPLACE')
+  expect(getJSON).toHaveBeenCalledTimes(1)
+  expect(new URL(vi.mocked(getJSON).mock.calls[0][0], 'http://admin.test').searchParams.get('keyword')).toBe('中文搜索')
+})
+
+it('syncs external URL searches except while composing and resumes ordinary immediate search', async () => {
+  vi.mocked(getJSON).mockImplementation(async (url) => url.includes('/ideas?') ? { list: [], total: 0 } : { reserve_count: 0, researching_count: 0, landed_30d: 0 })
+  const { router } = setup(<CollaborationPage />, '/collaboration?keyword=initial')
+  const input = screen.getByLabelText('搜索想法')
+  await act(async () => { await router.navigate('/collaboration?keyword=external&page_num=2') })
+  expect(input).toHaveValue('external')
+  fireEvent.compositionStart(input)
+  fireEvent.change(input, { target: { value: 'zhong' } })
+  await act(async () => { await router.navigate('/collaboration?keyword=other&page_num=4&kind=game') })
+  expect(input).toHaveValue('zhong')
+  fireEvent.compositionEnd(input, { target: { value: '中文' } })
+  expect(new URLSearchParams(router.state.location.search).get('keyword')).toBe('中文')
+  expect(new URLSearchParams(router.state.location.search).get('kind')).toBe('game')
+  fireEvent.change(input, { target: { value: 'Steam' } })
+  expect(new URLSearchParams(router.state.location.search).get('keyword')).toBe('Steam')
+  await act(async () => { await router.navigate('/collaboration?keyword=back') })
+  expect(input).toHaveValue('back')
+})
+
 it('retains modal edits on 409 and explicitly reloads without retrying a stale write', async () => {
   vi.mocked(sendJSON).mockRejectedValue(new ApiError('stale', 409))
   vi.mocked(getJSON).mockResolvedValue({ ...idea, version: 4, note: '其他成员的修改' })
@@ -164,7 +209,7 @@ it.each([{ kind: 'game' as const, fails: true }, { kind: 'site' as const, fails:
   else expect(await screen.findByText('已落地')).toBeInTheDocument()
   expect(vi.mocked(sendJSON).mock.calls.some(([url, method]) => method === 'DELETE' || url.includes('collector-domains'))).toBe(false)
   vi.mocked(sendJSON).mockResolvedValue({ ...current, status: 'landed' })
-  if (fails) fireEvent.click(screen.getByRole('button', { name: '关联到当前内容' }))
+  if (fails) fireEvent.click(await screen.findByRole('button', { name: '关联到当前内容' }))
   else expect(screen.queryByRole('button', { name: '关联到当前内容' })).not.toBeInTheDocument()
   await waitFor(() => expect(sendJSON).toHaveBeenLastCalledWith(`${base}/ideas/7/link`, 'POST', { version: 3, kind, resource_id: 42 }))
   expect(vi.mocked(sendJSON).mock.calls.filter(([url]) => url === `/api/v1${path}`).length).toBe(1)

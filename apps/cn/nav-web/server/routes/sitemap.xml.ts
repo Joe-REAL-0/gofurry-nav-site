@@ -1,4 +1,4 @@
-import { parseGameInventory, parseSiteGroupInventory, parseSiteInventory } from '../utils/sitemapInventory'
+import { parseGameInventory, parseSiteGroupInventory, parseSiteInventory, parseUpdateInventory } from '../utils/sitemapInventory'
 
 function escapeXml(value: string) {
   return value
@@ -53,19 +53,22 @@ export default defineEventHandler(async (event) => {
   let sites
   let siteGroups
   let games
+  let updates
   try {
-    const [siteResponse, siteGroupResponse, gameResponse] = await Promise.all([
+    const [siteResponse, siteGroupResponse, gameResponse, updateResponse] = await Promise.all([
       $fetch('/api/v2/nav/sites/index'),
       $fetch('/api/v2/nav/site-groups', {
         query: { lang: 'zh' }
       }),
       $fetch('/api/v2/game/list', {
         query: { limit: '5000', lang: 'zh', region: 'CN' }
-      })
+      }),
+      $fetch('/api/v2/nav/updates', { query: { lang: 'zh' } }),
     ])
     sites = parseSiteInventory(siteResponse)
     siteGroups = parseSiteGroupInventory(siteGroupResponse)
     games = parseGameInventory(gameResponse)
+    updates = parseUpdateInventory(updateResponse)
   } catch (error) {
     throw createError({
       statusCode: 503,
@@ -84,6 +87,10 @@ export default defineEventHandler(async (event) => {
 
   for (const game of games) {
     addLocalizedUrls(urls, `/games/${encodeURIComponent(game.id)}`)
+  }
+
+  for (const update of updates) {
+    addLocalizedUrls(urls, `/updates/${encodeURIComponent(update.id)}`)
   }
 
   setHeader(event, 'content-type', 'application/xml; charset=utf-8')

@@ -2,38 +2,33 @@ package service
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/gofurry/gofurry-nav-backend/apps/nav/navPage/service"
 	"github.com/gofurry/gofurry-nav-backend/apps/nav/search/models"
-	"github.com/gofurry/gofurry-nav-backend/common"
 	"github.com/gofurry/gofurry-nav-backend/common/log"
 	cs "github.com/gofurry/gofurry-nav-backend/common/service"
 	"github.com/gofurry/gofurry-nav-backend/common/util"
+	"github.com/gofurry/gofurry-nav-backend/roof/env"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/singleflight"
 )
 
 const (
 	searchSuggestionMaxQueryLen = 128
-	searchSuggestionCacheTTL    = 90 * time.Second
+	searchSuggestionCacheTTL    = 10 * time.Minute
 )
 
 type suggestionProvider interface {
-	GetBaiduSuggestion(q string) ([]string, common.GFError)
-	GetBingSuggestion(q string) ([]string, common.GFError)
-	GetGoogleSuggestion(q string) ([]string, common.GFError)
-	GetBiliBiliSuggestion(q string) ([]string, common.GFError)
-	GetDuckDuckGoSuggestion(q string) ([]string, common.GFError)
+	Fetch(ctx context.Context, query string) ([]string, error)
 }
 
 type suggestionCache interface {
 	Get(key string) ([]string, bool)
-	Set(key string, suggestions []string)
+	Set(key string, suggestions []string, ttl time.Duration)
 }
 
 type redisSuggestionCache struct{}
@@ -51,12 +46,12 @@ func (redisSuggestionCache) Get(key string) ([]string, bool) {
 	return copySuggestions(suggestions), true
 }
 
-func (redisSuggestionCache) Set(key string, suggestions []string) {
+func (redisSuggestionCache) Set(key string, suggestions []string, ttl time.Duration) {
 	payload, err := sonic.Marshal(suggestions)
 	if err != nil {
 		return
 	}
-	_ = cs.SetExpire(key, string(payload), searchSuggestionCacheTTL)
+	_ = cs.SetExpire(key, string(payload), ttl)
 }
 
 type searchService struct {
@@ -75,7 +70,7 @@ func GetSearchService() *searchService {
 	searchMu.Lock()
 	defer searchMu.Unlock()
 	if searchSingleton.provider == nil {
-		searchSingleton.provider = service.GetNavPageService()
+		searchSingleton.provider = newDuckDuckGoProvider(env.GetServerConfig().Proxy.Url)
 	}
 	if searchSingleton.cache == nil {
 		searchSingleton.cache = redisSuggestionCache{}
@@ -90,33 +85,26 @@ func newSearchService(provider suggestionProvider, cache suggestionCache, now fu
 	return &searchService{provider: provider, cache: cache, now: now}
 }
 
-func New(provider suggestionProvider) *searchService {
-	return newSearchService(provider, redisSuggestionCache{}, time.Now)
+func New(proxyURL string) *searchService {
+	return newSearchService(newDuckDuckGoProvider(proxyURL), redisSuggestionCache{}, time.Now)
 }
 
-func (svc *searchService) GetSearchSuggestions(engine string, query string) models.SearchSuggestionsResponse {
-	engine = normalizeSuggestionEngine(engine)
+func (svc *searchService) GetSearchSuggestions(ctx context.Context, query string) models.SearchSuggestionsResponse {
 	query = normalizeSuggestionQuery(query)
 	response := models.SearchSuggestionsResponse{
 		SchemaVersion: models.SearchSuggestionsSchemaVersion,
 		GeneratedAt:   svc.clock()(),
 		State:         models.SearchSuggestionsStateEmpty,
-		Engine:        engine,
 		Query:         query,
 		Suggestions:   []string{},
 		CacheState:    models.SearchSuggestionsCacheMiss,
 	}
 
-	if engine == "" {
-		response.State = models.SearchSuggestionsStateError
-		response.ReasonMessages = []string{"unsupported search engine"}
-		return response
-	}
 	if query == "" {
 		return response
 	}
 
-	cacheKey := searchSuggestionCacheKey(engine, query)
+	cacheKey := searchSuggestionCacheKey(query)
 	if cached, ok := svc.cacheStore().Get(cacheKey); ok {
 		response.CacheState = models.SearchSuggestionsCacheHit
 		response.Suggestions = cached
@@ -126,25 +114,34 @@ func (svc *searchService) GetSearchSuggestions(engine string, query string) mode
 		return response
 	}
 
-	result, err, _ := svc.group.Do(cacheKey, func() (any, error) {
+	pending := svc.group.DoChan(cacheKey, func() (any, error) {
 		if cached, ok := svc.cacheStore().Get(cacheKey); ok {
 			return cachedSearchSuggestions{items: cached, hit: true}, nil
 		}
-		items, fetchErr := svc.fetchSuggestions(engine, query)
+		// One bounded upstream request survives cancellation of an individual waiter.
+		fetchCtx, cancel := context.WithTimeout(context.Background(), searchSuggestTimeout)
+		defer cancel()
+		items, fetchErr := svc.provider.Fetch(fetchCtx, query)
 		if fetchErr != nil {
-			return cachedSearchSuggestions{items: []string{}, hit: false}, errors.New(fetchErr.GetMsg())
+			return cachedSearchSuggestions{items: []string{}, hit: false}, fetchErr
 		}
 		items = sanitizeSuggestions(items)
-		svc.cacheStore().Set(cacheKey, items)
+		svc.cacheStore().Set(cacheKey, items, searchSuggestionCacheTTL)
 		return cachedSearchSuggestions{items: items, hit: false}, nil
 	})
-	if err != nil {
-		response.State = models.SearchSuggestionsStateError
-		response.ReasonMessages = []string{err.Error()}
+	var result singleflight.Result
+	select {
+	case <-ctx.Done():
+		response.State = models.SearchSuggestionsStateUnavailable
+		return response
+	case result = <-pending:
+	}
+	if result.Err != nil {
+		response.State = models.SearchSuggestionsStateUnavailable
+		log.Warn("search suggestion provider unavailable:", result.Err)
 		return response
 	}
-
-	data := result.(cachedSearchSuggestions)
+	data := result.Val.(cachedSearchSuggestions)
 	response.Suggestions = copySuggestions(data.items)
 	if data.hit {
 		response.CacheState = models.SearchSuggestionsCacheHit
@@ -153,30 +150,6 @@ func (svc *searchService) GetSearchSuggestions(engine string, query string) mode
 		response.State = models.SearchSuggestionsStateReady
 	}
 	return response
-}
-
-func (svc *searchService) fetchSuggestions(engine string, query string) ([]string, common.GFError) {
-	switch engine {
-	case "baidu":
-		return svc.source().GetBaiduSuggestion(query)
-	case "bing":
-		return svc.source().GetBingSuggestion(query)
-	case "google":
-		return svc.source().GetGoogleSuggestion(query)
-	case "bilibili":
-		return svc.source().GetBiliBiliSuggestion(query)
-	case "duckduckgo":
-		return svc.source().GetDuckDuckGoSuggestion(query)
-	default:
-		return []string{}, nil
-	}
-}
-
-func (svc *searchService) source() suggestionProvider {
-	if svc != nil && svc.provider != nil {
-		return svc.provider
-	}
-	return service.GetNavPageService()
 }
 
 func (svc *searchService) cacheStore() suggestionCache {
@@ -198,15 +171,6 @@ type cachedSearchSuggestions struct {
 	hit   bool
 }
 
-func normalizeSuggestionEngine(engine string) string {
-	switch strings.ToLower(strings.TrimSpace(engine)) {
-	case "baidu", "bing", "google", "bilibili", "duckduckgo":
-		return strings.ToLower(strings.TrimSpace(engine))
-	default:
-		return ""
-	}
-}
-
 func normalizeSuggestionQuery(q string) string {
 	q = strings.TrimSpace(q)
 	runes := []rune(q)
@@ -216,8 +180,8 @@ func normalizeSuggestionQuery(q string) string {
 	return string(runes[:searchSuggestionMaxQueryLen])
 }
 
-func searchSuggestionCacheKey(engine string, query string) string {
-	return "nav:v2:search:suggestions:" + engine + ":" + util.CreateMD5(query)
+func searchSuggestionCacheKey(query string) string {
+	return "nav:v2:search:suggestions:v2:" + util.CreateMD5(query)
 }
 
 func sanitizeSuggestions(items []string) []string {
@@ -247,7 +211,8 @@ func copySuggestions(items []string) []string {
 }
 
 type redisSuggestionRateLimiter struct {
-	now func() time.Time
+	client *redis.Client
+	now    func() time.Time
 }
 
 func NewRedisSuggestionRateLimiter() *redisSuggestionRateLimiter {
@@ -255,7 +220,10 @@ func NewRedisSuggestionRateLimiter() *redisSuggestionRateLimiter {
 }
 
 func (limiter *redisSuggestionRateLimiter) Allow(ip string) (bool, int64) {
-	client := cs.GetRedisService()
+	client := limiter.client
+	if client == nil {
+		client = cs.GetRedisService()
+	}
 	if client == nil {
 		return true, 0
 	}
@@ -287,6 +255,6 @@ func (limiter *redisSuggestionRateLimiter) Allow(ip string) (bool, int64) {
 }
 
 const (
-	SearchSuggestionRateLimit  = int64(30)
-	SearchSuggestionRateWindow = 30 * time.Minute
+	SearchSuggestionRateLimit  = int64(300)
+	SearchSuggestionRateWindow = 10 * time.Minute
 )

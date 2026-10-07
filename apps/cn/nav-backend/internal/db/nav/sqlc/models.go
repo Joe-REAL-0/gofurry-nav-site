@@ -8,630 +8,968 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Self-contained SVG pattern catalog; defaults are not copied into user overrides
+// 导航页背景图案目录及明暗主题默认样式；用户自定义样式另有所有者
 type GfnBackgroundPattern struct {
-	ID     int64  `json:"id"`
-	Name   string `json:"name"`
+	// 导航页背景图案目录及明暗主题默认样式的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 运营识别该素材的中文名称
+	Name string `json:"name"`
+	// 运营识别该素材的英文名称
 	NameEn string `json:"name_en"`
-	// Immutable provider-neutral managed object key
-	ObjectKey     string             `json:"object_key"`
-	LightColor    string             `json:"light_color"`
-	DarkColor     string             `json:"dark_color"`
-	LightOpacity  pgtype.Numeric     `json:"light_opacity"`
-	DarkOpacity   pgtype.Numeric     `json:"dark_opacity"`
-	DefaultSizePx int32              `json:"default_size_px"`
-	Enabled       bool               `json:"enabled"`
-	SortOrder     int64              `json:"sort_order"`
-	Deleted       bool               `json:"deleted"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
-	CreateTime    pgtype.Timestamp   `json:"create_time"`
-	UpdateTime    pgtype.Timestamp   `json:"update_time"`
+	// Managed Asset 图案对象键，形如 nav/patterns/哈希.svg；不保存 CDN 域名
+	ObjectKey string `json:"object_key"`
+	// 浅色主题的默认图案颜色，十六进制颜色值
+	LightColor string `json:"light_color"`
+	// 深色主题的默认图案颜色，十六进制颜色值
+	DarkColor string `json:"dark_color"`
+	// 浅色主题的默认图案不透明度，范围 0..1
+	LightOpacity pgtype.Numeric `json:"light_opacity"`
+	// 深色主题的默认图案不透明度，范围 0..1
+	DarkOpacity pgtype.Numeric `json:"dark_opacity"`
+	// 默认图案平铺尺寸，单位像素
+	DefaultSizePx int32 `json:"default_size_px"`
+	// 是否允许该素材参与公开展示；删除状态另行约束
+	Enabled bool `json:"enabled"`
+	// 背景图案选项的展示顺序
+	SortOrder int64 `json:"sort_order"`
+	// 是否已软删除；不代表已删除云端对象
+	Deleted bool `json:"deleted"`
+	// 素材软删除的 UTC 时刻；未删除时为 NULL
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	// 导航页背景图案目录及明暗主题默认样式的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 导航页背景图案目录及明暗主题默认样式的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 
-// Independent ordered checkpoints for each Nav detector version.
+// 网站变化检测器各版本的独立有序水位；与事件投影原子提交
 type GfnChangeCheckpoint struct {
-	DetectorKey      string             `json:"detector_key"`
-	DetectorVersion  int32              `json:"detector_version"`
-	SourceStartDate  pgtype.Date        `json:"source_start_date"`
-	ProcessedThrough pgtype.Date        `json:"processed_through"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	// 变化检测器的稳定标识，与 detector_version 共同定位合同
+	DetectorKey string `json:"detector_key"`
+	// 变化检测语义版本；各版本独立投影和推进水位
+	DetectorVersion int32 `json:"detector_version"`
+	// 可重建源证据的首个 UTC 日期；NULL 表示尚无起始证据
+	SourceStartDate pgtype.Date `json:"source_start_date"`
+	// 已连续处理完成的最后一个 UTC 日期；NULL 表示尚未完成任何一天
+	ProcessedThrough pgtype.Date `json:"processed_through"`
+	// 网站变化检测器各版本的独立有序水位的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站变化检测器各版本的独立有序水位的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Deterministic canonical Nav change events derived only from facts, metrics, and effective periods.
+// 网站规范变化事件；确定性身份，来源仅为历史合同，不外键依赖当前目录
 type GfnChangeEvent struct {
-	EventKey        string             `json:"event_key"`
-	DetectorKey     string             `json:"detector_key"`
-	DetectorVersion int32              `json:"detector_version"`
-	SiteID          int64              `json:"site_id"`
-	ProjectionDate  pgtype.Date        `json:"projection_date"`
-	EventAt         pgtype.Timestamptz `json:"event_at"`
-	TimeBasis       string             `json:"time_basis"`
-	EventCode       string             `json:"event_code"`
-	ScopeKind       string             `json:"scope_kind"`
-	ScopeKey        string             `json:"scope_key"`
-	OldValue        []byte             `json:"old_value"`
-	NewValue        []byte             `json:"new_value"`
-	SourceEventKey  string             `json:"source_event_key"`
-	SourceBeforeKey string             `json:"source_before_key"`
-	SourceAfterKey  string             `json:"source_after_key"`
-	SourceBeforeAt  pgtype.Timestamptz `json:"source_before_at"`
-	SourceAfterAt   pgtype.Timestamptz `json:"source_after_at"`
-	SourceVersions  []byte             `json:"source_versions"`
-	MaterializedAt  pgtype.Timestamptz `json:"materialized_at"`
+	// 规范事件的确定性文本身份；相同来源重建得到相同键
+	EventKey string `json:"event_key"`
+	// 变化检测器的稳定标识，与 detector_version 共同定位合同
+	DetectorKey string `json:"detector_key"`
+	// 变化检测语义版本；各版本独立投影和推进水位
+	DetectorVersion int32 `json:"detector_version"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 事件被投影到的 UTC 日期，用于按日原子替换重建
+	ProjectionDate pgtype.Date `json:"projection_date"`
+	// 明确的生效或观察时刻；只有日粒度证据时为 NULL，不能伪造精确时间
+	EventAt pgtype.Timestamptz `json:"event_at"`
+	// 事件时间依据 effective、observed 或 day；day 不携带 event_at
+	TimeBasis string `json:"time_basis"`
+	// 检测器合同定义的业务变化类型
+	EventCode string `json:"event_code"`
+	// 事件作用范围类型，用于区分实体、地区或历史目标等范围
+	ScopeKind string `json:"scope_kind"`
+	// 事件在该作用范围内的稳定身份，不跨历史跟踪区间合并变化
+	ScopeKey string `json:"scope_key"`
+	// 变化前的已知语义值 JSON 对象，不使用失败噪声覆盖已知值
+	OldValue []byte `json:"old_value"`
+	// 变化后的已知语义值 JSON 对象
+	NewValue []byte `json:"new_value"`
+	// 来源事件确定性身份，与检测器及版本联合唯一以防重复产出
+	SourceEventKey string `json:"source_event_key"`
+	// 支持变化前语义的规范源证据键
+	SourceBeforeKey string `json:"source_before_key"`
+	// 支持变化后语义的规范源证据键
+	SourceAfterKey string `json:"source_after_key"`
+	// 变化前证据时刻；只有日粒度或无精确时刻时为 NULL
+	SourceBeforeAt pgtype.Timestamptz `json:"source_before_at"`
+	// 变化后证据时刻；只有日粒度或无精确时刻时为 NULL
+	SourceAfterAt pgtype.Timestamptz `json:"source_after_at"`
+	// 该事件依赖的事实、指标或源合同版本 JSON 对象
+	SourceVersions []byte `json:"source_versions"`
+	// 规范事件最近一次物化的 UTC 时刻，不是业务变化发生时刻
+	MaterializedAt pgtype.Timestamptz `json:"materialized_at"`
 }
 
-// Goose-owned versioned Nav change detector contracts; Runtime and Admin are read-only.
+// 网站变化检测器版本注册合同；仅 Goose 修改，历史版本语义不可覆盖
 type GfnChangeRegistry struct {
-	DetectorKey     string             `json:"detector_key"`
-	DetectorVersion int32              `json:"detector_version"`
-	SourceKind      string             `json:"source_kind"`
-	SourceContracts []string           `json:"source_contracts"`
-	DetectionPolicy string             `json:"detection_policy"`
-	WatermarkPolicy string             `json:"watermark_policy"`
-	EventCodes      []string           `json:"event_codes"`
-	ProcessingGrain string             `json:"processing_grain"`
-	Status          string             `json:"status"`
-	Description     string             `json:"description"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	RetiredAt       pgtype.Timestamptz `json:"retired_at"`
+	// 变化检测器的稳定标识，与 detector_version 共同定位合同
+	DetectorKey string `json:"detector_key"`
+	// 变化检测语义版本；各版本独立投影和推进水位
+	DetectorVersion int32 `json:"detector_version"`
+	// 源证据类型 metric、fact、domain_history 或 effective_period
+	SourceKind string `json:"source_kind"`
+	// 检测器依赖的规范源合同列表；不得以原始采集或当前目录替代
+	SourceContracts []string `json:"source_contracts"`
+	// 定义语义变化判定的编译策略标识
+	DetectionPolicy string `json:"detection_policy"`
+	// 定义可处理历史范围和源水位依赖的编译策略标识
+	WatermarkPolicy string `json:"watermark_policy"`
+	// 该检测器版本可产出的规范事件类型列表
+	EventCodes []string `json:"event_codes"`
+	// 处理粒度；当前固定为 day，即 UTC 日
+	ProcessingGrain string `json:"processing_grain"`
+	// 合同状态 active 或 retired；历史版本保留明确的重建语义
+	Status string `json:"status"`
+	// 检测器版本的业务含义和证据口径说明
+	Description string `json:"description"`
+	// 网站变化检测器版本注册合同的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 检测器退休的 UTC 时刻；active 时为 NULL
+	RetiredAt pgtype.Timestamptz `json:"retired_at"`
 }
 
-// Durable scheduled, manual, and entity-triggered Nav collection jobs.
+// 网站采集持久任务；计划槽与活跃去重键保证幂等，租约由 PostgreSQL 持有
 type GfnCollectionJob struct {
-	ID                int64              `json:"id"`
-	ScheduleID        *int64             `json:"schedule_id"`
-	ScheduleVersion   *int64             `json:"schedule_version"`
-	JobKey            string             `json:"job_key"`
-	Trigger           string             `json:"trigger"`
-	ScopeType         string             `json:"scope_type"`
-	ScopeID           *int64             `json:"scope_id"`
-	Target            *string            `json:"target"`
-	Tasks             []string           `json:"tasks"`
-	Priority          int32              `json:"priority"`
-	ConcurrencyKey    string             `json:"concurrency_key"`
-	ScheduledFor      pgtype.Timestamptz `json:"scheduled_for"`
-	Status            string             `json:"status"`
-	RequestedBy       string             `json:"requested_by"`
-	DedupeKey         *string            `json:"dedupe_key"`
-	ClaimedBy         *string            `json:"claimed_by"`
-	LeaseUntil        pgtype.Timestamptz `json:"lease_until"`
+	// 网站采集持久任务的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 来源调度身份；非计划来源可为 NULL，调度删除后保留任务并置空
+	ScheduleID *int64 `json:"schedule_id"`
+	// 任务建立时的调度版本；无调度来源时为 NULL
+	ScheduleVersion *int64 `json:"schedule_version"`
+	// 编译期采集能力的稳定标识；用于匹配执行器与调度合同
+	JobKey string `json:"job_key"`
+	// 触发来源 scheduled、manual、startup_catchup、entity_created、entity_changed
+	Trigger string `json:"trigger"`
+	// 执行范围：all 全量或 site 单实体，target 指定探测目标
+	ScopeType string `json:"scope_type"`
+	// 单实体范围的 网站身份；全量范围为 NULL
+	ScopeID *int64 `json:"scope_id"`
+	// 指定探测目标范围的地址；非 target 范围为 NULL
+	Target *string `json:"target"`
+	// 本任务请求执行的采集能力列表，不能为空
+	Tasks []string `json:"tasks"`
+	// 进入执行队列的优先级，由创建任务时的调度或请求确定
+	Priority int32 `json:"priority"`
+	// 采集并发通道标识；同一通道最多一个运行中的 Job
+	ConcurrencyKey string `json:"concurrency_key"`
+	// 计划槽的 UTC 时刻；手动触发没有计划槽，为 NULL
+	ScheduledFor pgtype.Timestamptz `json:"scheduled_for"`
+	// 任务状态 queued、running、success、partial、failed、skipped、missed 或 canceled
+	Status string `json:"status"`
+	// 请求创建任务的操作者或系统来源标识
+	RequestedBy string `json:"requested_by"`
+	// 活跃任务去重键；无需去重时为 NULL
+	DedupeKey *string `json:"dedupe_key"`
+	// 持有执行租约的采集实例身份；未领取时为 NULL
+	ClaimedBy *string `json:"claimed_by"`
+	// 执行租约的 UTC 到期时刻；用于故障后回收，不是计划时间
+	LeaseUntil pgtype.Timestamptz `json:"lease_until"`
+	// 请求取消的 UTC 时刻；NULL 表示没有取消请求
 	CancelRequestedAt pgtype.Timestamptz `json:"cancel_requested_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	// 网站采集持久任务的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站采集持久任务的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	// 任务进入终态的 UTC 时刻；尚未结束时为 NULL
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
 }
 
-// Execution attempts for durable Nav collection jobs.
+// 网站采集任务的执行尝试账本；同一 Job 可有多个递增尝试
 type GfnCollectionRun struct {
-	ID                  string             `json:"id"`
-	JobID               int64              `json:"job_id"`
-	AttemptNo           int32              `json:"attempt_no"`
-	CollectorInstanceID string             `json:"collector_instance_id"`
-	Status              string             `json:"status"`
-	ScheduledFor        pgtype.Timestamptz `json:"scheduled_for"`
-	StartedAt           pgtype.Timestamptz `json:"started_at"`
-	EndedAt             pgtype.Timestamptz `json:"ended_at"`
-	ExpectedCount       int32              `json:"expected_count"`
-	AttemptedCount      int32              `json:"attempted_count"`
-	SuccessCount        int32              `json:"success_count"`
-	PartialCount        int32              `json:"partial_count"`
-	FailureCount        int32              `json:"failure_count"`
-	SkippedCount        int32              `json:"skipped_count"`
-	ScheduleDelayMs     int64              `json:"schedule_delay_ms"`
-	DurationMs          int64              `json:"duration_ms"`
-	ErrorKind           string             `json:"error_kind"`
-	ErrorMessage        string             `json:"error_message"`
+	// 本次执行尝试的文本身份，用于关联原始观察及任务结果
+	ID string `json:"id"`
+	// 所属持久采集任务身份，删除任务时级联删除执行记录
+	JobID int64 `json:"job_id"`
+	// 同一 Job 内从 1 开始的尝试序号，与 job_id 联合唯一
+	AttemptNo int32 `json:"attempt_no"`
+	// 执行本次尝试的采集进程实例身份
+	CollectorInstanceID string `json:"collector_instance_id"`
+	// 尝试状态 running、success、partial、failed 或 canceled
+	Status string `json:"status"`
+	// 计划槽的 UTC 时刻；手动触发没有计划槽，为 NULL
+	ScheduledFor pgtype.Timestamptz `json:"scheduled_for"`
+	// 本次执行尝试实际开始的 UTC 时刻
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// 本次执行尝试结束的 UTC 时刻；运行中为 NULL
+	EndedAt pgtype.Timestamptz `json:"ended_at"`
+	// 本次执行计划处理的实体任务数
+	ExpectedCount int32 `json:"expected_count"`
+	// 已尝试的实体任务数，等于 success_count + partial_count + failure_count
+	AttemptedCount int32 `json:"attempted_count"`
+	// 本次尝试中完整成功的实体任务数
+	SuccessCount int32 `json:"success_count"`
+	// 本次尝试中部分成功的实体任务数
+	PartialCount int32 `json:"partial_count"`
+	// 本次尝试中失败的实体任务数
+	FailureCount int32 `json:"failure_count"`
+	// 本次尝试中未执行而跳过的实体任务数
+	SkippedCount int32 `json:"skipped_count"`
+	// 相对计划槽的启动延迟，单位毫秒且不为负
+	ScheduleDelayMs int64 `json:"schedule_delay_ms"`
+	// 本次执行耗时，单位毫秒
+	DurationMs int64 `json:"duration_ms"`
+	// 采集失败的稳定分类；无分类时为空串
+	ErrorKind string `json:"error_kind"`
+	// 采集失败的诊断摘要；无错误时为空串
+	ErrorMessage string `json:"error_message"`
 }
 
-// Durable Nav collection schedules; PostgreSQL is the source of truth.
+// 网站采集的持久调度定义；PostgreSQL 为计划及槽位的权威来源
 type GfnCollectionSchedule struct {
-	ID                  int64              `json:"id"`
-	JobKey              string             `json:"job_key"`
-	Name                string             `json:"name"`
-	Enabled             bool               `json:"enabled"`
-	ScheduleKind        string             `json:"schedule_kind"`
-	CronExpression      *string            `json:"cron_expression"`
-	IntervalSeconds     *int64             `json:"interval_seconds"`
-	AnchorAt            pgtype.Timestamptz `json:"anchor_at"`
-	Timezone            string             `json:"timezone"`
-	MisfirePolicy       string             `json:"misfire_policy"`
-	MisfireGraceSeconds int32              `json:"misfire_grace_seconds"`
-	OverlapPolicy       string             `json:"overlap_policy"`
-	Priority            int32              `json:"priority"`
-	ConcurrencyKey      string             `json:"concurrency_key"`
-	Version             int64              `json:"version"`
-	EffectiveFrom       pgtype.Timestamptz `json:"effective_from"`
+	// 网站采集的持久调度定义的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 编译期采集能力的稳定标识；用于匹配执行器与调度合同
+	JobKey string `json:"job_key"`
+	// 供运营识别的调度名称
+	Name string `json:"name"`
+	// 是否允许调度器为此计划物化新的 Job
+	Enabled bool `json:"enabled"`
+	// 调度方式 cron 或 interval，决定相应参数组
+	ScheduleKind string `json:"schedule_kind"`
+	// cron 调度表达式；interval 模式为 NULL
+	CronExpression *string `json:"cron_expression"`
+	// 固定调度间隔，单位秒且大于零；cron 模式为 NULL
+	IntervalSeconds *int64 `json:"interval_seconds"`
+	// interval 计划的 UTC 相位锚点；cron 模式为 NULL
+	AnchorAt pgtype.Timestamptz `json:"anchor_at"`
+	// 解释 cron 表达式所用的时区名称
+	Timezone string `json:"timezone"`
+	// 错过槽位的处理策略：skip 跳过或 catch_up_once 补一次
+	MisfirePolicy string `json:"misfire_policy"`
+	// 允许迟到执行的宽限秒数
+	MisfireGraceSeconds int32 `json:"misfire_grace_seconds"`
+	// 同通道重叠时的策略；当前合同仅允许 skip
+	OverlapPolicy string `json:"overlap_policy"`
+	// Job 排队优先级；用于执行调度而非内容展示
+	Priority int32 `json:"priority"`
+	// 采集并发通道标识；同一通道最多一个运行中的 Job
+	ConcurrencyKey string `json:"concurrency_key"`
+	// 乐观并发版本；修改时必须匹配旧版本并递增
+	Version int64 `json:"version"`
+	// 该版本调度定义开始生效的 UTC 时刻
+	EffectiveFrom pgtype.Timestamptz `json:"effective_from"`
+	// 最后已物化的计划槽时刻；尚无槽位时为 NULL
 	LastMaterializedFor pgtype.Timestamptz `json:"last_materialized_for"`
-	NextScheduledFor    pgtype.Timestamptz `json:"next_scheduled_for"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	// 下一个计划槽的 UTC 时刻；不可计算时为 NULL
+	NextScheduledFor pgtype.Timestamptz `json:"next_scheduled_for"`
+	// 网站采集的持久调度定义的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站采集的持久调度定义的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Per-target results for Nav collection runs.
+// 网站采集执行中每个实体与能力的结果；与 Run 共同形成质量账本
 type GfnCollectionTaskResult struct {
-	ID            int64              `json:"id"`
-	RunID         string             `json:"run_id"`
-	Protocol      string             `json:"protocol"`
-	SiteID        int64              `json:"site_id"`
-	Target        string             `json:"target"`
-	Status        string             `json:"status"`
-	ObservationID *int64             `json:"observation_id"`
-	DurationMs    int64              `json:"duration_ms"`
-	ErrorKind     string             `json:"error_kind"`
-	ErrorMessage  string             `json:"error_message"`
-	StartedAt     pgtype.Timestamptz `json:"started_at"`
-	EndedAt       pgtype.Timestamptz `json:"ended_at"`
-}
-
-// 域名请求表
-type GfnCollectorDomain struct {
-	// 域名请求表id
+	// 网站采集执行中每个实体与能力的结果的行身份；用于稳定引用该记录
 	ID int64 `json:"id"`
-	// 域名
-	Name string `json:"name"`
-	// 是否需要代理加速 1 0
-	Proxy string `json:"proxy"`
-	// 是否有前缀
-	Prefix *string `json:"prefix"`
-	// 是否 https 1 0
-	Tls     string `json:"tls"`
-	SiteID  *int64 `json:"site_id"`
-	Deleted bool   `json:"deleted"`
-}
-
-// Nav collector process instances and heartbeats.
-type GfnCollectorInstance struct {
-	InstanceID      string             `json:"instance_id"`
-	CollectorID     string             `json:"collector_id"`
-	Hostname        string             `json:"hostname"`
-	Version         string             `json:"version"`
-	CommitSha       string             `json:"commit_sha"`
-	Capabilities    []string           `json:"capabilities"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	LastHeartbeatAt pgtype.Timestamptz `json:"last_heartbeat_at"`
-	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
-}
-
-// DNS日志表
-type GfnCollectorLogDn struct {
-	// DNS日志表 id
-	ID int64 `json:"id"`
-	// 域名
-	Name string `json:"name"`
-	// A记录
-	A []byte `json:"a"`
-	// AAAA记录
-	Aaaa []byte `json:"aaaa"`
-	// MX记录
-	Mx []byte `json:"mx"`
-	// NS记录
-	Ns []byte `json:"ns"`
-	// SOA记录
-	Soa []byte `json:"soa"`
-	// TXT记录
-	Txt []byte `json:"txt"`
-	// CAA记录
-	Caa []byte `json:"caa"`
-	// CNAME记录
-	Cname []byte `json:"cname"`
-	// 采集状态 success failure
-	Status string `json:"status"`
-	// 采集时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-}
-
-// HTTP请求日志表
-type GfnCollectorLogHttp struct {
-	// http请求日志表
-	ID int64 `json:"id"`
-	// 域名
-	Name string `json:"name"`
-	// 日志内容
-	Info []byte `json:"info"`
-	// 请求状态 success failure
-	Status string `json:"status"`
-	// 请求时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-}
-
-// Ping日志表
-type GfnCollectorLogPing struct {
-	// ping记录表id
-	ID int64 `json:"id"`
-	// 域名
-	Name string `json:"name"`
-	// 延迟
-	Delay string `json:"delay"`
-	// 丢包
-	Loss string `json:"loss"`
-	// 可达性 up down
-	Status string `json:"status"`
-	// 日志时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-}
-
-// 采集观测表
-type GfnCollectorObservation struct {
-	// 采集观测表id
-	ID int64 `json:"id"`
-	// 站点id
-	SiteID int64 `json:"site_id"`
-	// 站点域名
-	Target string `json:"target"`
-	// 采集协议
+	// 所属执行尝试的文本身份，引用 collection_runs
+	RunID string `json:"run_id"`
+	// 本项执行的探测协议，与 Nav 采集能力合同一致
 	Protocol string `json:"protocol"`
-	// 采集状态
-	Status string `json:"status"`
-	// 观测时间
-	ObservedAt pgtype.Timestamptz `json:"observed_at"`
-	// 观测时长
-	DurationMs *int64 `json:"duration_ms"`
-	// 错误码
-	ErrorCode *string `json:"error_code"`
-	// 错误信息
-	ErrorMessage *string `json:"error_message"`
-	// 观测数据结果
-	Payload []byte `json:"payload"`
-	// schema 版本
-	SchemaVersion int32 `json:"schema_version"`
-	// 创建时间
-	CreateTime          pgtype.Timestamptz `json:"create_time"`
-	JobID               *int64             `json:"job_id"`
-	RunID               *string            `json:"run_id"`
-	CollectorInstanceID *string            `json:"collector_instance_id"`
-}
-
-// Ordered singleton checkpoints for Nav fact pipelines.
-type GfnFactRollupCheckpoint struct {
-	PipelineKey       string             `json:"pipeline_key"`
-	ProjectionVersion int32              `json:"projection_version"`
-	SourceStartDate   pgtype.Date        `json:"source_start_date"`
-	ProcessedThrough  pgtype.Date        `json:"processed_through"`
-	QualityCutoverAt  pgtype.Timestamptz `json:"quality_cutover_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-}
-
-// 精选站点表
-type GfnFeaturedSite struct {
-	// 精选站点表id
-	ID int64 `json:"id"`
-	// 站点id
+	// GoFurry 网站身份；与探测目标域名分别保存
 	SiteID int64 `json:"site_id"`
-	// 权重
-	Weight int64 `json:"weight"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 更新时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 本项执行的探测地址，与网站身份分别保存
+	Target string `json:"target"`
+	// 单项结果 success、partial、failed 或 skipped
+	Status string `json:"status"`
+	// 产生的原始观察身份；未产生或原始观察已裁剪时为 NULL
+	ObservationID *int64 `json:"observation_id"`
+	// 本次执行耗时，单位毫秒
+	DurationMs int64 `json:"duration_ms"`
+	// 采集失败的稳定分类；无分类时为空串
+	ErrorKind string `json:"error_kind"`
+	// 采集失败的诊断摘要；无错误时为空串
+	ErrorMessage string `json:"error_message"`
+	// 本项能力开始执行的 UTC 时刻
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// 本项能力执行结束的 UTC 时刻；未记录时为 NULL
+	EndedAt pgtype.Timestamptz `json:"ended_at"`
 }
 
-// Independent desktop/mobile AVIF random pools; no pairing or cross-pool fallback
-type GfnHomeHeroAsset struct {
-	ID      int64  `json:"id"`
-	Variant string `json:"variant"`
-	Name    string `json:"name"`
-	// Immutable provider-neutral managed object key
-	ObjectKey  string             `json:"object_key"`
-	Enabled    bool               `json:"enabled"`
-	Deleted    bool               `json:"deleted"`
-	DeletedAt  pgtype.Timestamptz `json:"deleted_at"`
-	CreateTime pgtype.Timestamp   `json:"create_time"`
-	UpdateTime pgtype.Timestamp   `json:"update_time"`
-}
-
-// Independent ordered checkpoints for each Nav metric version.
-type GfnMetricCheckpoint struct {
-	MetricKey        string             `json:"metric_key"`
-	MetricVersion    int32              `json:"metric_version"`
-	SourceStartDate  pgtype.Date        `json:"source_start_date"`
-	ProcessedThrough pgtype.Date        `json:"processed_through"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-}
-
-// Global and single-dimension Nav metric state counts; ratios are query-time only.
-type GfnMetricDaily struct {
-	MetricKey          string             `json:"metric_key"`
-	MetricVersion      int32              `json:"metric_version"`
-	FactDate           pgtype.Date        `json:"fact_date"`
-	DimensionKey       string             `json:"dimension_key"`
-	DimensionValue     string             `json:"dimension_value"`
-	PopulationCount    int64              `json:"population_count"`
-	EligibleCount      int64              `json:"eligible_count"`
-	NotApplicableCount int64              `json:"not_applicable_count"`
-	PositiveCount      int64              `json:"positive_count"`
-	NegativeCount      int64              `json:"negative_count"`
-	StaleCount         int64              `json:"stale_count"`
-	NotProbedCount     int64              `json:"not_probed_count"`
-	ProbeFailedCount   int64              `json:"probe_failed_count"`
-	UnknownCount       int64              `json:"unknown_count"`
-	ComputedAt         pgtype.Timestamptz `json:"computed_at"`
-}
-
-// Explainable per-Site historical metric state derived only from finalized Nav Facts.
-type GfnMetricEntityDaily struct {
-	MetricKey                string             `json:"metric_key"`
-	MetricVersion            int32              `json:"metric_version"`
-	FactDate                 pgtype.Date        `json:"fact_date"`
-	SiteID                   int64              `json:"site_id"`
-	State                    string             `json:"state"`
-	ReasonCode               string             `json:"reason_code"`
-	SourceObservedAt         pgtype.Timestamptz `json:"source_observed_at"`
-	DimensionValues          []byte             `json:"dimension_values"`
-	SourceProjectionVersions []byte             `json:"source_projection_versions"`
-	EvaluatedAt              pgtype.Timestamptz `json:"evaluated_at"`
-}
-
-// Goose-owned versioned Nav metric contracts; runtime and Admin are read-only.
-type GfnMetricRegistry struct {
-	MetricKey         string             `json:"metric_key"`
-	MetricVersion     int32              `json:"metric_version"`
-	MetricKind        string             `json:"metric_kind"`
-	EntityLevel       string             `json:"entity_level"`
-	TimeGrain         string             `json:"time_grain"`
-	SourceFacts       []string           `json:"source_facts"`
-	EligibilityPolicy string             `json:"eligibility_policy"`
-	StatePolicy       string             `json:"state_policy"`
-	CoveragePolicy    string             `json:"coverage_policy"`
-	FreshnessSeconds  *int64             `json:"freshness_seconds"`
-	AllowedDimensions []string           `json:"allowed_dimensions"`
-	Status            string             `json:"status"`
-	Description       string             `json:"description"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	RetiredAt         pgtype.Timestamptz `json:"retired_at"`
-}
-
-// 站点更新公告表
-type GfnNavUpdateNotice struct {
-	// 站点更新公告表id
+// 网站当前探测目标配置；历史跟踪区间由独立事实合同保留
+type GfnCollectorDomain struct {
+	// 网站当前探测目标配置的行身份；用于稳定引用该记录
 	ID int64 `json:"id"`
-	// 更新公告标题
-	Title string `json:"title"`
-	// 更新公告标题 - 英文
-	TitleEn string `json:"title_en"`
-	// 更新公告内容
-	Body string `json:"body"`
-	// 更新公告内容 - 英文
-	BodyEn string `json:"body_en"`
-	// 发布时间
-	PublishedAt pgtype.Timestamp `json:"published_at"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 更新时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-	// 软删除
-	Deleted bool `json:"deleted"`
-}
-
-// 金句表
-type GfnSaying struct {
-	// 金句表ID
-	ID int64 `json:"id"`
-	// 金句提供者
-	Author *string `json:"author"`
-	// 金句
-	Saying string `json:"saying"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 修改时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-	Language   string           `json:"language"`
-}
-
-// 导航站点表
-type GfnSite struct {
-	// 站点表id
-	ID int64 `json:"id"`
-	// 站点名称
+	// 探测目标的主机名主体
 	Name string `json:"name"`
-	// 站点名称-英文
-	NameEn string `json:"name_en"`
-	// 站点描述
-	Info string `json:"info"`
-	// 站点描述-英文
-	InfoEn string `json:"info_en"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 修改时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-	// 站点所属国家
-	Country *string `json:"country"`
-	// 是否NSFW 1 0
-	Nsfw string `json:"nsfw"`
-	// 是否公益项目 1 0
-	Welfare string `json:"welfare"`
-	// Nullable managed object key nav/sites/{id}/icon/{hash}[.{ext}]; populated during maintenance cutover
-	Icon *string `json:"icon"`
-	// 软删除
+	// 是否经配置代理探测的字符串开关：1 启用，0 关闭
+	Proxy string `json:"proxy"`
+	// 附加在主机名前的前缀；未配置时为 NULL
+	Prefix *string `json:"prefix"`
+	// HTTP 探测是否使用 TLS 的字符串开关：1 为 HTTPS，0 为 HTTP
+	Tls string `json:"tls"`
+	// 所属网站身份；旧目标可未关联网站而为 NULL
+	SiteID *int64 `json:"site_id"`
+	// 目标软删除标记；已删除目标不再参加正常采集
 	Deleted bool `json:"deleted"`
-	// 浏览量
+}
+
+// 网站采集进程的持久身份及心跳历史；不是可随意清空的在线列表
+type GfnCollectorInstance struct {
+	// 每次采集进程启动产生的实例身份
+	InstanceID string `json:"instance_id"`
+	// 采集器逻辑身份；多次进程启动可共享此标识
+	CollectorID string `json:"collector_id"`
+	// 运行该采集进程的主机名
+	Hostname string `json:"hostname"`
+	// 采集器二进制的版本标识，不是乐观锁版本
+	Version string `json:"version"`
+	// 构建该采集器二进制的 Git 提交标识
+	CommitSha string `json:"commit_sha"`
+	// 该采集器实例可执行的编译期能力列表
+	Capabilities []string `json:"capabilities"`
+	// 进程本次启动的 UTC 时刻
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// 最近一次成功写入心跳的 UTC 时刻
+	LastHeartbeatAt pgtype.Timestamptz `json:"last_heartbeat_at"`
+	// 正常退出记录的 UTC 时刻；异常退出或仍运行时可为 NULL
+	StoppedAt pgtype.Timestamptz `json:"stopped_at"`
+}
+
+// 仍供 Nav V1 兼容读取的 DNS 采集日志，不是规范历史事实
+type GfnCollectorLogDn struct {
+	// 仍供 Nav V1 兼容读取的 DNS 采集日志的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 本条 DNS 探测的目标名称
+	Name string `json:"name"`
+	// DNS A 查询得到的记录 JSON；未记录该类结果时为 NULL
+	A []byte `json:"a"`
+	// DNS AAAA 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Aaaa []byte `json:"aaaa"`
+	// DNS MX 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Mx []byte `json:"mx"`
+	// DNS NS 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Ns []byte `json:"ns"`
+	// DNS SOA 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Soa []byte `json:"soa"`
+	// DNS TXT 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Txt []byte `json:"txt"`
+	// DNS CAA 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Caa []byte `json:"caa"`
+	// DNS CNAME 查询得到的记录 JSON；未记录该类结果时为 NULL
+	Cname []byte `json:"cname"`
+	// 采集请求结果 success 或 failure
+	Status string `json:"status"`
+	// 仍供 Nav V1 兼容读取的 DNS 采集日志的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+}
+
+// 仍供 Nav V1 兼容读取的 HTTP 采集日志，不是规范历史事实
+type GfnCollectorLogHttp struct {
+	// 仍供 Nav V1 兼容读取的 HTTP 采集日志的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 本条 HTTP 探测的目标名称
+	Name string `json:"name"`
+	// HTTP 请求探测详情 JSON，保留 Nav V1 读取合同
+	Info []byte `json:"info"`
+	// 采集请求结果 success 或 failure
+	Status string `json:"status"`
+	// 仍供 Nav V1 兼容读取的 HTTP 采集日志的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+}
+
+// 仍供 Nav V1 兼容读取的 Ping 采集日志，不是规范历史事实
+type GfnCollectorLogPing struct {
+	// 仍供 Nav V1 兼容读取的 Ping 采集日志的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 本条 Ping 探测的目标名称
+	Name string `json:"name"`
+	// 平均往返延迟的兼容文本，带 ms 后缀
+	Delay string `json:"delay"`
+	// 丢包百分比的兼容文本，100 表示全部丢包
+	Loss string `json:"loss"`
+	// 探测可达性 up 或 down
+	Status string `json:"status"`
+	// 仍供 Nav V1 兼容读取的 Ping 采集日志的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+}
+
+// Nav 原始探测观察及采集账本关联；受事实水位保护的裁剪不删除历史事实
+type GfnCollectorObservation struct {
+	// Nav 原始探测观察及采集账本关联的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 该次观察的完整探测目标地址，与网站身份分别保存
+	Target string `json:"target"`
+	// 该次观察的探测协议，如 http、dns、ping 或 security_txt
+	Protocol string `json:"protocol"`
+	// 该次协议探测的结果状态；不等同于能力支持或不支持
+	Status string `json:"status"`
+	// 本条业务证据实际被观察到的 UTC 时刻
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+	// 该次探测耗时毫秒数；未知时为 NULL
+	DurationMs *int64 `json:"duration_ms"`
+	// 探测失败的稳定诊断代码；无错误时可为 NULL
+	ErrorCode *string `json:"error_code"`
+	// 探测失败的诊断摘要；无错误时可为 NULL
+	ErrorMessage *string `json:"error_message"`
+	// 协议专属原始观察 JSON，按 schema_version 解释；不是跨协议统一状态
+	Payload []byte `json:"payload"`
+	// 原始观察 payload 的结构版本
+	SchemaVersion int32 `json:"schema_version"`
+	// Nav 原始探测观察及采集账本关联的记录创建时间
+	CreateTime pgtype.Timestamptz `json:"create_time"`
+	// 所属持久采集 Job；历史无账本关联时为 NULL
+	JobID *int64 `json:"job_id"`
+	// 所属执行尝试身份；历史无账本关联时为 NULL
+	RunID *string `json:"run_id"`
+	// 产生观察的采集进程实例；历史无关联时为 NULL
+	CollectorInstanceID *string `json:"collector_instance_id"`
+}
+
+// 网站历史事实流水线的有序水位；与投影写入在同一事务提交
+type GfnFactRollupCheckpoint struct {
+	// 事实流水线的稳定标识；每条流水线独立锁定和推进
+	PipelineKey string `json:"pipeline_key"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 可重建源证据的首个 UTC 日期；NULL 表示尚无起始证据
+	SourceStartDate pgtype.Date `json:"source_start_date"`
+	// 已连续处理完成的最后一个 UTC 日期；NULL 表示尚未完成任何一天
+	ProcessedThrough pgtype.Date `json:"processed_through"`
+	// 完整采集账本开始可用的 UTC 边界；此前质量分母不可推造
+	QualityCutoverAt pgtype.Timestamptz `json:"quality_cutover_at"`
+	// 网站历史事实流水线的有序水位的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站历史事实流水线的有序水位的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 导航精选网站与运营选取权重
+type GfnFeaturedSite struct {
+	// 导航精选网站与运营选取权重的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 精选网站展示权重，按降序排列，同值按记录身份降序稳定排序
+	Weight int64 `json:"weight"`
+	// 导航精选网站与运营选取权重的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 导航精选网站与运营选取权重的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+}
+
+// 导航首页 Hero 素材目录；桌面和移动端是独立选取池，不按记录配对
+type GfnHomeHeroAsset struct {
+	// 导航首页 Hero 素材目录的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 素材所属池 desktop 或 mobile
+	Variant string `json:"variant"`
+	// 运营识别该素材的中文名称
+	Name string `json:"name"`
+	// Managed Asset Hero 对象键，形如 nav/hero/端类型/哈希.avif；不保存 CDN 域名
+	ObjectKey string `json:"object_key"`
+	// 是否允许该素材参与公开展示；删除状态另行约束
+	Enabled bool `json:"enabled"`
+	// 是否已软删除；不代表已删除云端对象
+	Deleted bool `json:"deleted"`
+	// 素材软删除的 UTC 时刻；未删除时为 NULL
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	// 导航首页 Hero 素材目录的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 导航首页 Hero 素材目录的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+}
+
+// 网站指标各版本的独立有序水位；重建不能倒退该水位
+type GfnMetricCheckpoint struct {
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 可重建源证据的首个 UTC 日期；NULL 表示尚无起始证据
+	SourceStartDate pgtype.Date `json:"source_start_date"`
+	// 已连续处理完成的最后一个 UTC 日期；NULL 表示尚未完成任何一天
+	ProcessedThrough pgtype.Date `json:"processed_through"`
+	// 网站指标各版本的独立有序水位的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站指标各版本的独立有序水位的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 网站指标每日全局及单维度状态计数；比例在查询时计算，不落最终百分比
+type GfnMetricDaily struct {
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 汇总维度名；全局汇总使用 global，其它取注册合同允许的单维度
+	DimensionKey string `json:"dimension_key"`
+	// 该维度的历史取值；全局汇总使用 all
+	DimensionValue string `json:"dimension_value"`
+	// 实体总体数，等于 eligible_count + not_applicable_count
+	PopulationCount int64 `json:"population_count"`
+	// 适用实体数，等于除 not_applicable 外六种状态的计数之和
+	EligibleCount int64 `json:"eligible_count"`
+	// 不适用该指标的实体数，不进入适用分母
+	NotApplicableCount int64 `json:"not_applicable_count"`
+	// 有明确正向证据的实体数，与 negative_count 共同组成已知分母
+	PositiveCount int64 `json:"positive_count"`
+	// 有明确反向证据的实体数；不能由未知或失败推断
+	NegativeCount int64 `json:"negative_count"`
+	// 证据已超过该版本新鲜度门槛的实体数
+	StaleCount int64 `json:"stale_count"`
+	// 历史上尚未执行所需探测的实体数
+	NotProbedCount int64 `json:"not_probed_count"`
+	// 所需探测失败且不能得到有效判定的实体数
+	ProbeFailedCount int64 `json:"probe_failed_count"`
+	// 证据不足以判定正反状态的实体数
+	UnknownCount int64 `json:"unknown_count"`
+	// 本条派生结果最近一次计算完成的 UTC 时刻
+	ComputedAt pgtype.Timestamptz `json:"computed_at"`
+}
+
+// 网站实体每日可解释指标状态；仅从已 finalized 的历史事实产生
+type GfnMetricEntityDaily struct {
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 七态结果 positive、negative、stale、not_probed、probe_failed、unknown、not_applicable；未知不能当作否定
+	State string `json:"state"`
+	// 解释该实体为何进入当前指标状态的稳定原因代码
+	ReasonCode string `json:"reason_code"`
+	// 来源证据的实际观察时刻；无可用证据时为 NULL，沿用证据不刷新此时刻
+	SourceObservedAt pgtype.Timestamptz `json:"source_observed_at"`
+	// 该历史日的维度值 JSON 对象，不回查当前目录改写历史
+	DimensionValues []byte `json:"dimension_values"`
+	// 所用历史事实及其投影版本的 JSON 对象
+	SourceProjectionVersions []byte `json:"source_projection_versions"`
+	// 本次指标状态判定完成的 UTC 时刻
+	EvaluatedAt pgtype.Timestamptz `json:"evaluated_at"`
+}
+
+// 网站指标版本注册合同；仅 Goose 修改，运行时和 Admin 只读
+type GfnMetricRegistry struct {
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 指标类型；当前仅为 state_ratio，即按实体状态计算比例
+	MetricKind string `json:"metric_kind"`
+	// 指标实体层级；此库固定为 site
+	EntityLevel string `json:"entity_level"`
+	// 指标处理粒度；当前固定为 day，即 UTC 日
+	TimeGrain string `json:"time_grain"`
+	// 指标依赖的历史事实合同标识列表，不允许改用当前目录或原始采集替代
+	SourceFacts []string `json:"source_facts"`
+	// 判定实体是否属于指标适用总体的编译策略标识
+	EligibilityPolicy string `json:"eligibility_policy"`
+	// 由历史证据推导七态结果的编译策略标识
+	StatePolicy string `json:"state_policy"`
+	// 定义已知证据覆盖范围及统计分母的编译策略标识
+	CoveragePolicy string `json:"coverage_policy"`
+	// 相对历史日结束时刻的证据有效秒数；NULL 表示无此新鲜度门槛
+	FreshnessSeconds *int64 `json:"freshness_seconds"`
+	// 允许生成的单一维度名称列表；空列表表示仅全局汇总
+	AllowedDimensions []string `json:"allowed_dimensions"`
+	// 合同状态 active 或 retired；已退休版本仍可按原语义重建
+	Status string `json:"status"`
+	// 该指标版本的业务口径说明
+	Description string `json:"description"`
+	// 网站指标版本注册合同的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 合同停止作为活跃版本的 UTC 时刻；active 时为 NULL
+	RetiredAt pgtype.Timestamptz `json:"retired_at"`
+}
+
+// 导航更新公告；仅持久化草稿或已发布，未来发布时间决定定时展示
+type GfnNavUpdateNotice struct {
+	// 导航更新公告的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 公告中文标题
+	Title string `json:"title"`
+	// 公告英文标题
+	TitleEn string `json:"title_en"`
+	// 公告中文 Markdown 正文
+	Body string `json:"body"`
+	// 公告英文 Markdown 正文
+	BodyEn string `json:"body_en"`
+	// 公告公开生效的 Asia/Shanghai 墙上时间；草稿可为 NULL，未来值表示定时发布
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+	// 导航更新公告的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 导航更新公告的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 公告软删除标记；公开查询排除已删除公告
+	Deleted bool `json:"deleted"`
+	// 可选的产品发布版本文案，不是乐观并发版本
+	Version *string `json:"version"`
+	// 可选的发布 Git 提交标识，7..64 位小写十六进制
+	CommitSha *string `json:"commit_sha"`
+	// 公告中文列表摘要
+	Summary string `json:"summary"`
+	// 公告英文列表摘要
+	SummaryEn string `json:"summary_en"`
+	// 持久发布状态 draft 或 published；scheduled 是时间派生状态，不入库
+	PublicationState string `json:"publication_state"`
+}
+
+// 导航页按语言展示的金句内容
+type GfnSaying struct {
+	// 导航页按语言展示的金句内容的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 金句作者或署名；未提供时为 NULL
+	Author *string `json:"author"`
+	// 金句正文
+	Saying string `json:"saying"`
+	// 导航页按语言展示的金句内容的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 导航页按语言展示的金句内容的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 金句展示语言 zh 或 en
+	Language string `json:"language"`
+}
+
+// 导航当前网站目录；软删除边界保留为历史事实的跟踪依据
+type GfnSite struct {
+	// 导航当前网站目录的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 运营维护的中文名称
+	Name string `json:"name"`
+	// 运营维护的英文名称
+	NameEn string `json:"name_en"`
+	// 运营维护的中文简介
+	Info string `json:"info"`
+	// 运营维护的英文简介
+	InfoEn string `json:"info_en"`
+	// 导航当前网站目录的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 导航当前网站目录的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 网站所属国家或地区代码；未配置时为 NULL，不是探测 IP 地域
+	Country *string `json:"country"`
+	// 成人内容字符串标记，1 表示是、0 表示否；历史空值不推断为明确否
+	Nsfw string `json:"nsfw"`
+	// 公益属性字符串标记，1 表示是、0 表示否
+	Welfare string `json:"welfare"`
+	// Managed Asset 网站图标对象键，如 nav/sites/网站身份/icon/哈希.扩展名；未配置时为 NULL
+	Icon *string `json:"icon"`
+	// 网站软删除标记；删除与恢复维护对应历史资格边界
+	Deleted bool `json:"deleted"`
+	// 网站入口累计访问计数，不是探测成功次数
 	ViewCount int64 `json:"view_count"`
-	// UTC soft-delete boundary for historical Site facts; legacy local timestamps are interpreted as Asia/Shanghai.
+	// 网站软删除的 UTC 边界；未删除时为 NULL，旧本地时间按 Asia/Shanghai 解释
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
-// Historical Site dimensions and effective-dated Primary Target selection. finalized_at is NULL only for a current-day write-through marker.
+// 网站每日历史维度和主目标快照；当前日可变，已完成历史日供指标读取
 type GfnSiteDaily struct {
-	SiteID                        int64              `json:"site_id"`
-	FactDate                      pgtype.Date        `json:"fact_date"`
-	SnapshotAt                    pgtype.Timestamptz `json:"snapshot_at"`
-	TrackedAtEnd                  bool               `json:"tracked_at_end"`
-	Name                          string             `json:"name"`
-	NameEn                        string             `json:"name_en"`
-	SiteCountry                   *string            `json:"site_country"`
-	Nsfw                          *bool              `json:"nsfw"`
-	Welfare                       *bool              `json:"welfare"`
-	ViewCount                     int64              `json:"view_count"`
-	GroupIds                      []int64            `json:"group_ids"`
-	PrimaryTargetTrackingPeriodID *int64             `json:"primary_target_tracking_period_id"`
-	PrimaryTarget                 *string            `json:"primary_target"`
-	PrimaryBasis                  *string            `json:"primary_basis"`
-	ActiveTargetCount             int32              `json:"active_target_count"`
-	ProjectionVersion             int32              `json:"projection_version"`
-	FinalizedAt                   pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt                     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
-}
-
-// 导航站点分组表
-type GfnSiteGroup struct {
-	// 分组表id
-	ID int64 `json:"id"`
-	// 分组名称
-	Name string `json:"name"`
-	// 分组名称-英文
-	NameEn string `json:"name_en"`
-	// 分组简介
-	Info string `json:"info"`
-	// 分组简介-英文
-	InfoEn string `json:"info_en"`
-	// 分组优先级
-	Priority int64 `json:"priority"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 修改时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-}
-
-// 导航站点分组映射表
-type GfnSiteGroupMap struct {
-	// 分组映射表id
-	ID int64 `json:"id"`
-	// 站点id
+	// GoFurry 网站身份；与探测目标域名分别保存
 	SiteID int64 `json:"site_id"`
-	// 分组id
-	GroupID int64 `json:"group_id"`
-	// 创建时间
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 该行代表的历史快照时刻；不等同于原始证据观察时刻
+	SnapshotAt pgtype.Timestamptz `json:"snapshot_at"`
+	// 在该事实日结束边界是否仍具跟踪资格
+	TrackedAtEnd bool `json:"tracked_at_end"`
+	// 历史快照中的中文网站名称
+	Name string `json:"name"`
+	// 历史快照中的英文网站名称
+	NameEn string `json:"name_en"`
+	// 历史快照中的网站所属国家或地区；未知时为 NULL
+	SiteCountry *string `json:"site_country"`
+	// 历史成人内容属性；无明确证据时为 NULL
+	Nsfw *bool `json:"nsfw"`
+	// 历史公益属性；无明确证据时为 NULL
+	Welfare *bool `json:"welfare"`
+	// 该历史快照的累计访问计数，不是当日增量
+	ViewCount int64 `json:"view_count"`
+	// 历史快照中的网站分组身份集合，不回查当前关系改写
+	GroupIds []int64 `json:"group_ids"`
+	// 该历史日有效主目标的跟踪区间身份；无主目标时为 NULL
+	PrimaryTargetTrackingPeriodID *int64 `json:"primary_target_tracking_period_id"`
+	// 该历史日有效的主探测地址；无主目标时为 NULL
+	PrimaryTarget *string `json:"primary_target"`
+	// 历史主目标的选择依据；无主目标时为 NULL
+	PrimaryBasis *string `json:"primary_basis"`
+	// 该快照时刻具有效跟踪资格的探测目标数量
+	ActiveTargetCount int32 `json:"active_target_count"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 历史日投影完成的 UTC 时刻；当前日可变标记为 NULL
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 网站每日历史维度和主目标快照的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站每日历史维度和主目标快照的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 导航网站分组的当前运营内容与排序
+type GfnSiteGroup struct {
+	// 导航网站分组的当前运营内容与排序的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 运营维护的中文名称
+	Name string `json:"name"`
+	// 运营维护的英文名称
+	NameEn string `json:"name_en"`
+	// 运营维护的中文简介
+	Info string `json:"info"`
+	// 运营维护的英文简介
+	InfoEn string `json:"info_en"`
+	// 网站分组展示排序值，按升序排列；不是采集队列优先级
+	Priority int64 `json:"priority"`
+	// 导航网站分组的当前运营内容与排序的记录创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 修改时间
+	// 导航网站分组的当前运营内容与排序的记录最近更新时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
-	Weight     int64            `json:"weight"`
 }
 
-// Single source of truth for effective-dated Primary Target selection.
+// 网站与分组的当前归属关系及组内排序
+type GfnSiteGroupMap struct {
+	// 网站与分组的当前归属关系及组内排序的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 所属导航分组身份
+	GroupID int64 `json:"group_id"`
+	// 网站与分组的当前归属关系及组内排序的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 网站与分组的当前归属关系及组内排序的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 网站在该分组中的运营排序权重，值越大越靠前
+	Weight int64 `json:"weight"`
+}
+
+// 网站主目标的有效时间区间；历史指标必须使用当时有效的主目标
 type GfnSitePrimaryTargetPeriod struct {
-	ID                     int64              `json:"id"`
-	SiteID                 int64              `json:"site_id"`
-	TargetTrackingPeriodID int64              `json:"target_tracking_period_id"`
-	EffectiveFrom          pgtype.Timestamptz `json:"effective_from"`
-	EffectiveUntil         pgtype.Timestamptz `json:"effective_until"`
-	Basis                  string             `json:"basis"`
-	CreatedAt              pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	// 网站主目标的有效时间区间的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 网站探测目标的历史跟踪区间身份，引用 gfn_target_tracking_periods
+	TargetTrackingPeriodID int64 `json:"target_tracking_period_id"`
+	// 该主目标开始生效的 UTC 时刻，区间包含起点
+	EffectiveFrom pgtype.Timestamptz `json:"effective_from"`
+	// 该主目标停止生效的 UTC 时刻，区间不包含终点；NULL 表示仍有效
+	EffectiveUntil pgtype.Timestamptz `json:"effective_until"`
+	// 主目标选择依据 explicit、single_target_inferred、deterministic_fallback 或 legacy_backfill
+	Basis string `json:"basis"`
+	// 网站主目标的有效时间区间的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站主目标的有效时间区间的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Typed compact HTTP/TLS/DNS/Ping historical target fact.
+// 网站目标每日类型化 HTTP、TLS、DNS、Ping 已知事实；失败不能覆盖既有可用证据
 type GfnSiteTargetDaily struct {
-	TargetTrackingPeriodID   int64              `json:"target_tracking_period_id"`
-	SiteID                   int64              `json:"site_id"`
-	CollectorDomainID        *int64             `json:"collector_domain_id"`
-	Target                   string             `json:"target"`
-	FactDate                 pgtype.Date        `json:"fact_date"`
-	SnapshotAt               pgtype.Timestamptz `json:"snapshot_at"`
-	TrackedAtEnd             bool               `json:"tracked_at_end"`
-	HttpProbeStatus          *string            `json:"http_probe_status"`
-	HttpProbeObservedAt      pgtype.Timestamptz `json:"http_probe_observed_at"`
-	HttpStateObservedAt      pgtype.Timestamptz `json:"http_state_observed_at"`
-	HttpStatusCode           *int32             `json:"http_status_code"`
-	HttpResponseTimeMs       *int64             `json:"http_response_time_ms"`
-	HttpTtfbMs               *int64             `json:"http_ttfb_ms"`
-	HttpProtocol             *string            `json:"http_protocol"`
-	HttpServer               *string            `json:"http_server"`
-	HttpRemoteIp             *string            `json:"http_remote_ip"`
-	HttpFinalUrl             *string            `json:"http_final_url"`
-	HttpCanonicalUrl         *string            `json:"http_canonical_url"`
-	HttpSecurityHeaders      []byte             `json:"http_security_headers"`
-	TlsStateObservedAt       pgtype.Timestamptz `json:"tls_state_observed_at"`
-	TlsHandshake             *string            `json:"tls_handshake"`
-	TlsVersion               *string            `json:"tls_version"`
-	TlsCipherSuite           *string            `json:"tls_cipher_suite"`
-	TlsCertVerified          *bool              `json:"tls_cert_verified"`
-	TlsVerifyErrorCategory   *string            `json:"tls_verify_error_category"`
-	TlsCertNotBefore         pgtype.Timestamptz `json:"tls_cert_not_before"`
-	TlsCertNotAfter          pgtype.Timestamptz `json:"tls_cert_not_after"`
-	TlsCertIssuer            *string            `json:"tls_cert_issuer"`
-	TlsCertFingerprintSha256 *string            `json:"tls_cert_fingerprint_sha256"`
-	TlsCertSpkiSha256        *string            `json:"tls_cert_spki_sha256"`
-	TlsCertDnsNames          []string           `json:"tls_cert_dns_names"`
-	DnsProbeStatus           *string            `json:"dns_probe_status"`
-	DnsProbeObservedAt       pgtype.Timestamptz `json:"dns_probe_observed_at"`
-	DnsStateObservedAt       pgtype.Timestamptz `json:"dns_state_observed_at"`
-	DnsHasA                  *bool              `json:"dns_has_a"`
-	DnsHasAaaa               *bool              `json:"dns_has_aaaa"`
-	DnsIpv4Count             *int32             `json:"dns_ipv4_count"`
-	DnsIpv6Count             *int32             `json:"dns_ipv6_count"`
-	DnsARecords              []string           `json:"dns_a_records"`
-	DnsAaaaRecords           []string           `json:"dns_aaaa_records"`
-	DnsCnameTerminal         *string            `json:"dns_cname_terminal"`
-	DnsCnameDepth            *int32             `json:"dns_cname_depth"`
-	DnsNsHosts               []string           `json:"dns_ns_hosts"`
-	DnsMxHosts               []string           `json:"dns_mx_hosts"`
-	DnsMinTtl                *int32             `json:"dns_min_ttl"`
-	DnsMaxTtl                *int32             `json:"dns_max_ttl"`
-	DnsRiskFlags             []string           `json:"dns_risk_flags"`
-	PingProbeStatus          *string            `json:"ping_probe_status"`
-	PingProbeObservedAt      pgtype.Timestamptz `json:"ping_probe_observed_at"`
-	PingStateObservedAt      pgtype.Timestamptz `json:"ping_state_observed_at"`
-	PingAvgRttMs             *float64           `json:"ping_avg_rtt_ms"`
-	PingMinRttMs             *float64           `json:"ping_min_rtt_ms"`
-	PingMaxRttMs             *float64           `json:"ping_max_rtt_ms"`
-	PingLossRate             *float64           `json:"ping_loss_rate"`
-	PingJitterMs             *float64           `json:"ping_jitter_ms"`
-	PingSelectedIp           *string            `json:"ping_selected_ip"`
-	PingIpFamily             *string            `json:"ping_ip_family"`
-	PingIcmpBlockedSuspected *bool              `json:"ping_icmp_blocked_suspected"`
-	ProjectionVersion        int32              `json:"projection_version"`
-	FinalizedAt              pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt                pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	// 网站探测目标的历史跟踪区间身份，引用 gfn_target_tracking_periods
+	TargetTrackingPeriodID int64 `json:"target_tracking_period_id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 历史探测配置身份；无配置来源时为 NULL，不回查当前目录补写
+	CollectorDomainID *int64 `json:"collector_domain_id"`
+	// 该事实所属历史跟踪区间的探测地址
+	Target string `json:"target"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 该行代表的历史快照时刻；不等同于原始证据观察时刻
+	SnapshotAt pgtype.Timestamptz `json:"snapshot_at"`
+	// 在该事实日结束边界是否仍具跟踪资格
+	TrackedAtEnd bool `json:"tracked_at_end"`
+	// 最近 HTTP 探测结果；无探测时为 NULL，不等同于最后已知能力状态
+	HttpProbeStatus *string `json:"http_probe_status"`
+	// 最近 HTTP 探测的观察时刻；无探测时为 NULL
+	HttpProbeObservedAt pgtype.Timestamptz `json:"http_probe_observed_at"`
+	// 最后可用 HTTP 状态的实际观察时刻；沿用证据不刷新，未知时为 NULL
+	HttpStateObservedAt pgtype.Timestamptz `json:"http_state_observed_at"`
+	// 最后已知 HTTP 响应状态码；无有效证据时为 NULL
+	HttpStatusCode *int32 `json:"http_status_code"`
+	// 最后已知 HTTP 响应耗时，单位毫秒；未知时为 NULL
+	HttpResponseTimeMs *int64 `json:"http_response_time_ms"`
+	// 最后已知 HTTP 首字节耗时，单位毫秒；未知时为 NULL
+	HttpTtfbMs *int64 `json:"http_ttfb_ms"`
+	// 最后已知 HTTP 协议版本；未知时为 NULL
+	HttpProtocol *string `json:"http_protocol"`
+	// 最后已知 HTTP Server 响应头；未取得时为 NULL
+	HttpServer *string `json:"http_server"`
+	// 最后已知 HTTP 实际连接的远端地址；未知时为 NULL
+	HttpRemoteIp *string `json:"http_remote_ip"`
+	// 最后已知 HTTP 跟随重定向后的最终 URL；未知时为 NULL
+	HttpFinalUrl *string `json:"http_final_url"`
+	// 最后已知页面声明的 canonical URL；未取得时为 NULL
+	HttpCanonicalUrl *string `json:"http_canonical_url"`
+	// 最后已知 HTTP 安全响应头的白名单 JSON；无证据时为 NULL
+	HttpSecurityHeaders []byte `json:"http_security_headers"`
+	// TLS 已知证据的原始观察时刻；来自 HTTP 状态，沿用不刷新
+	TlsStateObservedAt pgtype.Timestamptz `json:"tls_state_observed_at"`
+	// 最后已知 TLS 握手结果；无证据时为 NULL，不代替证书验证状态
+	TlsHandshake *string `json:"tls_handshake"`
+	// 成功握手证据中的 TLS 版本；无有效证据时为 NULL
+	TlsVersion *string `json:"tls_version"`
+	// 握手证据中的 TLS 密码套件；无有效证据时为 NULL
+	TlsCipherSuite *string `json:"tls_cipher_suite"`
+	// 证书链是否通过验证；未能验证时为 NULL，不能把握手失败当作明确否
+	TlsCertVerified *bool `json:"tls_cert_verified"`
+	// 证书验证失败的规范分类；无对应证据时为 NULL
+	TlsVerifyErrorCategory *string `json:"tls_verify_error_category"`
+	// 证书有效期的 UTC 起点；源时间无效或未知时为 NULL
+	TlsCertNotBefore pgtype.Timestamptz `json:"tls_cert_not_before"`
+	// 证书有效期的 UTC 终点；源时间无效或未知时为 NULL
+	TlsCertNotAfter pgtype.Timestamptz `json:"tls_cert_not_after"`
+	// 最后已知证书的颁发者；未知时为 NULL
+	TlsCertIssuer *string `json:"tls_cert_issuer"`
+	// 最后已知叶证书的 SHA256 指纹；用于证书变化检测，未知时为 NULL
+	TlsCertFingerprintSha256 *string `json:"tls_cert_fingerprint_sha256"`
+	// 最后已知证书公钥 SPKI 的 SHA256 摘要；未知时为 NULL
+	TlsCertSpkiSha256 *string `json:"tls_cert_spki_sha256"`
+	// 最后已知证书包含的 DNS 名称集合；未知时为 NULL
+	TlsCertDnsNames []string `json:"tls_cert_dns_names"`
+	// 最近 DNS 探测结果；无探测时为 NULL，不等同于最后已知能力状态
+	DnsProbeStatus *string `json:"dns_probe_status"`
+	// 最近 DNS 探测的观察时刻；无探测时为 NULL
+	DnsProbeObservedAt pgtype.Timestamptz `json:"dns_probe_observed_at"`
+	// 最后可用 DNS 状态的实际观察时刻；沿用证据不刷新，未知时为 NULL
+	DnsStateObservedAt pgtype.Timestamptz `json:"dns_state_observed_at"`
+	// 已知 DNS 状态是否含 A 记录；无证据时为 NULL
+	DnsHasA *bool `json:"dns_has_a"`
+	// 已知 DNS 状态是否含 AAAA 记录；查询失败不能据此推断不支持，V2 指标另核对查询证据
+	DnsHasAaaa *bool `json:"dns_has_aaaa"`
+	// 已知 DNS A 地址数；无证据时为 NULL
+	DnsIpv4Count *int32 `json:"dns_ipv4_count"`
+	// 已知 DNS AAAA 地址数；无证据时为 NULL
+	DnsIpv6Count *int32 `json:"dns_ipv6_count"`
+	// 最后已知 DNS A 地址集合；无证据时为 NULL
+	DnsARecords []string `json:"dns_a_records"`
+	// 最后已知 DNS AAAA 地址集合；无证据时为 NULL
+	DnsAaaaRecords []string `json:"dns_aaaa_records"`
+	// 已知 CNAME 链的终点名称；未知时为 NULL
+	DnsCnameTerminal *string `json:"dns_cname_terminal"`
+	// 已知 CNAME 链的跳数；未知时为 NULL
+	DnsCnameDepth *int32 `json:"dns_cname_depth"`
+	// 最后已知 DNS NS 主机集合；无证据时为 NULL
+	DnsNsHosts []string `json:"dns_ns_hosts"`
+	// 最后已知 DNS MX 主机集合；无证据时为 NULL
+	DnsMxHosts []string `json:"dns_mx_hosts"`
+	// 已知 DNS 记录的最小 TTL 秒数；无证据时为 NULL
+	DnsMinTtl *int32 `json:"dns_min_ttl"`
+	// 已知 DNS 记录的最大 TTL 秒数；无证据时为 NULL
+	DnsMaxTtl *int32 `json:"dns_max_ttl"`
+	// 最后已知 DNS 风险标记集合；无证据时为 NULL
+	DnsRiskFlags []string `json:"dns_risk_flags"`
+	// 最近 PING 探测结果；无探测时为 NULL，不等同于最后已知能力状态
+	PingProbeStatus *string `json:"ping_probe_status"`
+	// 最近 PING 探测的观察时刻；无探测时为 NULL
+	PingProbeObservedAt pgtype.Timestamptz `json:"ping_probe_observed_at"`
+	// 最后可用 PING 状态的实际观察时刻；沿用证据不刷新，未知时为 NULL
+	PingStateObservedAt pgtype.Timestamptz `json:"ping_state_observed_at"`
+	// 最后已知 Ping 平均往返耗时毫秒数；无证据时为 NULL
+	PingAvgRttMs *float64 `json:"ping_avg_rtt_ms"`
+	// 最后已知 Ping 最小往返耗时毫秒数；无证据时为 NULL
+	PingMinRttMs *float64 `json:"ping_min_rtt_ms"`
+	// 最后已知 Ping 最大往返耗时毫秒数；无证据时为 NULL
+	PingMaxRttMs *float64 `json:"ping_max_rtt_ms"`
+	// 最后已知 Ping 丢包百分比，100 表示全部丢包；无证据时为 NULL
+	PingLossRate *float64 `json:"ping_loss_rate"`
+	// 最后已知 Ping 抖动，单位毫秒；无证据时为 NULL
+	PingJitterMs *float64 `json:"ping_jitter_ms"`
+	// 最后已知 Ping 实际选择的目标地址；未知时为 NULL
+	PingSelectedIp *string `json:"ping_selected_ip"`
+	// 最后已知 Ping 目标的 IP 协议族；未知时为 NULL
+	PingIpFamily *string `json:"ping_ip_family"`
+	// 探测是否怀疑 ICMP 被阻断；无证据时为 NULL，不等同于网站不可用
+	PingIcmpBlockedSuspected *bool `json:"ping_icmp_blocked_suspected"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 该历史日事实投影完成的 UTC 时刻
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 网站目标每日类型化 HTTP、TLS、DNS、Ping 已知事实的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站目标每日类型化 HTTP、TLS、DNS、Ping 已知事实的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Scheduled protocol quality, latest observation outcome, and whitelisted last-known state.
+// 目标各协议每日计划质量、最近观察结果和白名单内的最后已知状态；三者不可混同
 type GfnSiteTargetProtocolDaily struct {
-	TargetTrackingPeriodID  int64              `json:"target_tracking_period_id"`
-	SiteID                  int64              `json:"site_id"`
-	CollectorDomainID       *int64             `json:"collector_domain_id"`
-	Target                  string             `json:"target"`
-	Protocol                string             `json:"protocol"`
-	FactDate                pgtype.Date        `json:"fact_date"`
-	ExpectedCount           *int32             `json:"expected_count"`
-	AttemptedCount          int32              `json:"attempted_count"`
-	SuccessCount            int32              `json:"success_count"`
-	PartialCount            int32              `json:"partial_count"`
-	FailureCount            int32              `json:"failure_count"`
-	SkippedCount            *int32             `json:"skipped_count"`
-	MissedCount             *int32             `json:"missed_count"`
-	CanceledCount           *int32             `json:"canceled_count"`
-	UnattemptedCount        *int32             `json:"unattempted_count"`
-	FailureKindCounts       []byte             `json:"failure_kind_counts"`
-	QualityBasis            string             `json:"quality_basis"`
-	LatestScheduledStatus   *string            `json:"latest_scheduled_status"`
-	LatestScheduledAt       pgtype.Timestamptz `json:"latest_scheduled_at"`
-	LatestObservationStatus *string            `json:"latest_observation_status"`
-	LatestObservationAt     pgtype.Timestamptz `json:"latest_observation_at"`
-	KnownStateObservedAt    pgtype.Timestamptz `json:"known_state_observed_at"`
-	KnownState              []byte             `json:"known_state"`
-	AvgDurationMs           *float64           `json:"avg_duration_ms"`
-	P95DurationMs           *float64           `json:"p95_duration_ms"`
-	ProjectionVersion       int32              `json:"projection_version"`
-	FinalizedAt             pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	// 网站探测目标的历史跟踪区间身份，引用 gfn_target_tracking_periods
+	TargetTrackingPeriodID int64 `json:"target_tracking_period_id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 历史探测配置身份；无配置来源时为 NULL，不回查当前目录补写
+	CollectorDomainID *int64 `json:"collector_domain_id"`
+	// 该事实所属历史跟踪区间的探测地址
+	Target string `json:"target"`
+	// 此行聚合的探测协议，同一目标每日各协议分别保存
+	Protocol string `json:"protocol"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 计划账本应有探测次数；旧观察无完整账本时为 NULL
+	ExpectedCount *int32 `json:"expected_count"`
+	// 实际尝试次数，等于 success_count + partial_count + failure_count
+	AttemptedCount int32 `json:"attempted_count"`
+	// 计划探测完整成功次数
+	SuccessCount int32 `json:"success_count"`
+	// 计划探测部分成功次数
+	PartialCount int32 `json:"partial_count"`
+	// 计划探测执行失败次数
+	FailureCount int32 `json:"failure_count"`
+	// 计划账本记录跳过的次数；无完整账本时为 NULL
+	SkippedCount *int32 `json:"skipped_count"`
+	// 计划账本记录错过的次数；无完整账本时为 NULL
+	MissedCount *int32 `json:"missed_count"`
+	// 计划账本记录取消的次数；无完整账本时为 NULL
+	CanceledCount *int32 `json:"canceled_count"`
+	// 计划存在但没有执行尝试的次数；无完整账本时为 NULL
+	UnattemptedCount *int32 `json:"unattempted_count"`
+	// 按失败类别汇总的次数 JSON 对象；与成功样本数分开解释
+	FailureKindCounts []byte `json:"failure_kind_counts"`
+	// 质量分母依据：legacy_observed_only 只有历史观察，acquisition_ledger 才有完整计划账本
+	QualityBasis string `json:"quality_basis"`
+	// 当日最近计划探测的执行结果；无计划结果时为 NULL
+	LatestScheduledStatus *string `json:"latest_scheduled_status"`
+	// 当日最近计划探测的槽位时刻；无计划时为 NULL
+	LatestScheduledAt pgtype.Timestamptz `json:"latest_scheduled_at"`
+	// 截至该日最近原始观察的结果，可能来自手动探测；无观察时为 NULL
+	LatestObservationStatus *string `json:"latest_observation_status"`
+	// 截至该日最近原始观察的时刻；无观察时为 NULL
+	LatestObservationAt pgtype.Timestamptz `json:"latest_observation_at"`
+	// 最后可用协议状态的原始观察时刻；沿用证据不刷新，无已知状态时为 NULL
+	KnownStateObservedAt pgtype.Timestamptz `json:"known_state_observed_at"`
+	// 白名单内的最后已知协议证据 JSON；不是完整 payload，无有效证据时为 NULL
+	KnownState []byte `json:"known_state"`
+	// 该日计划探测已尝试执行的耗时均值，单位毫秒；无样本时为 NULL
+	AvgDurationMs *float64 `json:"avg_duration_ms"`
+	// 该日计划探测已尝试执行耗时的第 95 百分位，单位毫秒；无样本时为 NULL
+	P95DurationMs *float64 `json:"p95_duration_ms"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 该历史日事实投影完成的 UTC 时刻
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 目标各协议每日计划质量、最近观察结果和白名单内的最后已知状态的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 目标各协议每日计划质量、最近观察结果和白名单内的最后已知状态的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Immutable Site target eligibility periods; current CollectorDomain is not a historical FK owner.
+// 网站探测目标的历史跟踪资格区间；当前目录删除不抹除历史身份
 type GfnTargetTrackingPeriod struct {
-	ID                int64              `json:"id"`
-	CollectorDomainID *int64             `json:"collector_domain_id"`
-	SiteID            int64              `json:"site_id"`
-	Target            string             `json:"target"`
-	TrackedFrom       pgtype.Timestamptz `json:"tracked_from"`
-	TrackedUntil      pgtype.Timestamptz `json:"tracked_until"`
-	TrackingBasis     string             `json:"tracking_basis"`
-	OpenedReason      string             `json:"opened_reason"`
-	ClosedReason      *string            `json:"closed_reason"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	// 网站探测目标的历史跟踪资格区间的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 建立区间时的探测配置身份；历史推断可为 NULL，不依赖当前配置外键
+	CollectorDomainID *int64 `json:"collector_domain_id"`
+	// GoFurry 网站身份；与探测目标域名分别保存
+	SiteID int64 `json:"site_id"`
+	// 该历史区间内稳定的探测目标地址
+	Target string `json:"target"`
+	// 跟踪资格生效的 UTC 时刻，区间包含此起点
+	TrackedFrom pgtype.Timestamptz `json:"tracked_from"`
+	// 跟踪资格失效的 UTC 时刻，区间不包含此终点；NULL 表示仍在跟踪
+	TrackedUntil pgtype.Timestamptz `json:"tracked_until"`
+	// 区间依据 explicit 明确配置或 legacy_observed 历史观察推断
+	TrackingBasis string `json:"tracking_basis"`
+	// 建立该历史跟踪区间的业务原因
+	OpenedReason string `json:"opened_reason"`
+	// 关闭该历史跟踪区间的业务原因；未关闭时为 NULL
+	ClosedReason *string `json:"closed_reason"`
+	// 网站探测目标的历史跟踪资格区间的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 网站探测目标的历史跟踪资格区间的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }

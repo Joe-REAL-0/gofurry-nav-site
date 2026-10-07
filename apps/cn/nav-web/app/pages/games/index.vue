@@ -12,11 +12,12 @@
             :initial-raw-data="gamesPageData.mainInfo"
             :initial-panel-data="gamesPageData.panelData"
             :initial-news-record="gamesPageData.latestNews"
+            :showcase="showcase ?? emptyGameShowcase()"
           />
         </section>
 
         <aside class="hidden xl:block xl:w-[25%]">
-          <SideBarPanel :initial-reviews="gamesPageData.latestReviews" />
+          <SideBarPanel :initial-reviews="gamesPageData.latestReviews" :collections="collections" />
         </aside>
       </div>
     </main>
@@ -31,7 +32,9 @@ import { useI18n } from 'vue-i18n'
 import GameInfoPanel from '@/components/game/main/content/GameInfoPanel.vue'
 import GameToolDock from '@/components/game/main/GameToolDock.vue'
 import SideBarPanel from '@/components/game/main/sidebar/SideBarPanel.vue'
-import { getGameHomeData, type GameHomeData } from '~/services/game'
+import { getGameHomeData, getGameHomeShowcase, getGameCollectionHome, type GameHomeData } from '~/services/game'
+import { emptyGameShowcase } from '~/utils/gameShowcasePresentation'
+import type { GameShowcaseSnapshot, GameCollectionHome } from '~/types/game'
 
 const { locale } = useI18n()
 const lang = computed(() => (locale.value === 'en' ? 'en' : 'zh'))
@@ -48,18 +51,40 @@ const gamesPageSeo = computed(() => locale.value === 'en'
     }
 )
 
-const { data } = await useAsyncData<GameHomeData | null>(
+interface GamesPageData { lang: string; home: GameHomeData | null; showcase: GameShowcaseSnapshot | null; collections: GameCollectionHome | null }
+
+const { data } = await useAsyncData<GamesPageData>(
   () => `games-page:${lang.value}`,
   async () => {
-    return getGameHomeData(lang.value).catch(() => null)
+    const requestedLang = lang.value
+    const [home, showcase, collections] = await Promise.allSettled([
+      getGameHomeData(requestedLang),
+      getGameHomeShowcase(requestedLang),
+      getGameCollectionHome(requestedLang),
+    ])
+    return {
+      lang: requestedLang,
+      home: home.status === 'fulfilled' ? home.value : null,
+      showcase: showcase.status === 'fulfilled' ? showcase.value : null,
+      collections: collections.status === 'fulfilled' ? collections.value : null,
+    }
   },
   {
     watch: [lang],
-    default: () => null,
+    default: () => ({ lang: '', home: null, showcase: null, collections: null }),
   }
 )
 
-const gamesPageData = computed<GameHomeData>(() => data.value ?? {
+const showcase = useGameHomeOptionalRecovery(lang,
+  computed(() => data.value?.lang === lang.value ? data.value.showcase : undefined),
+  (locale, signal) => getGameHomeShowcase(locale, { timeout: 8000, signal }),
+)
+const collections = useGameHomeOptionalRecovery(lang,
+  computed(() => data.value?.lang === lang.value ? data.value.collections : undefined),
+  (locale, signal) => getGameCollectionHome(locale, { timeout: 8000, signal }),
+)
+
+const gamesPageData = computed<GameHomeData>(() => data.value?.home ?? {
   mainInfo: nullGameGroups(),
   panelData: nullGamePanel(),
   latestNews: { news_zh: [], news_en: [] },

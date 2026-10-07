@@ -428,35 +428,51 @@ export interface NavSiteIndexResponse {
 
 export type NavUpdatesState = 'ready' | 'empty' | 'error';
 
-export interface NavUpdateNotice {
+export interface NavUpdateIndexItem {
     id: number;
     title: string;
-    body: string;
+    summary: string;
+    version: string | null;
+    commit_sha: string | null;
     published_at: string;
-    create_time: string;
-    update_time: string;
 }
 
 export interface NavUpdatesResponse {
+    page: number;
+    page_size: number;
+    total: number;
+    has_more: boolean;
     schema_version: number;
     generated_at: string;
     state: NavUpdatesState;
     reason_messages?: string[];
-    items: NavUpdateNotice[];
+    items: NavUpdateIndexItem[];
 }
 
-export type NavSearchSuggestionEngine = 'baidu' | 'bing' | 'google' | 'bilibili' | 'duckduckgo';
-export type NavSearchSuggestionsState = 'ready' | 'empty' | 'error';
+export interface NavUpdateDetail extends NavUpdateIndexItem {
+    body: string;
+}
 
-export interface NavSearchSuggestionsResponse {
+export type NavUpdateNeighbor = Pick<NavUpdateIndexItem, 'id' | 'title' | 'version' | 'published_at'>;
+
+export interface NavUpdateDetailResponse {
     schema_version: number;
     generated_at: string;
+    state: 'ready';
+    item: NavUpdateDetail;
+    previous: NavUpdateNeighbor | null;
+    next: NavUpdateNeighbor | null;
+}
+
+export type NavSearchSuggestionsState = 'ready' | 'empty' | 'unavailable';
+
+export interface NavSearchSuggestionsResponse {
+    schema_version: 2;
+    generated_at: string;
     state: NavSearchSuggestionsState;
-    engine: NavSearchSuggestionEngine | '';
     query: string;
     suggestions: string[];
     cache_state: 'hit' | 'miss';
-    reason_messages?: string[];
 }
 
 // Entity-level discovery; Target/workspace/display mode never enter its identity.

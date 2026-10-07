@@ -139,7 +139,7 @@ func (store *navStore) createUpdateNotice(ctx context.Context, meta audit.Meta, 
 		if err != nil {
 			return 0, nil, nil, err
 		}
-		row, err := q.InsertUpdateNotice(ctx, navsqlc.InsertUpdateNoticeParams{ID: id, Title: req.Title, TitleEn: req.TitleEn, Body: req.Body, BodyEn: req.BodyEn, PublishedAt: navTimestamp(publishedAt)})
+		row, err := q.InsertUpdateNotice(ctx, navsqlc.InsertUpdateNoticeParams{ID: id, Title: req.Title, TitleEn: req.TitleEn, Body: req.Body, BodyEn: req.BodyEn, Version: req.Version, CommitSha: req.CommitSHA, Summary: req.Summary, SummaryEn: req.SummaryEn, PublishedAt: navTimestamp(publishedAt)})
 		result = updateNoticeModel(row)
 		return id, nil, row, err
 	})
@@ -148,18 +148,26 @@ func (store *navStore) createUpdateNotice(ctx context.Context, meta audit.Meta, 
 
 func (store *navStore) updateUpdateNotice(ctx context.Context, meta audit.Meta, id int64, req models.UpdateNoticePayload, publishedAt time.Time) common.Error {
 	return store.mutate(ctx, meta, "update", "gfn_nav_update_notice", func(q *navsqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetUpdateNoticeAny(ctx, id)
+		before, err := q.LockUpdateNotice(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
-		after, err := q.UpdateUpdateNotice(ctx, navsqlc.UpdateUpdateNoticeParams{ID: id, Title: req.Title, TitleEn: req.TitleEn, Body: req.Body, BodyEn: req.BodyEn, PublishedAt: navTimestamp(publishedAt)})
+		if before.PublicationState == "published" {
+			if err := validateUpdateNoticePublication(req.Title, req.Body); err != nil {
+				return id, nil, nil, err
+			}
+			if publishedAt.IsZero() {
+				return id, nil, nil, common.NewValidationError("published release requires published_at")
+			}
+		}
+		after, err := q.UpdateUpdateNotice(ctx, navsqlc.UpdateUpdateNoticeParams{ID: id, Title: req.Title, TitleEn: req.TitleEn, Body: req.Body, BodyEn: req.BodyEn, Version: req.Version, CommitSha: req.CommitSHA, Summary: req.Summary, SummaryEn: req.SummaryEn, PublishedAt: navTimestamp(publishedAt)})
 		return id, before, after, err
 	})
 }
 
 func (store *navStore) deleteUpdateNotice(ctx context.Context, meta audit.Meta, id int64) common.Error {
 	return store.mutate(ctx, meta, "delete", "gfn_nav_update_notice", func(q *navsqlc.Queries) (int64, any, any, error) {
-		before, err := q.GetUpdateNoticeAny(ctx, id)
+		before, err := q.LockUpdateNotice(ctx, id)
 		if err != nil {
 			return id, nil, nil, err
 		}
@@ -814,7 +822,7 @@ func sayingModel(row navsqlc.GfnSaying) models.Saying {
 }
 
 func updateNoticeModel(row navsqlc.GfnNavUpdateNotice) models.UpdateNotice {
-	return models.UpdateNotice{ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Body: row.Body, BodyEn: row.BodyEn,
+	return models.UpdateNotice{Version: row.Version, CommitSHA: row.CommitSha, Summary: row.Summary, SummaryEn: row.SummaryEn, PublicationState: row.PublicationState, ID: row.ID, Title: row.Title, TitleEn: row.TitleEn, Body: row.Body, BodyEn: row.BodyEn,
 		PublishedAt: pkgmodels.LocalTime(row.PublishedAt.Time), CreateTime: pkgmodels.LocalTime(row.CreateTime.Time), UpdateTime: pkgmodels.LocalTime(row.UpdateTime.Time), Deleted: row.Deleted}
 }
 

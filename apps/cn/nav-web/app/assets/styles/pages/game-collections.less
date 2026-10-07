@@ -1,0 +1,156 @@
+/* Collection discovery inherits Games material and global interaction tokens.
+ * Only private connector geometry belongs here; layout is owned by Tailwind. */
+.game-collection-card:hover {
+  border-color: var(--games-item-hover-border);
+  background: var(--games-item-hover-bg);
+}
+
+.game-collection-card:focus-visible,
+.game-collection-back:focus-visible { .gf-focus-ring(); }
+
+.game-collection-card {
+  border: 1px solid var(--games-item-border);
+  border-radius: var(--gf-radius-lg);
+  background: var(--games-badge-bg);
+  box-shadow: var(--games-shadow-soft);
+}
+
+.game-collection-card__collage { aspect-ratio: 16 / 7; }
+.game-collection-image {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  object-fit: cover;
+}
+
+.game-collection-timeline__image { height: auto; aspect-ratio: 460 / 215; }
+.game-collections-heading { color: var(--games-text-title); font-size: 2rem; font-weight: 700; line-height: 1.25; }
+.game-collection-title { color: var(--games-text-title); font-size: 1.125rem; font-weight: 600; line-height: 1.4; }
+.game-collection-section { color: var(--games-text-title); font-size: 1rem; font-weight: 600; }
+.game-collection-copy { color: var(--games-text-body); font-size: 0.9rem; line-height: 1.7; }
+.game-collection-note { color: var(--games-text-soft); font-size: 0.8rem; }
+.game-collection-time,
+.game-collection-back { color: var(--games-accent); font-size: 0.8rem; }
+// Timeline geometry shares the 2.5rem grid gap; separate snakes never cross phases.
+.game-collection-timeline__now {
+  padding: 0.65rem 1.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--gf-radius-lg);
+  background: var(--games-home-card-bg);
+  box-shadow: var(--games-home-card-shadow);
+  color: var(--games-text-soft);
+  font-size: 0.85rem;
+
+  strong { color: var(--games-text-title); font-weight: 700; }
+}
+
+.game-collection-timeline__item:not([data-connector='none'])::after {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  top: 100%;
+  left: calc(50% - 1px);
+  width: 2px;
+  height: 2.5rem;
+  color: color-mix(in srgb, var(--games-accent-muted) 75%, transparent);
+  background: repeating-linear-gradient(to bottom, currentColor 0 5px, transparent 5px 10px);
+  background-size: 100% 10px;
+  animation: collection-flow-down 2s linear infinite;
+  content: '';
+}
+
+@keyframes collection-flow-down { to { background-position: 0 10px; } }
+@keyframes collection-flow-right { to { background-position: 10px 0; } }
+
+@media (min-width: 900px) {
+  .game-collection-timeline__snake .game-collection-timeline__item {
+    grid-row: var(--timeline-row);
+    grid-column: var(--timeline-column);
+  }
+
+  .game-collection-timeline__item[data-connector='right']::after,
+  .game-collection-timeline__item[data-connector='left']::after {
+    top: calc(50% - 1px); left: 100%; width: 2.5rem; height: 2px;
+    background: repeating-linear-gradient(to right, currentColor 0 5px, transparent 5px 10px);
+    background-size: 10px 100%;
+    animation-name: collection-flow-right;
+  }
+
+  .game-collection-timeline__item[data-connector='left']::after {
+    left: -2.5rem;
+    animation-direction: reverse;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-collection-timeline__item:not([data-connector='none'])::after { animation: none; }
+}
+
+.game-collection-timeline-card {
+  padding: 0.5rem;
+  border-color: transparent;
+  border-radius: 0.75rem;
+  background: var(--games-home-card-bg);
+  box-shadow: var(--games-home-card-shadow);
+  transition: background-color 180ms ease, border-color 180ms ease;
+
+  .game-collection-title,
+  .game-collection-copy { min-height: 2lh; }
+}
+
+.game-collection-timeline-card:hover,
+.game-collection-timeline-card:focus-visible {
+  border-color: transparent;
+  background: var(--games-home-card-hover-bg);
+}
+
+.game-collection-timeline-card__media {
+  aspect-ratio: 460 / 215;
+  border-radius: 0.375rem;
+  background: var(--games-home-card-bg);
+}
+
+.game-collection-timeline-tag {
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--gf-radius-sm);
+  background: var(--games-badge-bg);
+  color: var(--games-text-soft);
+  font-size: 0.7rem;
+  line-height: 1.4;
+}
+
+.game-collection-timeline-tag--primary {
+  color: var(--games-accent);
+  background: color-mix(in srgb, var(--games-accent-muted) 15%, transparent);
+}
+
+.game-collection-timeline-metrics {
+  min-height: 1.25rem;
+  color: var(--games-text-soft);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+
+  svg { width: 0.9rem; height: 0.9rem; flex-shrink: 0; }
+}
+
+// Index material follows Game Home cards.
+.game-collection-index-card {
+  padding: 0.5rem;
+  border-color: transparent;
+  border-radius: 0.75rem;
+  background: var(--games-home-card-bg);
+  box-shadow: var(--games-home-card-shadow);
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.game-collection-index-card:hover,
+.game-collection-index-card:focus-visible {
+  border-color: transparent;
+  background: var(--games-home-card-hover-bg);
+}
+
+.game-collection-index-card .game-collection-card__collage {
+  border-radius: 0.375rem;
+  background: var(--games-home-card-bg);
+}

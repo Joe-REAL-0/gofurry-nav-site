@@ -220,3 +220,12 @@ export function buildInsightsSeo(page: InsightsSeoPage, locale?: SeoLocale): Det
 
   return copy[page]
 }
+export function buildGameCollectionSeo(locale: string, description: string, name?: string): DetailSeo {
+  const english = locale === 'en'
+  return {
+    title: name
+      ? `${name} - GoFurry ${english ? 'Game Collections' : '游戏分区'}`
+      : english ? 'GoFurry Game Collections - Curated Furry Game Timelines' : 'GoFurry 游戏分区 - 兽人游戏主题合集与发展脉络',
+    description: stripHtml(description).slice(0, 180),
+  }
+}

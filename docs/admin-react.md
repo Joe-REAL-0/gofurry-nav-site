@@ -2,6 +2,77 @@
 
 The sole Admin frontend is `apps/cn/admin/react`. It owns content workspaces and all operational/system workflows and is the production entrypoint embedded by the Go binary.
 
+## IME-safe searches (#141)
+
+`useCompositionSafeSearch` separates displayed IME drafts from committed search
+text. Content ideas commit the final keyword to the URL with replace and page 1;
+GlobalSearch keeps its two-character minimum and clears both values on every
+dialog close. RemoteSelect and Board IdeaPicker debounce committed text only.
+RemoteSelect leaves IME Enter/arrow/Escape handling to the input method and retains
+the selected option through composing/blur. DataTable keeps its existing IME
+implementation. Vitest covers composition, trailing changes, URL synchronization,
+0/300 ms remote searches, keyboard selection and dialog reset. Debounce timing uses
+fake timers.
+
+The four owners above are covered by #141. Existing technical filters in Collection
+(job key and run-result IDs/target/protocol), Changes (event code), and Metrics
+(dimension value) still commit on each change; they are identified follow-up gaps,
+not silently included in this patch. Ordinary form inputs and TagMultiSelect's
+local filtering are unchanged.
+
+## Showcase operations (#119-B)
+
+`src/features/showcase` owns `/game/showcase` (current composition, Campaigns,
+automatic discovery) and `/game/showcase/:id` (overview, content, artwork,
+schedule/display, statistics). It uses native shared controls and the
+existing [Stage A API](game-showcase.md), outside Resource Engine. Navigation,
+breadcrumbs and the page title use “首页展柜”. Discovery locale/pool filters share
+the table toolbar with column controls; daily trend legends sit above the plot.
+Discovery now defaults to “可用候选”, with “待开启” (only missing operator approval),
+“条件未满足”, and “全部诊断” groups. Counts and filtered totals come from the internal
+Game Backend diagnostic read, before pagination. Search by localized name/Game ID
+is debounced by 300 ms; advanced exclusion filters and pool-specific/name/ID sorting
+use URL state (`candidate_status`, `candidate_keyword`, `candidate_sort`,
+`excluded_reason`) independently of Campaign filters. Changing a filter resets the
+page; changing pool clears incompatible exclusion filters. The table shows Game,
+status, key evidence, blockers and actions; “查看诊断” opens full release/first-available
+and finalized-player evidence in a keyboard-accessible dialog. Classification owns
+all eligibility writes. This view requires the matching Admin proxy/Game Backend
+read-only diagnostic extension; it does not change Composer or enrollment rules.
+`content.read` can inspect every tab; `content.write` permits mutations. New Drafts immediately
+open their real ID workspace. Lists use URL filters and do not fetch per-row stats.
+
+Content explicitly edits zh/en; Sponsored clears both Editorial Notes and CTA
+types stay fixed. Assets accept original desktop 1600×800/mobile 1200×675 AVIF up
+to 5 MiB. The browser checks file hints/size; Go owns authoritative dimensions.
+Local previews are revoked on replacement/unmount. Reloaded artwork shows its
+object key, since Stage A supplies no persistent CDN URL. Mirror warnings remain
+successful Primary publication. Focus coordinates save the full content contract.
+A 3×3 grid highlights the nearest preset; staged local preview clicks select
+clamped x/y and update object-position immediately. Saving remains explicit and
+read-only controls are disabled. Weak technical text replaces the numeric inputs.
+No persistent CDN URL is guessed when no local preview exists.
+
+Schedules interpret DateTimePicker wall time as Asia/Shanghai (UTC+08:00), with
+explicit RFC3339 conversion. Lifecycle actions and reference clearing confirm;
+unsaved edits/staged uploads protect tab navigation, routing and unload. Statistics
+display backend totals, daily two-series trends, click sources and same-origin CSV.
+Multi-day sessions are summed daily HLL estimates, not distinct people. Discovery
+links to Game Classification for eligibility. The Header “操作审计” action is
+visible only with `audit.read` and carries only the Campaign resource filter.
+History is removed; old `tab=history` falls back to overview without redirect.
+“选取权重” and “固定展示位置” replace Weight/Pin labels, with explanatory
+help and unchanged 1..10000 / null-or-1..4 payloads.
+
+Vitest/Testing Library cover these contracts without real cloud resources. After
+automated checks, human acceptance still covers light/dark and narrow screens,
+the full create/edit/upload/schedule/publish/pause/resume/stats/CSV workflow and
+Game eligibility reflected in diagnostics. Real Development COS/R2 acceptance
+requires explicit authorization. Production data/cloud operations and Stage C
+Public Web implementation are outside this stage.
+
+## Local development
+
 Start the existing Go API with the ignored local development config:
 
 ~~~text
@@ -31,7 +102,7 @@ pnpm run build
 
 The App Shell consumes the current principal from `/api/v1/auth/state`. Missing navigation or actions should first be checked against returned capabilities and backend authorization; never patch around the contract with role comparisons.
 
-Simple resources are defined in `src/features/resources/definitions.tsx`. Site and Game must remain dedicated workspaces. New server reads should be small, explicit sqlc-backed read models rather than a generic frontend BFF.
+Simple resources are defined in `src/features/resources/definitions.tsx`. Site, Game and Release Notes remain dedicated workspaces. `src/features/release-notes` owns list/new/detail routes, bilingual Markdown authoring and the P1 publication APIs; see [Release Notes](release-notes.md) and the [Markdown contract](../contracts/update-markdown.md). New server reads should be small, explicit sqlc-backed read models rather than a generic frontend BFF.
 
 Collection, Metrics, and Changes are under `src/features/operations`; Cloud Resources, DataOps, Audit, and Accounts are under `src/features/system`. `dataops.read` is the only valid Data Operations capability. Operator/Developer/Owner differences must be expressed through `auth.can(...)`, not client-side role matrices.
 

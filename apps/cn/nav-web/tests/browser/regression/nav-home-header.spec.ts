@@ -144,3 +144,139 @@ test('Quick Access exposes all slots and persists real Manage add/delete actions
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('navCustomSites')!))).toEqual(customSeed)
   header.assertQuiet()
 })
+
+test('Suggestion requests debounce for 600ms, abort stale work and use only q', async ({ page, header }) => {
+  await header.open()
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  header.holdSuggestions()
+  await header.input.fill('wo')
+  await page.clock.runFor(400)
+  await header.input.fill('wolf')
+  await page.clock.runFor(599)
+  expect(header.requestQueries()).toEqual([])
+  await page.clock.runFor(1)
+  await header.expectSuggestionRequest('wolf')
+  await expect(header.suggestions.locator('.search-suggestion-loading')).toBeVisible()
+  await header.input.fill('noresult')
+  await header.expectAborted('wolf')
+  await page.clock.runFor(599)
+  expect(header.requestQueries()).toEqual(['wolf'])
+  await page.clock.runFor(1)
+  await header.expectSuggestionRequest('noresult')
+  await expect(header.suggestions.getByText('暂无搜索建议', { exact: true })).toBeVisible()
+  header.releaseSuggestions()
+  await page.clock.runFor(1000)
+  await expect(header.items).toHaveCount(0)
+  expect(header.requestQueries()).toEqual(['wolf', 'noresult'])
+  header.assertQuiet()
+})
+
+for (const [platform, destination] of [
+  ['谷歌', 'https://www.google.com/search?q=wolf%20furry'],
+  ['小红书', 'https://www.xiaohongshu.com/search_result?keyword=wolf%20furry'],
+] as const) {
+  test(`${platform} destination uses the same suggestion API without changing Enter navigation`, async ({ page, header }) => {
+    await header.open()
+    await header.search.locator('.search-platform-row').getByText(platform, { exact: true }).click()
+    await header.showSuggestions()
+    header.allowSearchPopup(destination)
+    const popupPromise = page.waitForEvent('popup')
+    await header.input.press('Enter')
+    const popup = await popupPromise
+    await popup.waitForLoadState('load')
+    await expect(popup).toHaveURL(destination)
+    expect(header.requestQueries()).toEqual(['wolf'])
+    header.assertQuiet()
+  })
+}
+
+for (const failure of ['unavailable', 503, 429, 'network'] as const) {
+  test(`Suggestion ${failure} quietly closes the dropdown and preserves search`, async ({ page, header }) => {
+    await header.open()
+    header.suggestion('furry', failure === 'unavailable' ? { state: 'unavailable' } : { failure })
+    await page.clock.install()
+    await page.clock.pauseAt(new Date())
+    await header.input.fill('furry')
+    const finished = page.waitForEvent(failure === 'network' ? 'requestfailed' : 'requestfinished',
+      request => request.url().includes('/nav/search/suggestions?q=furry'))
+    await page.clock.runFor(600)
+    await finished
+    await expect(header.suggestions).toHaveCount(0)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+    await page.clock.runFor(5000)
+    expect(header.requestQueries()).toEqual(['furry'])
+    const destination = 'https://www.bing.com/search?q=furry'
+    header.allowSearchPopup(destination)
+    const popupPromise = page.waitForEvent('popup')
+    await header.input.press('Enter')
+    const popup = await popupPromise
+    await popup.waitForLoadState('load')
+    await expect(popup).toHaveURL(destination)
+    header.assertQuiet()
+  })
+}
+
+test('IME owns confirmation and navigation keys; only final Chinese text starts one debounce', async ({ page, context, header }) => {
+  await header.open()
+  header.suggestion('兽人', { items: ['兽人 游戏'] })
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  await header.input.focus()
+  await header.input.dispatchEvent('compositionstart')
+  for (const text of ['shou', '兽']) {
+    await header.input.fill(text)
+    await page.clock.runFor(1200)
+    expect(header.requestQueries()).toEqual([])
+  }
+  for (const key of ['Enter', 'ArrowDown', 'ArrowUp', 'Escape']) {
+    // Both the composition lifecycle ref and the native flag guard before preventDefault.
+    for (const isComposing of [false, true]) {
+      expect(await header.input.evaluate((input, event) => input.dispatchEvent(new KeyboardEvent('keydown', {
+        ...event, bubbles: true, cancelable: true,
+      })), { key, isComposing })).toBe(true)
+    }
+  }
+  expect(context.pages()).toHaveLength(1)
+  await header.input.fill('兽人')
+  await header.input.dispatchEvent('compositionend', { data: '兽人' })
+  await page.clock.runFor(300)
+  await header.input.dispatchEvent('input', { inputType: 'insertText', data: '兽人' })
+  await page.clock.runFor(299)
+  expect(header.requestQueries()).toEqual([])
+  await page.clock.runFor(1)
+  await header.expectSuggestionRequest('兽人')
+  await expect(header.items).toHaveText(['兽人 游戏'])
+  await page.clock.runFor(1000)
+  expect(header.requestQueries()).toEqual(['兽人'])
+  // Native composing can still be true after compositionend in some browsers.
+  expect(await header.input.evaluate(input => input.dispatchEvent(new KeyboardEvent('keydown', {
+    key: 'Enter', isComposing: true, bubbles: true, cancelable: true,
+  })))).toBe(true)
+  expect(context.pages()).toHaveLength(1)
+  await header.input.press('Escape')
+  await expect(header.suggestions).toHaveCount(0)
+  header.assertQuiet()
+})
+
+test('Provider HTML remains literal text with safe keyword segments; other categories never fetch', async ({ page, header }) => {
+  await header.open()
+  const malicious = '<img src=x onerror="document.documentElement.dataset.suggestionXss=1">wolf<script>alert(1)</script>'
+  header.suggestion('wolf', { items: [malicious] })
+  await page.clock.install()
+  await page.clock.pauseAt(new Date())
+  await header.input.fill('wolf')
+  await page.clock.runFor(600)
+  await header.expectSuggestionRequest('wolf')
+  await expect(header.items).toHaveText([malicious])
+  await expect(header.items.locator('.search-highlight')).toHaveText('wolf')
+  await expect(header.items.locator('img, script')).toHaveCount(0)
+  await expect(page.locator('html')).not.toHaveAttribute('data-suggestion-xss')
+  // Dispatch a real click without depending on animation frames while the clock is paused.
+  await header.search.locator('.search-category-row').getByText('兽人', { exact: true }).dispatchEvent('click')
+  await header.input.fill('other category')
+  await page.clock.runFor(1200)
+  await expect(header.suggestions).toHaveCount(0)
+  expect(header.requestQueries()).toEqual(['wolf'])
+  header.assertQuiet()
+})

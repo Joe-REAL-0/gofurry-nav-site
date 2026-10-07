@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { History, ShieldCheck } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { DataTable, type AdminColumn } from '../../components/admin/data-table'
 import { FilterField, JsonBlock } from '../../components/admin/operations'
 import { Detail, DetailGrid, PageHeader, PageLayout, Section } from '../../components/admin/page'
@@ -17,7 +18,8 @@ import type { AuditLog } from '../operations/types'
 function auditJSON(value: string) { try { return JSON.parse(value || '{}') as unknown } catch { return {} } }
 
 export function AuditPage() {
-  const [page, setPage] = useState(1); const [operator, setOperator] = useState(''); const [role, setRole] = useState(''); const [action, setAction] = useState(''); const [resource, setResource] = useState(''); const [from, setFrom] = useState(''); const [through, setThrough] = useState(''); const [selected, setSelected] = useState<AuditLog | null>(null)
+  const [params] = useSearchParams()
+  const [page, setPage] = useState(1); const [operator, setOperator] = useState(''); const [role, setRole] = useState(''); const [action, setAction] = useState(''); const [resource, setResource] = useState(() => params.get('resource') ?? ''); const [from, setFrom] = useState(''); const [through, setThrough] = useState(''); const [selected, setSelected] = useState<AuditLog | null>(null)
   const search = new URLSearchParams({ page: String(page), page_size: '20' }); if (operator) search.set('operator', operator); if (role) search.set('role', role); if (action) search.set('action', action); if (resource) search.set('resource', resource); if (from) search.set('from', from); if (through) search.set('to', through)
   const query = useQuery({ queryKey: ['audit', page, operator, role, action, resource, from, through], queryFn: () => getJSON<PageResult<AuditLog>>(`/api/v1/audit/logs?${search}`) })
   const columns = useMemo<AdminColumn<AuditLog>[]>(() => [

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"context"
 	"strconv"
 	"sync"
 
@@ -27,7 +28,7 @@ func New(reader suggestionsReader, limiter suggestionsLimiter) *searchApi {
 }
 
 type suggestionsReader interface {
-	GetSearchSuggestions(engine string, query string) models.SearchSuggestionsResponse
+	GetSearchSuggestions(ctx context.Context, query string) models.SearchSuggestionsResponse
 }
 
 type suggestionsLimiter interface {
@@ -58,7 +59,7 @@ func (api searchApi) GetSearchSuggestions(c fiber.Ctx) error {
 	if reader == nil {
 		reader = currentSuggestionsReader()
 	}
-	data := reader.GetSearchSuggestions(c.Query("engine"), c.Query("q"))
+	data := reader.GetSearchSuggestions(c.Context(), c.Query("q"))
 	return common.NewResponse(c).SuccessWithData(data)
 }
 

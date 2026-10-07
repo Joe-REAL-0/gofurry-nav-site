@@ -11,10 +11,6 @@ type navPageReader interface {
 	GetSiteList(lang string) ([]models.SiteVo, common.GFError)
 	GetGroupList(lang string) ([]models.GroupVo, common.GFError)
 	GetPingList() (map[string]string, common.GFError)
-	GetBaiduSuggestion(q string) ([]string, common.GFError)
-	GetBingSuggestion(q string) ([]string, common.GFError)
-	GetGoogleSuggestion(q string) ([]string, common.GFError)
-	GetBiliBiliSuggestion(q string) ([]string, common.GFError)
 	GetSayingService(lang string) (models.SayingModel, common.GFError)
 }
 
@@ -63,54 +59,6 @@ func (api *navPageApi) GetGroupList(c fiber.Ctx) error {
 // @Description 获取所有导航站点延迟信息
 func (api *navPageApi) GetPingList(c fiber.Ctx) error {
 	data, err := api.service().GetPingList()
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
-// @Schemes
-// @Description 获取百度搜索建议
-func (api *navPageApi) GetBaiduSearchSuggestion(c fiber.Ctx) error {
-	q := c.Query("q")
-	data, err := api.service().GetBaiduSuggestion(q)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
-// @Schemes
-// @Description 获取必应搜索建议
-func (api *navPageApi) GetBingSearchSuggestion(c fiber.Ctx) error {
-	q := c.Query("q")
-	data, err := api.service().GetBingSuggestion(q)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
-// @Schemes
-// @Description 获取谷歌搜索建议
-func (api *navPageApi) GetGoogleSearchSuggestion(c fiber.Ctx) error {
-	q := c.Query("q")
-	data, err := api.service().GetGoogleSuggestion(q)
-	if err != nil {
-		return common.NewResponse(c).Error(err.GetMsg())
-	}
-
-	return common.NewResponse(c).SuccessWithData(data)
-}
-
-// @Schemes
-// @Description 获取b站搜索建议
-func (api *navPageApi) GetBiliBiliSearchSuggestion(c fiber.Ctx) error {
-	q := c.Query("q")
-	data, err := api.service().GetBiliBiliSuggestion(q)
 	if err != nil {
 		return common.NewResponse(c).Error(err.GetMsg())
 	}

@@ -34,7 +34,7 @@ const gameContentSchema = z.object({
 })
 type GameContentValues = z.infer<typeof gameContentSchema>
 
-const gameClassificationSchema = z.object({ primary_tag: z.coerce.number().int().nonnegative(), secondary_tag: z.coerce.number().int().nonnegative(), tag_ids: z.array(z.string()), weight: z.coerce.number().int() })
+const gameClassificationSchema = z.object({ showcase_eligible: z.boolean(), primary_tag: z.coerce.number().int().nonnegative(), secondary_tag: z.coerce.number().int().nonnegative(), tag_ids: z.array(z.string()), weight: z.coerce.number().int() })
 type GameClassificationValues = z.infer<typeof gameClassificationSchema>
 
 
@@ -44,7 +44,7 @@ const tabs: WorkspaceTab[] = [
 ]
 
 function emptyGame(): Game {
-  return { id: 0, name: '', name_en: '', info: '', info_en: '', create_time: '', update_time: '', resources: [{ key: '', value: '' }], groups: [{ key: '', value: '' }], developers: [''], publishers: [''], appid: 0, header: '', links: [{ key: '', value: '' }], weight: 1000, primary_tag: 0, secondary_tag: 0 }
+  return { showcase_eligible: false, id: 0, name: '', name_en: '', info: '', info_en: '', create_time: '', update_time: '', resources: [{ key: '', value: '' }], groups: [{ key: '', value: '' }], developers: [''], publishers: [''], appid: 0, header: '', links: [{ key: '', value: '' }], weight: 1000, primary_tag: 0, secondary_tag: 0 }
 }
 
 export function GameListPage() {
@@ -102,21 +102,21 @@ export function GameClassificationForm({ workspace }: { workspace: GameWorkspace
   const { toast } = useToast()
   const [operationError, setOperationError] = useState('')
   const options = useQuery({ queryKey: ['options', 'tags', 'all'], queryFn: loadAllTagOptions })
-  const form = useForm<GameClassificationValues>({ resolver: zodResolver(gameClassificationSchema) as unknown as Resolver<GameClassificationValues>, defaultValues: { primary_tag: workspace.game.primary_tag, secondary_tag: workspace.game.secondary_tag, tag_ids: workspace.tags.map((tag) => String(tag.tag_id)), weight: workspace.game.weight } })
+  const form = useForm<GameClassificationValues>({ resolver: zodResolver(gameClassificationSchema) as unknown as Resolver<GameClassificationValues>, defaultValues: { showcase_eligible: workspace.game.showcase_eligible ?? false, primary_tag: workspace.game.primary_tag, secondary_tag: workspace.game.secondary_tag, tag_ids: workspace.tags.map((tag) => String(tag.tag_id)), weight: workspace.game.weight } })
   useUnsavedChanges(form.formState.isDirty)
   const mutation = useMutation({ mutationFn: async (values: GameClassificationValues) => {
     return sendJSON<GameWorkspace>(`/api/v1/game/games/${workspace.game.id}/classification`, 'PUT', {
-      weight: values.weight, primary_tag_id: values.primary_tag || null,
+      showcase_eligible: values.showcase_eligible, weight: values.weight, primary_tag_id: values.primary_tag || null,
       secondary_tag_id: values.secondary_tag || null, tag_ids: values.tag_ids.map(Number),
     })
   }, onSuccess: async (saved) => {
-    form.reset({ primary_tag: saved.game.primary_tag, secondary_tag: saved.game.secondary_tag, tag_ids: saved.tags.map((tag) => String(tag.tag_id)), weight: saved.game.weight })
-    await client.invalidateQueries({ queryKey: ['game', workspace.game.id] }); await client.invalidateQueries({ queryKey: ['games'] }); toast('游戏分类与展示已保存')
+    form.reset({ showcase_eligible: saved.game.showcase_eligible, primary_tag: saved.game.primary_tag, secondary_tag: saved.game.secondary_tag, tag_ids: saved.tags.map((tag) => String(tag.tag_id)), weight: saved.game.weight })
+    await client.invalidateQueries({ queryKey: ['game', workspace.game.id] }); await client.invalidateQueries({ queryKey: ['games'] }); await client.invalidateQueries({ queryKey: ['showcase', 'candidates'] }); await client.invalidateQueries({ queryKey: ['showcase', 'composition'] }); toast('游戏分类与展示已保存')
   }, onError: (error) => setOperationError(errorMessage(error)) })
   const tagOptions = options.data ?? []
   const selectedTag = (id: number) => tagOptions.find((option) => Number(option.id) === id)
     ?? (id ? { id: String(id), label: workspace.tags.find((tag) => tag.tag_id === id)?.tag_name ?? `标签 #${id}` } : null)
-  return <Section title="分类与展示" description="主标签、副标签与完整标签集合在同一工作流维护。"><form className="grid gap-6" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="主要分类"><div className="grid gap-4 md:grid-cols-3"><FormField label="主要标签"><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={300} placeholder="搜索主要标签…" value={selectedTag(form.watch('primary_tag'))} onChange={(value) => form.setValue('primary_tag', Number(value?.id ?? 0), { shouldDirty: true })} /></FormField><FormField label="次要标签"><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={300} placeholder="搜索次要标签…" value={selectedTag(form.watch('secondary_tag'))} onChange={(value) => form.setValue('secondary_tag', Number(value?.id ?? 0), { shouldDirty: true })} /></FormField><FormField label="展示权重"><Input type="number" {...form.register('weight')} /></FormField></div></FormSection><FormSection title="全部标签" description="主要标签、次要标签与全部标签会一起保存。"><TagMultiSelect loading={options.isLoading} error={options.error?.message} options={tagOptions} selected={form.watch('tag_ids')} onChange={(value) => form.setValue('tag_ids', value, { shouldDirty: true })} /></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}保存分类与展示</Button></div></form></Section>
+  return <Section title="分类与展示" description="主标签、副标签与完整标签集合在同一工作流维护。"><form className="grid gap-6" onSubmit={form.handleSubmit((values) => { setOperationError(''); mutation.mutate(values) })}>{operationError && <Alert tone="danger">{operationError}</Alert>}<FormSection title="主要分类"><div className="grid gap-4 md:grid-cols-3"><FormField label="主要标签"><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={300} placeholder="搜索主要标签…" value={selectedTag(form.watch('primary_tag'))} onChange={(value) => form.setValue('primary_tag', Number(value?.id ?? 0), { shouldDirty: true })} /></FormField><FormField label="次要标签"><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={300} placeholder="搜索次要标签…" value={selectedTag(form.watch('secondary_tag'))} onChange={(value) => form.setValue('secondary_tag', Number(value?.id ?? 0), { shouldDirty: true })} /></FormField><FormField label="展示权重"><Input type="number" {...form.register('weight')} /></FormField></div></FormSection><FormSection title="自动 Showcase" description="仅控制是否进入 Upcoming / New Release / Trending 候选池；最终是否展示仍由内容完整性、SFW、素材、发布时间和 Composer 决定。"><label className="flex items-center gap-2 text-sm"><input type="checkbox" {...form.register('showcase_eligible')} />允许作为自动发现候选</label></FormSection><FormSection title="全部标签" description="主要标签、次要标签与全部标签会一起保存。"><TagMultiSelect loading={options.isLoading} error={options.error?.message} options={tagOptions} selected={form.watch('tag_ids')} onChange={(value) => form.setValue('tag_ids', value, { shouldDirty: true })} /></FormSection><div className="flex justify-end"><Button disabled={mutation.isPending || !form.formState.isDirty}>{mutation.isPending && <LoaderCircle className="size-4 animate-spin" />}保存分类与展示</Button></div></form></Section>
 }
 
 function GameSteamCollection({ game }: { game: Game }) {

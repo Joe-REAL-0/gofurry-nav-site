@@ -15,6 +15,7 @@
           {{ t("game.action.dailyGame") }}
         </button>
       </div>
+      <slot name="collection-shortcuts" />
     </div>
 
     <!-- 相关网站 -->

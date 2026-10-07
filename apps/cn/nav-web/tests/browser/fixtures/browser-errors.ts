@@ -9,7 +9,9 @@ export function captureBrowserErrors(page: Page, expectedNetworkFailures: Readon
     // exact network diagnostic for an injected URL is expected; never suppress
     // application errors or hydration messages, even at the same URL.
     if (message.type() === 'error' && ['Failed to load resource: net::ERR_FAILED',
-      'Failed to load resource: the server responded with a status of 503 (Service Unavailable)'].includes(message.text())
+      'Failed to load resource: the server responded with a status of 404 (Not Found)',
+      'Failed to load resource: the server responded with a status of 503 (Service Unavailable)',
+      'Failed to load resource: the server responded with a status of 429 (Too Many Requests)'].includes(message.text())
       && expectedNetworkFailures.has(message.location().url)) return
     if (message.type() === 'error' || /hydration.*mismatch|mismatch.*hydration/i.test(message.text())) {
       errors.push(`${message.type()}: ${message.text()}`)

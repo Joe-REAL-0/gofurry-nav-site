@@ -1,4 +1,46 @@
 {
+  "gameShowcase": {
+    "label": "Home Showcase",
+    "context": {
+      "editorial": "GoFurry Pick",
+      "upcoming": "Upcoming",
+      "newRelease": "New Release Pick",
+      "trending": "Trending",
+      "sponsored": {
+        "game": "Game · Sponsored",
+        "crowdfunding": "Crowdfunding · Sponsored",
+        "tabletop": "Tabletop · Sponsored",
+        "merchandise": "Merchandise · Sponsored",
+        "other": "Sponsored"
+      }
+    },
+    "action": {
+      "game": "View Game",
+      "project": "View Project",
+      "product": "View Product",
+      "website": "Visit Website"
+    },
+    "secondary": {
+      "steam": "Steam",
+      "kickstarter": "Kickstarter",
+      "website": "Website",
+      "other": "External Link"
+    },
+    "release": {
+      "expected": "Expected {date}",
+      "released": "Released {date}"
+    },
+    "control": {
+      "previous": "Previous showcase item",
+      "next": "Next showcase item",
+      "pause": "Pause autoplay",
+      "play": "Resume autoplay"
+    },
+    "live": {
+      "slide": "{current} / {total} · {title}"
+    }
+  },
+
   "siteIntelligence": {
     "scope": "Site-wide data · independent of the current target.",
     "ecosystem": "Ecosystem-wide",
@@ -731,6 +773,60 @@
     }
   },
   "game": {
+    "collections": {
+      "metrics": {
+        "rating": "Rating {average} from {count} reviews",
+        "online": "Latest observed players: {count}",
+        "onlineAt": "Latest observed players: {count}, collected at {time}",
+        "communities": "{count} community links"
+      },
+      "search": "Search collections or games…",
+      "advancedFilter": "Advanced filters",
+      "apply": "Apply",
+      "phaseLabel": "Content phase",
+      "sortLabel": "Sort by",
+      "phases": {
+        "all": "All",
+        "released": "Includes released games",
+        "upcoming": "Includes upcoming games",
+        "mixed": "Released and upcoming"
+      },
+      "sorts": {
+        "published_desc": "Recently published",
+        "count_desc": "Most games",
+        "count_asc": "Fewest games",
+        "name_asc": "Name ascending",
+        "name_desc": "Name descending"
+      },
+      "heading": "Game Collections",
+      "all": "All collections",
+      "intro": "Explore curated themes and series through the release history of their games.",
+      "back": "Back to collections",
+      "count": "{count} games",
+      "empty": "No game collections yet",
+      "emptyWorks": "No games to display right now",
+      "unavailable": "Game collections are temporarily unavailable. Please try again.",
+      "refreshFailed": "The update is unavailable. Your previous content is still here.",
+      "retry": "Retry",
+      "loadMore": "Load more",
+      "loading": "Loading…",
+      "loadFailed": "Could not load more collections. Please try again.",
+      "now": "Now",
+      "sections": {
+        "past": "Released games",
+        "releasedUnknown": "Released · date unknown",
+        "future": "Future games",
+        "tba": "Release date to be announced",
+        "unknown": "Status unknown"
+      },
+      "time": {
+        "released_unknown": "Released · date unknown",
+        "upcoming_tba": "Release date to be announced",
+        "unknown": "Status unknown",
+        "inferred": "Approx. {time}",
+        "overdue": "Planned for {time} · still upcoming"
+      }
+    },
     "panel": {
       "playerCount": "Player Count",
       "playerCountTop15": "Player Count Top 15",

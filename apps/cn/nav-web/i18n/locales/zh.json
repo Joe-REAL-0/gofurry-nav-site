@@ -1,4 +1,46 @@
 {
+  "gameShowcase": {
+    "label": "首页精选",
+    "context": {
+      "editorial": "GoFurry 精选",
+      "upcoming": "即将发售",
+      "newRelease": "新作推荐",
+      "trending": "热度上升",
+      "sponsored": {
+        "game": "游戏 · 推广",
+        "crowdfunding": "众筹项目 · 推广",
+        "tabletop": "桌面游戏 · 推广",
+        "merchandise": "收藏周边 · 推广",
+        "other": "推广"
+      }
+    },
+    "action": {
+      "game": "查看游戏",
+      "project": "查看项目",
+      "product": "查看产品",
+      "website": "访问官网"
+    },
+    "secondary": {
+      "steam": "Steam",
+      "kickstarter": "Kickstarter",
+      "website": "官方网站",
+      "other": "外部链接"
+    },
+    "release": {
+      "expected": "预计 {date}",
+      "released": "发行于 {date}"
+    },
+    "control": {
+      "previous": "上一项精选",
+      "next": "下一项精选",
+      "pause": "暂停自动轮播",
+      "play": "继续自动轮播"
+    },
+    "live": {
+      "slide": "{current} / {total} · {title}"
+    }
+  },
+
   "siteIntelligence": {
     "scope": "站点级生态数据 · 不受当前目标切换影响。",
     "ecosystem": "全站生态",
@@ -731,6 +773,60 @@
     }
   },
   "game": {
+    "collections": {
+      "metrics": {
+        "rating": "评分 {average}，共 {count} 条评价",
+        "online": "最近观测在线人数 {count}",
+        "onlineAt": "最近观测在线人数 {count}，采集于 {time}",
+        "communities": "{count} 个社群入口"
+      },
+      "search": "搜索游戏分区或作品……",
+      "advancedFilter": "高级筛选",
+      "apply": "应用",
+      "phaseLabel": "内容阶段",
+      "sortLabel": "排序",
+      "phases": {
+        "all": "全部",
+        "released": "包含已发行作品",
+        "upcoming": "包含待发行作品",
+        "mixed": "已发行与待发行"
+      },
+      "sorts": {
+        "published_desc": "最新发布",
+        "count_desc": "作品数量从多到少",
+        "count_asc": "作品数量从少到多",
+        "name_asc": "名称升序",
+        "name_desc": "名称降序"
+      },
+      "heading": "游戏分区",
+      "all": "全部分区",
+      "intro": "沿着作品的发行脉络，发现人工整理的游戏主题与系列。",
+      "back": "返回分区",
+      "count": "{count} 部作品",
+      "empty": "当前暂无游戏分区",
+      "emptyWorks": "当前暂无可展示作品",
+      "unavailable": "暂时无法加载游戏分区，请稍后重试。",
+      "refreshFailed": "更新暂时不可用，仍为你保留上次加载的内容。",
+      "retry": "重试",
+      "loadMore": "加载更多",
+      "loading": "正在加载…",
+      "loadFailed": "更多分区加载失败，请重试。",
+      "now": "现在",
+      "sections": {
+        "past": "已发布作品",
+        "releasedUnknown": "已发布 · 日期待考",
+        "future": "未来作品",
+        "tba": "发售时间待定",
+        "unknown": "状态待考"
+      },
+      "time": {
+        "released_unknown": "已发布 · 日期待考",
+        "upcoming_tba": "发售时间待定",
+        "unknown": "状态待考",
+        "inferred": "约 {time}",
+        "overdue": "原计划 {time} · 当前仍未发售"
+      }
+    },
     "panel": {
       "playerCount": "在线人数",
       "playerCountTop15": "在线人数 Top 15",

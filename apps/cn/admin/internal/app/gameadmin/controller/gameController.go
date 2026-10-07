@@ -17,6 +17,7 @@ import (
 	"github.com/gofurry/gofurry-admin/internal/app/shared/adminutil"
 	"github.com/gofurry/gofurry-admin/internal/app/shared/audit"
 	gamesqlc "github.com/gofurry/gofurry-admin/internal/db/game/sqlc"
+	"github.com/gofurry/gofurry-admin/internal/infra/assets"
 	"github.com/gofurry/gofurry-admin/pkg/common"
 	pkgmodels "github.com/gofurry/gofurry-admin/pkg/models"
 	"github.com/gofurry/gofurry-admin/pkg/util"
@@ -26,7 +27,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type GameAPI struct{ store *gameStore }
+type GameAPI struct {
+	store          *gameStore
+	showcaseAssets *assets.Service
+}
+
+func (api *GameAPI) WithShowcaseAssets(s *assets.Service) *GameAPI {
+	api.showcaseAssets = s
+	return api
+}
 
 func New(pool *pgxpool.Pool, auditLogger *audit.Logger) *GameAPI {
 	return &GameAPI{store: newGameStore(pool, auditLogger)}
@@ -463,7 +472,7 @@ func (api *GameAPI) CreatePrize(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(valErr)
 	}
 	created, err := api.store.createPrize(c.Context(), audit.MetaFromFiber(c), gamesqlc.InsertPrizeParams{
-		Title: strings.TrimSpace(req.Title), Description: strings.TrimSpace(req.Desc), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
+		Title: strings.TrimSpace(req.Title), TitleEn: strings.TrimSpace(req.TitleEn), Description: strings.TrimSpace(req.Desc), DescEn: strings.TrimSpace(req.DescEn), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
 		Key: strings.TrimSpace(req.Key), StartTime: gameTimestamp(startTime), EndTime: gameTimestamp(endTime), Status: req.Status,
 	})
 	if err != nil {
@@ -498,7 +507,7 @@ func (api *GameAPI) UpdatePrize(c fiber.Ctx) error {
 		return common.NewResponse(c).Error(valErr)
 	}
 	txErr := api.store.updatePrize(c.Context(), audit.MetaFromFiber(c), gamesqlc.UpdatePrizeParams{
-		ID: id, Title: strings.TrimSpace(req.Title), Description: strings.TrimSpace(req.Desc), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
+		ID: id, Title: strings.TrimSpace(req.Title), TitleEn: strings.TrimSpace(req.TitleEn), Description: strings.TrimSpace(req.Desc), DescEn: strings.TrimSpace(req.DescEn), Prize: []byte(adminutil.MustJSON(normalizePrizeBody(req.Prize))),
 		Key: strings.TrimSpace(req.Key), StartTime: gameTimestamp(startTime), EndTime: gameTimestamp(endTime), Status: req.Status,
 	})
 	if txErr != nil {
@@ -549,23 +558,24 @@ func gameUpdateParams(req models.GamePayload) gamesqlc.UpdateGameParams {
 
 func gameDTO(row models.Game) models.GameDTO {
 	return models.GameDTO{
-		ID:           row.ID,
-		Name:         row.Name,
-		NameEn:       row.NameEn,
-		Info:         row.Info,
-		InfoEn:       row.InfoEn,
-		CreateTime:   row.CreateTime,
-		UpdateTime:   row.UpdateTime,
-		Resources:    adminutil.ParseKVArray(row.Resources),
-		Groups:       adminutil.ParseKVArray(row.Groups),
-		Developers:   adminutil.ParseStringArray(row.Developers),
-		Publishers:   adminutil.ParseStringArray(row.Publishers),
-		Appid:        row.Appid,
-		Header:       row.Header,
-		Links:        adminutil.ParseKVArray(row.Links),
-		Weight:       row.Weight,
-		PrimaryTag:   row.PrimaryTag,
-		SecondaryTag: row.SecondaryTag,
+		ShowcaseEligible: row.ShowcaseEligible,
+		ID:               row.ID,
+		Name:             row.Name,
+		NameEn:           row.NameEn,
+		Info:             row.Info,
+		InfoEn:           row.InfoEn,
+		CreateTime:       row.CreateTime,
+		UpdateTime:       row.UpdateTime,
+		Resources:        adminutil.ParseKVArray(row.Resources),
+		Groups:           adminutil.ParseKVArray(row.Groups),
+		Developers:       adminutil.ParseStringArray(row.Developers),
+		Publishers:       adminutil.ParseStringArray(row.Publishers),
+		Appid:            row.Appid,
+		Header:           row.Header,
+		Links:            adminutil.ParseKVArray(row.Links),
+		Weight:           row.Weight,
+		PrimaryTag:       row.PrimaryTag,
+		SecondaryTag:     row.SecondaryTag,
 	}
 }
 
@@ -575,7 +585,9 @@ func prizeDTO(row models.Prize) models.PrizeDTO {
 	return models.PrizeDTO{
 		ID:         row.ID,
 		Title:      row.Title,
+		TitleEn:    row.TitleEn,
 		Desc:       row.Desc,
+		DescEn:     row.DescEn,
 		Prize:      prize,
 		Key:        row.Key,
 		StartTime:  row.StartTime,
@@ -687,7 +699,9 @@ func steamAssetKinds(kind string) []steamassets.Kind {
 func normalizePrizeBody(body models.PrizeBody) models.PrizeBody {
 	body.Keys = normalizeStringArray(body.Keys)
 	body.Title = strings.TrimSpace(body.Title)
+	body.TitleEn = strings.TrimSpace(body.TitleEn)
 	body.Platform = strings.TrimSpace(body.Platform)
+	body.PlatformEn = strings.TrimSpace(body.PlatformEn)
 	return body
 }
 

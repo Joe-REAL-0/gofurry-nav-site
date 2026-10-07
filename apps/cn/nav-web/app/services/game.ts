@@ -1,4 +1,9 @@
 import type {
+  GameCollectionHome,
+  GameCollectionIndex,
+  GameCollectionDetail,
+  GameCollectionMode,
+  GameCollectionCriteria,
   AnonymousReviewModel,
   CommentReq,
   GameBaseInfoResponse,
@@ -14,6 +19,8 @@ import type {
   GameTagRecord,
   GameTagCategory,
   GameHomeApiResponse,
+  GameShowcaseSnapshot,
+  GameShowcaseEvent,
   GameViewTouchResponse,
   LatestNewsRecord,
   LotteryReq,
@@ -25,6 +32,7 @@ import type {
   SearchPageQueryRequest,
   SearchPageResponse
 } from '~/types/game'
+
 import type { ApiResult } from '~/types/api'
 import type {
   GameInsightChangeCategory,
@@ -61,6 +69,26 @@ export function getGameList() {
   return useApi('gameV2')<GameV2ListItem[]>('/game/list')
 }
 
+type HomeOptionalReadOptions = { timeout?: number; signal?: AbortSignal }
+
+export function getGameCollectionHome(lang = 'zh', options: HomeOptionalReadOptions = {}) {
+  return useApi('gameV2')<GameCollectionHome>('/game/collections/home', {
+    query: { lang: normalizeGameLang(lang), mode: 'sfw' }, timeout: 1000, retry: 0, ...options,
+  })
+}
+
+export function getGameCollections(lang: string, mode: GameCollectionMode, page = 1, pageSize = 24, criteria: GameCollectionCriteria = { q: '', phase: 'all', sort: 'published_desc' }) {
+  return useApi('gameV2')<GameCollectionIndex>('/game/collections', {
+    query: { lang: normalizeGameLang(lang), mode, page, page_size: pageSize, ...criteria }, timeout: 8000, retry: 0,
+  })
+}
+
+export function getGameCollectionDetail(code: string, lang: string, mode: GameCollectionMode) {
+  return useApi('gameV2')<GameCollectionDetail>(`/game/collections/${encodeURIComponent(code)}`, {
+    query: { lang: normalizeGameLang(lang), mode }, timeout: 8000, retry: 0,
+  })
+}
+
 export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
   const payload = await getGameHomeSnapshot(lang)
 
@@ -73,6 +101,34 @@ export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
     },
     latestReviews: payload.latest_reviews,
   }
+}
+
+export function getGameHomeShowcase(lang = 'zh', options: HomeOptionalReadOptions = {}): Promise<GameShowcaseSnapshot> {
+  return useApi('gameV2')('/game/home/showcase', {
+    query: { lang: normalizeGameLang(lang), region: 'CN' },
+    timeout: 1000,
+    retry: 0,
+    ...options,
+  })
+}
+
+// This endpoint deliberately returns an empty 204, not the useApi envelope.
+// Navigation never waits for analytics, including configuration/network failures.
+export async function submitGameShowcaseEvent(event: GameShowcaseEvent): Promise<void> {
+  if (!import.meta.client) return
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type -- This endpoint is HTTP 204; no response envelope/body exists.
+    await $fetch<void>('/game/home/showcase/events', {
+      baseURL: useRuntimeConfig().public.gameV2ApiBase,
+      method: 'POST', body: event, credentials: 'include', keepalive: true,
+      retry: 0, timeout: 5000,
+      // ofetch skips null-body status parsing. Drain the empty stream so the
+      // browser completes the request instead of cancelling an unread response.
+      async onResponse({ response }) {
+        if (response.status === 204) await response.text()
+      },
+    })
+  } catch { /* Optional analytics must never affect navigation or UI. */ }
 }
 
 // Insights needs the same prewarmed panel as Game Home. The uncached panel

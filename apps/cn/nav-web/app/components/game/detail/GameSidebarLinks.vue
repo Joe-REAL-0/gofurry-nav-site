@@ -77,7 +77,7 @@ const goSteam = () => {
 // 过滤数组
 const safeGroups = computed<KvModel[]>(() =>
     (props.game?.groups ?? []).filter(
-        (item): item is KvModel => !!item?.key && !!item?.value
+        (item): item is KvModel => !!item?.key?.trim() && !!item?.value?.trim()
     )
 )
 

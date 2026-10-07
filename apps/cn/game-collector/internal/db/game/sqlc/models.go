@@ -8,623 +8,1136 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// Independent ordered checkpoints for each Game detector version.
+// 游戏变化检测器各版本的独立有序水位；与事件投影原子提交
 type GfgChangeCheckpoint struct {
-	DetectorKey      string             `json:"detector_key"`
-	DetectorVersion  int32              `json:"detector_version"`
-	SourceStartDate  pgtype.Date        `json:"source_start_date"`
-	ProcessedThrough pgtype.Date        `json:"processed_through"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	// 变化检测器的稳定标识，与 detector_version 共同定位合同
+	DetectorKey string `json:"detector_key"`
+	// 变化检测语义版本；各版本独立投影和推进水位
+	DetectorVersion int32 `json:"detector_version"`
+	// 可重建源证据的首个 UTC 日期；NULL 表示尚无起始证据
+	SourceStartDate pgtype.Date `json:"source_start_date"`
+	// 已连续处理完成的最后一个 UTC 日期；NULL 表示尚未完成任何一天
+	ProcessedThrough pgtype.Date `json:"processed_through"`
+	// 游戏变化检测器各版本的独立有序水位的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏变化检测器各版本的独立有序水位的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Deterministic canonical Game change events derived only from history, facts, metrics, and periods.
+// 游戏规范变化事件；确定性身份，来源仅为历史合同，不外键依赖当前目录
 type GfgChangeEvent struct {
-	EventKey        string             `json:"event_key"`
-	DetectorKey     string             `json:"detector_key"`
-	DetectorVersion int32              `json:"detector_version"`
-	GameID          int64              `json:"game_id"`
-	ProjectionDate  pgtype.Date        `json:"projection_date"`
-	EventAt         pgtype.Timestamptz `json:"event_at"`
-	TimeBasis       string             `json:"time_basis"`
-	EventCode       string             `json:"event_code"`
-	ScopeKind       string             `json:"scope_kind"`
-	ScopeKey        string             `json:"scope_key"`
-	OldValue        []byte             `json:"old_value"`
-	NewValue        []byte             `json:"new_value"`
-	SourceEventKey  string             `json:"source_event_key"`
-	SourceBeforeKey string             `json:"source_before_key"`
-	SourceAfterKey  string             `json:"source_after_key"`
-	SourceBeforeAt  pgtype.Timestamptz `json:"source_before_at"`
-	SourceAfterAt   pgtype.Timestamptz `json:"source_after_at"`
-	SourceVersions  []byte             `json:"source_versions"`
-	MaterializedAt  pgtype.Timestamptz `json:"materialized_at"`
-}
-
-// Goose-owned versioned Game change detector contracts; Runtime and Admin are read-only.
-type GfgChangeRegistry struct {
-	DetectorKey     string             `json:"detector_key"`
-	DetectorVersion int32              `json:"detector_version"`
-	SourceKind      string             `json:"source_kind"`
-	SourceContracts []string           `json:"source_contracts"`
-	DetectionPolicy string             `json:"detection_policy"`
-	WatermarkPolicy string             `json:"watermark_policy"`
-	EventCodes      []string           `json:"event_codes"`
-	ProcessingGrain string             `json:"processing_grain"`
-	Status          string             `json:"status"`
-	Description     string             `json:"description"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	RetiredAt       pgtype.Timestamptz `json:"retired_at"`
-}
-
-// Durable scheduled, manual, and entity-triggered Game collection jobs.
-type GfgCollectionJob struct {
-	ID                int64              `json:"id"`
-	ScheduleID        *int64             `json:"schedule_id"`
-	ScheduleVersion   *int64             `json:"schedule_version"`
-	JobKey            string             `json:"job_key"`
-	Trigger           string             `json:"trigger"`
-	ScopeType         string             `json:"scope_type"`
-	ScopeID           *int64             `json:"scope_id"`
-	Target            *string            `json:"target"`
-	Tasks             []string           `json:"tasks"`
-	Priority          int32              `json:"priority"`
-	ConcurrencyKey    string             `json:"concurrency_key"`
-	ScheduledFor      pgtype.Timestamptz `json:"scheduled_for"`
-	Status            string             `json:"status"`
-	RequestedBy       string             `json:"requested_by"`
-	DedupeKey         *string            `json:"dedupe_key"`
-	ClaimedBy         *string            `json:"claimed_by"`
-	LeaseUntil        pgtype.Timestamptz `json:"lease_until"`
-	CancelRequestedAt pgtype.Timestamptz `json:"cancel_requested_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
-}
-
-// Execution attempts for durable Game collection jobs.
-type GfgCollectionRun struct {
-	ID                  string             `json:"id"`
-	JobID               int64              `json:"job_id"`
-	AttemptNo           int32              `json:"attempt_no"`
-	CollectorInstanceID string             `json:"collector_instance_id"`
-	Status              string             `json:"status"`
-	ScheduledFor        pgtype.Timestamptz `json:"scheduled_for"`
-	StartedAt           pgtype.Timestamptz `json:"started_at"`
-	EndedAt             pgtype.Timestamptz `json:"ended_at"`
-	ExpectedCount       int32              `json:"expected_count"`
-	AttemptedCount      int32              `json:"attempted_count"`
-	SuccessCount        int32              `json:"success_count"`
-	PartialCount        int32              `json:"partial_count"`
-	FailureCount        int32              `json:"failure_count"`
-	SkippedCount        int32              `json:"skipped_count"`
-	ScheduleDelayMs     int64              `json:"schedule_delay_ms"`
-	DurationMs          int64              `json:"duration_ms"`
-	ErrorKind           string             `json:"error_kind"`
-	ErrorMessage        string             `json:"error_message"`
-}
-
-// Durable Game collection schedules; PostgreSQL is the source of truth.
-type GfgCollectionSchedule struct {
-	ID                  int64              `json:"id"`
-	JobKey              string             `json:"job_key"`
-	Name                string             `json:"name"`
-	Enabled             bool               `json:"enabled"`
-	ScheduleKind        string             `json:"schedule_kind"`
-	CronExpression      *string            `json:"cron_expression"`
-	IntervalSeconds     *int64             `json:"interval_seconds"`
-	AnchorAt            pgtype.Timestamptz `json:"anchor_at"`
-	Timezone            string             `json:"timezone"`
-	MisfirePolicy       string             `json:"misfire_policy"`
-	MisfireGraceSeconds int32              `json:"misfire_grace_seconds"`
-	OverlapPolicy       string             `json:"overlap_policy"`
-	Priority            int32              `json:"priority"`
-	ConcurrencyKey      string             `json:"concurrency_key"`
-	Version             int64              `json:"version"`
-	EffectiveFrom       pgtype.Timestamptz `json:"effective_from"`
-	LastMaterializedFor pgtype.Timestamptz `json:"last_materialized_for"`
-	NextScheduledFor    pgtype.Timestamptz `json:"next_scheduled_for"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-}
-
-// Per-game, per-task results for Game collection runs.
-type GfgCollectionTaskResult struct {
-	ID                 int64              `json:"id"`
-	RunID              string             `json:"run_id"`
-	TaskType           string             `json:"task_type"`
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	Status             string             `json:"status"`
-	UpstreamStatusCode int32              `json:"upstream_status_code"`
-	TrafficBucket      string             `json:"traffic_bucket"`
-	RetryCount         int32              `json:"retry_count"`
-	DurationMs         int64              `json:"duration_ms"`
-	ErrorKind          string             `json:"error_kind"`
-	ErrorMessage       string             `json:"error_message"`
-	StartedAt          pgtype.Timestamptz `json:"started_at"`
-	EndedAt            pgtype.Timestamptz `json:"ended_at"`
-}
-
-// Game collector process instances and heartbeats.
-type GfgCollectorInstance struct {
-	InstanceID      string             `json:"instance_id"`
-	CollectorID     string             `json:"collector_id"`
-	Hostname        string             `json:"hostname"`
-	Version         string             `json:"version"`
-	CommitSha       string             `json:"commit_sha"`
-	Capabilities    []string           `json:"capabilities"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	LastHeartbeatAt pgtype.Timestamptz `json:"last_heartbeat_at"`
-	StoppedAt       pgtype.Timestamptz `json:"stopped_at"`
-}
-
-// Ordered singleton checkpoints for Game fact pipelines.
-type GfgFactRollupCheckpoint struct {
-	PipelineKey       string             `json:"pipeline_key"`
-	ProjectionVersion int32              `json:"projection_version"`
-	SourceStartDate   pgtype.Date        `json:"source_start_date"`
-	ProcessedThrough  pgtype.Date        `json:"processed_through"`
-	QualityCutoverAt  pgtype.Timestamptz `json:"quality_cutover_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-}
-
-// 游戏表
-type GfgGame struct {
-	// 游戏表ID
-	ID int64 `json:"id"`
-	// 游戏名称
-	Name string `json:"name"`
-	// 游戏英文名称
-	NameEn string `json:"name_en"`
-	// 游戏简介
-	Info string `json:"info"`
-	// 游戏英文简介
-	InfoEn string `json:"info_en"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 更新时间
-	UpdateTime pgtype.Timestamp `json:"update_time"`
-	// 游戏相关资源
-	Resources []byte `json:"resources"`
-	// 游戏相关社群
-	Groups []byte `json:"groups"`
-	// Deprecated legacy manual release string; retained temporarily for migration audit and rollback only.
-	ReleaseDate string `json:"release_date"`
-	// 开发商
-	Developers []byte `json:"developers"`
-	// 发行商
-	Publishers []byte `json:"publishers"`
-	// SteamAPI appid
-	Appid int64 `json:"appid"`
-	// 游戏封面图
-	Header string `json:"header"`
-	// 三方网站链接
-	Links []byte `json:"links"`
-	// 权重
-	Weight    int64 `json:"weight"`
-	ViewCount int64 `json:"view_count"`
-}
-
-type GfgGameAsset struct {
-	ID            int64              `json:"id"`
-	GameID        int64              `json:"game_id"`
-	Appid         int64              `json:"appid"`
-	AssetType     string             `json:"asset_type"`
-	AssetFamily   string             `json:"asset_family"`
-	Source        string             `json:"source"`
-	Lang          string             `json:"lang"`
-	MediaKey      string             `json:"media_key"`
-	Title         string             `json:"title"`
-	Url           string             `json:"url"`
-	ThumbnailUrl  string             `json:"thumbnail_url"`
-	Format        string             `json:"format"`
-	Exists        *bool              `json:"exists"`
-	StatusCode    int32              `json:"status_code"`
-	ContentType   string             `json:"content_type"`
-	ContentLength int64              `json:"content_length"`
-	Extra         []byte             `json:"extra"`
-	SortOrder     int32              `json:"sort_order"`
-	CheckedAt     pgtype.Timestamptz `json:"checked_at"`
-	CollectedAt   pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-}
-
-// 评论表
-type GfgGameComment struct {
-	// 评论表ID
-	ID int64 `json:"id"`
-	// 地区
-	Region string `json:"region"`
-	// 评论
-	Content string `json:"content"`
-	// 评分
-	Score float64 `json:"score"`
-	// 创建时间
-	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 游戏表ID
+	// 规范事件的确定性文本身份；相同来源重建得到相同键
+	EventKey string `json:"event_key"`
+	// 变化检测器的稳定标识，与 detector_version 共同定位合同
+	DetectorKey string `json:"detector_key"`
+	// 变化检测语义版本；各版本独立投影和推进水位
+	DetectorVersion int32 `json:"detector_version"`
+	// GoFurry 游戏身份，不是 Steam AppID
 	GameID int64 `json:"game_id"`
-	// ip
+	// 事件被投影到的 UTC 日期，用于按日原子替换重建
+	ProjectionDate pgtype.Date `json:"projection_date"`
+	// 明确的生效或观察时刻；只有日粒度证据时为 NULL，不能伪造精确时间
+	EventAt pgtype.Timestamptz `json:"event_at"`
+	// 事件时间依据 effective、observed 或 day；day 不携带 event_at
+	TimeBasis string `json:"time_basis"`
+	// 检测器合同定义的业务变化类型
+	EventCode string `json:"event_code"`
+	// 事件作用范围类型，用于区分实体、地区或历史目标等范围
+	ScopeKind string `json:"scope_kind"`
+	// 事件在该作用范围内的稳定身份，不跨历史跟踪区间合并变化
+	ScopeKey string `json:"scope_key"`
+	// 变化前的已知语义值 JSON 对象，不使用失败噪声覆盖已知值
+	OldValue []byte `json:"old_value"`
+	// 变化后的已知语义值 JSON 对象
+	NewValue []byte `json:"new_value"`
+	// 来源事件确定性身份，与检测器及版本联合唯一以防重复产出
+	SourceEventKey string `json:"source_event_key"`
+	// 支持变化前语义的规范源证据键
+	SourceBeforeKey string `json:"source_before_key"`
+	// 支持变化后语义的规范源证据键
+	SourceAfterKey string `json:"source_after_key"`
+	// 变化前证据时刻；只有日粒度或无精确时刻时为 NULL
+	SourceBeforeAt pgtype.Timestamptz `json:"source_before_at"`
+	// 变化后证据时刻；只有日粒度或无精确时刻时为 NULL
+	SourceAfterAt pgtype.Timestamptz `json:"source_after_at"`
+	// 该事件依赖的事实、指标或源合同版本 JSON 对象
+	SourceVersions []byte `json:"source_versions"`
+	// 规范事件最近一次物化的 UTC 时刻，不是业务变化发生时刻
+	MaterializedAt pgtype.Timestamptz `json:"materialized_at"`
+}
+
+// 游戏变化检测器版本注册合同；仅 Goose 修改，历史版本语义不可覆盖
+type GfgChangeRegistry struct {
+	// 变化检测器的稳定标识，与 detector_version 共同定位合同
+	DetectorKey string `json:"detector_key"`
+	// 变化检测语义版本；各版本独立投影和推进水位
+	DetectorVersion int32 `json:"detector_version"`
+	// 源证据类型 metric、fact、domain_history 或 effective_period
+	SourceKind string `json:"source_kind"`
+	// 检测器依赖的规范源合同列表；不得以原始采集或当前目录替代
+	SourceContracts []string `json:"source_contracts"`
+	// 定义语义变化判定的编译策略标识
+	DetectionPolicy string `json:"detection_policy"`
+	// 定义可处理历史范围和源水位依赖的编译策略标识
+	WatermarkPolicy string `json:"watermark_policy"`
+	// 该检测器版本可产出的规范事件类型列表
+	EventCodes []string `json:"event_codes"`
+	// 处理粒度；当前固定为 day，即 UTC 日
+	ProcessingGrain string `json:"processing_grain"`
+	// 合同状态 active 或 retired；历史版本保留明确的重建语义
+	Status string `json:"status"`
+	// 检测器版本的业务含义和证据口径说明
+	Description string `json:"description"`
+	// 游戏变化检测器版本注册合同的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 检测器退休的 UTC 时刻；active 时为 NULL
+	RetiredAt pgtype.Timestamptz `json:"retired_at"`
+}
+
+// 游戏采集持久任务；计划槽与活跃去重键保证幂等，租约由 PostgreSQL 持有
+type GfgCollectionJob struct {
+	// 游戏采集持久任务的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 来源调度身份；非计划来源可为 NULL，调度删除后保留任务并置空
+	ScheduleID *int64 `json:"schedule_id"`
+	// 任务建立时的调度版本；无调度来源时为 NULL
+	ScheduleVersion *int64 `json:"schedule_version"`
+	// 编译期采集能力的稳定标识；用于匹配执行器与调度合同
+	JobKey string `json:"job_key"`
+	// 触发来源 scheduled、manual、startup_catchup、entity_created、entity_changed，历史导入还可为 legacy_import
+	Trigger string `json:"trigger"`
+	// 执行范围：all 全量或 game 单实体
+	ScopeType string `json:"scope_type"`
+	// 单实体范围的 游戏身份；全量范围为 NULL
+	ScopeID *int64 `json:"scope_id"`
+	// 保留的目标槽；游戏任务合同要求始终为 NULL
+	Target *string `json:"target"`
+	// 本任务请求执行的采集能力列表，不能为空
+	Tasks []string `json:"tasks"`
+	// 进入执行队列的优先级，由创建任务时的调度或请求确定
+	Priority int32 `json:"priority"`
+	// 采集并发通道标识；同一通道最多一个运行中的 Job
+	ConcurrencyKey string `json:"concurrency_key"`
+	// 计划槽的 UTC 时刻；手动触发没有计划槽，为 NULL
+	ScheduledFor pgtype.Timestamptz `json:"scheduled_for"`
+	// 任务状态 queued、running、success、partial、failed、skipped、missed 或 canceled
+	Status string `json:"status"`
+	// 请求创建任务的操作者或系统来源标识
+	RequestedBy string `json:"requested_by"`
+	// 活跃任务去重键；无需去重时为 NULL
+	DedupeKey *string `json:"dedupe_key"`
+	// 持有执行租约的采集实例身份；未领取时为 NULL
+	ClaimedBy *string `json:"claimed_by"`
+	// 执行租约的 UTC 到期时刻；用于故障后回收，不是计划时间
+	LeaseUntil pgtype.Timestamptz `json:"lease_until"`
+	// 请求取消的 UTC 时刻；NULL 表示没有取消请求
+	CancelRequestedAt pgtype.Timestamptz `json:"cancel_requested_at"`
+	// 游戏采集持久任务的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏采集持久任务的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	// 任务进入终态的 UTC 时刻；尚未结束时为 NULL
+	CompletedAt pgtype.Timestamptz `json:"completed_at"`
+}
+
+// 游戏采集任务的执行尝试账本；同一 Job 可有多个递增尝试
+type GfgCollectionRun struct {
+	// 本次执行尝试的文本身份，用于关联原始观察及任务结果
+	ID string `json:"id"`
+	// 所属持久采集任务身份，删除任务时级联删除执行记录
+	JobID int64 `json:"job_id"`
+	// 同一 Job 内从 1 开始的尝试序号，与 job_id 联合唯一
+	AttemptNo int32 `json:"attempt_no"`
+	// 执行本次尝试的采集进程实例身份
+	CollectorInstanceID string `json:"collector_instance_id"`
+	// 尝试状态 running、success、partial、failed 或 canceled
+	Status string `json:"status"`
+	// 计划槽的 UTC 时刻；手动触发没有计划槽，为 NULL
+	ScheduledFor pgtype.Timestamptz `json:"scheduled_for"`
+	// 本次执行尝试实际开始的 UTC 时刻
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// 本次执行尝试结束的 UTC 时刻；运行中为 NULL
+	EndedAt pgtype.Timestamptz `json:"ended_at"`
+	// 本次执行计划处理的实体任务数
+	ExpectedCount int32 `json:"expected_count"`
+	// 已尝试的实体任务数，等于 success_count + partial_count + failure_count
+	AttemptedCount int32 `json:"attempted_count"`
+	// 本次尝试中完整成功的实体任务数
+	SuccessCount int32 `json:"success_count"`
+	// 本次尝试中部分成功的实体任务数
+	PartialCount int32 `json:"partial_count"`
+	// 本次尝试中失败的实体任务数
+	FailureCount int32 `json:"failure_count"`
+	// 本次尝试中未执行而跳过的实体任务数
+	SkippedCount int32 `json:"skipped_count"`
+	// 相对计划槽的启动延迟，单位毫秒且不为负
+	ScheduleDelayMs int64 `json:"schedule_delay_ms"`
+	// 本次执行耗时，单位毫秒
+	DurationMs int64 `json:"duration_ms"`
+	// 采集失败的稳定分类；无分类时为空串
+	ErrorKind string `json:"error_kind"`
+	// 采集失败的诊断摘要；无错误时为空串
+	ErrorMessage string `json:"error_message"`
+}
+
+// 游戏采集的持久调度定义；PostgreSQL 为计划及槽位的权威来源
+type GfgCollectionSchedule struct {
+	// 游戏采集的持久调度定义的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 编译期采集能力的稳定标识；用于匹配执行器与调度合同
+	JobKey string `json:"job_key"`
+	// 供运营识别的调度名称
+	Name string `json:"name"`
+	// 是否允许调度器为此计划物化新的 Job
+	Enabled bool `json:"enabled"`
+	// 调度方式 cron 或 interval，决定相应参数组
+	ScheduleKind string `json:"schedule_kind"`
+	// cron 调度表达式；interval 模式为 NULL
+	CronExpression *string `json:"cron_expression"`
+	// 固定调度间隔，单位秒且大于零；cron 模式为 NULL
+	IntervalSeconds *int64 `json:"interval_seconds"`
+	// interval 计划的 UTC 相位锚点；cron 模式为 NULL
+	AnchorAt pgtype.Timestamptz `json:"anchor_at"`
+	// 解释 cron 表达式所用的时区名称
+	Timezone string `json:"timezone"`
+	// 错过槽位的处理策略：skip 跳过或 catch_up_once 补一次
+	MisfirePolicy string `json:"misfire_policy"`
+	// 允许迟到执行的宽限秒数
+	MisfireGraceSeconds int32 `json:"misfire_grace_seconds"`
+	// 同通道重叠时的策略；当前合同仅允许 skip
+	OverlapPolicy string `json:"overlap_policy"`
+	// Job 排队优先级；用于执行调度而非内容展示
+	Priority int32 `json:"priority"`
+	// 采集并发通道标识；同一通道最多一个运行中的 Job
+	ConcurrencyKey string `json:"concurrency_key"`
+	// 乐观并发版本；修改时必须匹配旧版本并递增
+	Version int64 `json:"version"`
+	// 该版本调度定义开始生效的 UTC 时刻
+	EffectiveFrom pgtype.Timestamptz `json:"effective_from"`
+	// 最后已物化的计划槽时刻；尚无槽位时为 NULL
+	LastMaterializedFor pgtype.Timestamptz `json:"last_materialized_for"`
+	// 下一个计划槽的 UTC 时刻；不可计算时为 NULL
+	NextScheduledFor pgtype.Timestamptz `json:"next_scheduled_for"`
+	// 游戏采集的持久调度定义的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏采集的持久调度定义的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 游戏采集执行中每个实体与能力的结果；与 Run 共同形成质量账本
+type GfgCollectionTaskResult struct {
+	// 游戏采集执行中每个实体与能力的结果的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 所属执行尝试的文本身份，引用 collection_runs
+	RunID string `json:"run_id"`
+	// 游戏采集能力 details、news 或 players
+	TaskType string `json:"task_type"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 单项结果 success、partial、failed 或 skipped
+	Status string `json:"status"`
+	// 上游 HTTP 响应码；未取得响应时为零
+	UpstreamStatusCode int32 `json:"upstream_status_code"`
+	// 本次请求所用的流量分类，用于区分上游请求来源
+	TrafficBucket string `json:"traffic_bucket"`
+	// 本项采集发生的重试次数，不含首次请求
+	RetryCount int32 `json:"retry_count"`
+	// 本次执行耗时，单位毫秒
+	DurationMs int64 `json:"duration_ms"`
+	// 采集失败的稳定分类；无分类时为空串
+	ErrorKind string `json:"error_kind"`
+	// 采集失败的诊断摘要；无错误时为空串
+	ErrorMessage string `json:"error_message"`
+	// 本项能力开始执行的 UTC 时刻
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// 本项能力执行结束的 UTC 时刻；未记录时为 NULL
+	EndedAt pgtype.Timestamptz `json:"ended_at"`
+}
+
+// 游戏采集进程的持久身份及心跳历史；不是可随意清空的在线列表
+type GfgCollectorInstance struct {
+	// 每次采集进程启动产生的实例身份
+	InstanceID string `json:"instance_id"`
+	// 采集器逻辑身份；多次进程启动可共享此标识
+	CollectorID string `json:"collector_id"`
+	// 运行该采集进程的主机名
+	Hostname string `json:"hostname"`
+	// 采集器二进制的版本标识，不是乐观锁版本
+	Version string `json:"version"`
+	// 构建该采集器二进制的 Git 提交标识
+	CommitSha string `json:"commit_sha"`
+	// 该采集器实例可执行的编译期能力列表
+	Capabilities []string `json:"capabilities"`
+	// 进程本次启动的 UTC 时刻
+	StartedAt pgtype.Timestamptz `json:"started_at"`
+	// 最近一次成功写入心跳的 UTC 时刻
+	LastHeartbeatAt pgtype.Timestamptz `json:"last_heartbeat_at"`
+	// 正常退出记录的 UTC 时刻；异常退出或仍运行时可为 NULL
+	StoppedAt pgtype.Timestamptz `json:"stopped_at"`
+}
+
+// 游戏历史事实流水线的有序水位；与投影写入在同一事务提交
+type GfgFactRollupCheckpoint struct {
+	// 事实流水线的稳定标识；每条流水线独立锁定和推进
+	PipelineKey string `json:"pipeline_key"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 可重建源证据的首个 UTC 日期；NULL 表示尚无起始证据
+	SourceStartDate pgtype.Date `json:"source_start_date"`
+	// 已连续处理完成的最后一个 UTC 日期；NULL 表示尚未完成任何一天
+	ProcessedThrough pgtype.Date `json:"processed_through"`
+	// 完整采集账本开始可用的 UTC 边界；此前质量分母不可推造
+	QualityCutoverAt pgtype.Timestamptz `json:"quality_cutover_at"`
+	// 游戏历史事实流水线的有序水位的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏历史事实流水线的有序水位的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 运营维护的当前游戏目录；Steam 采集详情、规范发行事实与标签关系分别持有
+type GfgGame struct {
+	// 运营维护的当前游戏目录的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 运营维护的中文游戏名称
+	Name string `json:"name"`
+	// 运营维护的英文游戏名称
+	NameEn string `json:"name_en"`
+	// 运营维护的中文纯文本摘要，不是上游详细 HTML 正文
+	Info string `json:"info"`
+	// 运营维护的英文纯文本摘要，不是上游详细 HTML 正文
+	InfoEn string `json:"info_en"`
+	// 运营维护的当前游戏目录的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 运营维护的当前游戏目录的记录最近更新时间
+	UpdateTime pgtype.Timestamp `json:"update_time"`
+	// 游戏资源入口的键值列表 JSON；未配置时为 NULL
+	Resources []byte `json:"resources"`
+	// 游戏社群入口的键值列表 JSON；未配置时为 NULL
+	Groups []byte `json:"groups"`
+	// 历史人工发行日期原文，仅保留兼容和追溯；不作为当前规范发行状态
+	ReleaseDate string `json:"release_date"`
+	// 运营维护的开发者列表 JSON
+	Developers []byte `json:"developers"`
+	// 运营维护的发行商列表 JSON
+	Publishers []byte `json:"publishers"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 当前游戏头图来源值，按游戏素材读取合同解析
+	Header string `json:"header"`
+	// 游戏外部链接列表 JSON；未配置时为 NULL
+	Links []byte `json:"links"`
+	// 当前游戏列表排序权重；weight 排序按升序及游戏身份稳定排列，不是展柜抽样权重
+	Weight int64 `json:"weight"`
+	// 游戏页面累计访问计数，不是 Steam 在线人数
+	ViewCount int64 `json:"view_count"`
+	// 是否允许运营自动展柜候选发现；默认 false，开启后仍须满足安全、语言、素材与候选池条件
+	ShowcaseEligible bool `json:"showcase_eligible"`
+}
+
+// 游戏上游素材目录及探测结果；素材 URL 与可用性证据分开保存
+type GfgGameAsset struct {
+	// 游戏上游素材目录及探测结果的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 具体素材类型，如 library_capsule、library_logo、screenshot_full 或视频变体
+	AssetType string `json:"asset_type"`
+	// 素材所属类别，如 library、screenshot 或 movie
+	AssetFamily string `json:"asset_family"`
+	// 产出该素材记录的上游接口来源标识
+	Source string `json:"source"`
+	// 该素材对应的上游语言代码
+	Lang string `json:"lang"`
+	// 上游媒体在所属游戏中的稳定标识，用于去重与更新
+	MediaKey string `json:"media_key"`
+	// 上游媒体标题，未提供时为空串
+	Title string `json:"title"`
+	// 原始上游媒体地址；不是 Managed Asset 对象键
+	Url string `json:"url"`
+	// 上游提供的媒体缩略图地址
+	ThumbnailUrl string `json:"thumbnail_url"`
+	// 素材的格式标记，用于区分图像或视频编码变体
+	Format string `json:"format"`
+	// 最近探测是否确认素材存在；NULL 表示尚未确认，不能等同于不存在
+	Exists *bool `json:"exists"`
+	// 最近素材探测的 HTTP 状态码；无响应时为零
+	StatusCode int32 `json:"status_code"`
+	// 探测响应的媒体 MIME 类型
+	ContentType string `json:"content_type"`
+	// 探测响应报告的内容字节数；未取得时为零
+	ContentLength int64 `json:"content_length"`
+	// 媒体类型相关的补充 JSON，如视频格式或突出展示标记
+	Extra []byte `json:"extra"`
+	// 上游媒体列表的显示顺序
+	SortOrder int32 `json:"sort_order"`
+	// 最近执行素材可用性探测的 UTC 时刻；尚未探测时为 NULL
+	CheckedAt pgtype.Timestamptz `json:"checked_at"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+	// 游戏上游素材目录及探测结果的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 人工策展的游戏分区；只定义发展谱系与公开生命周期，不承担标签、推荐算法或成员排序。
+type GfgGameCollection struct {
+	// 分区内部主键，用于成员关系和首页槽位引用；不进入公开分区 DTO。
+	ID int64 `json:"id"`
+	// 公开路由使用的小写连字符标识，最长 64 字符；创建后由运营写入层禁止修改。
+	Code string `json:"code"`
+	// 分区中文名称；公开中文读取优先使用，英文为空时也可用于回退。
+	Name string `json:"name"`
+	// 分区英文名称；公开英文读取优先使用，中文为空时也可用于回退。
+	NameEn string `json:"name_en"`
+	// 分区中文策展简介，不用于推导成员资格或时间线顺序。
+	Info string `json:"info"`
+	// 分区英文策展简介；缺失时公开读取可回退中文简介。
+	InfoEn string `json:"info_en"`
+	// 运营生命周期：draft 草稿、published 公开发布、archived 归档；公开 API 只读取 published。
+	Status string `json:"status"`
+	// 运营写入的乐观并发版本，从 1 开始；后续写入层以版本校验防止覆盖并发编辑。
+	Version int64 `json:"version"`
+	// 最近一次成功发布的时刻，也是公开分区列表倒序依据；撤回草稿后可保留历史值。
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	// 当前归档的时刻，仅 archived 状态必须有值；恢复草稿时由写入层清空。
+	ArchivedAt pgtype.Timestamptz `json:"archived_at"`
+	// 人工创建该分区的时刻，与成员游戏的发行时间无关。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 分区运营资料最近一次修改时刻，由写入层维护。
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 首页人工策展分区的五个固定槽位；公开读取仅保留已发布且当前浏览模式有可见成员的分区。
+type GfgGameCollectionHomeSlot struct {
+	// 首页展示槽位，范围 1 至 5 并按升序展示；全部分区入口不入库。
+	Slot int16 `json:"slot"`
+	// 槽位引用的分区，同一分区只能占一个槽位；删除分区时级联移除槽位。
+	CollectionID int64 `json:"collection_id"`
+	// 该首页槽位记录创建的时刻，不代表分区发布时间。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 该槽位的分区指派最近一次修改时刻，由运营写入层维护。
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 人工维护的分区与游戏成员关系；不存人工顺序、权重或成人标记，公开时间线由游戏发行事实派生。
+type GfgGameCollectionItem struct {
+	// 所属人工策展分区；分区删除时级联删除成员关系，不删除游戏。
+	CollectionID int64 `json:"collection_id"`
+	// 成员游戏主档案；游戏删除时级联移除关系，成人语义始终读取关联标签 code=adult。
+	GameID int64 `json:"game_id"`
+	// 人工将游戏纳入分区的时刻，不作为公开时间线排序依据。
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 成员关系最近一次维护时刻，由运营写入层维护，不改变发行事实。
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// GoFurry 用户游戏评论及评分；来源位置与上游 Steam 评价分别持有
+type GfgGameComment struct {
+	// GoFurry 用户游戏评论及评分的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 评论提交来源 IP 的地域解析结果，不是游戏发行地区
+	Region string `json:"region"`
+	// 用户提交的游戏评论正文
+	Content string `json:"content"`
+	// 用户对该游戏提交的评分，与上游评价分数无关
+	Score float64 `json:"score"`
+	// GoFurry 用户游戏评论及评分的记录创建时间
+	CreateTime pgtype.Timestamp `json:"create_time"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 提交评论的客户端地址；公开响应按隐私规则脱敏
 	Ip string `json:"ip"`
-	// 评论人名称
+	// 评论者填写的展示名称
 	Name string `json:"name"`
 }
 
-// Compact historical Game entity and canonical domain snapshot.
+// 游戏每日历史维度与状态；当前日可变，closed UTC 日 finalized 后供指标读取
 type GfgGameDaily struct {
-	GameID                    int64              `json:"game_id"`
-	FactDate                  pgtype.Date        `json:"fact_date"`
-	TrackingPeriodID          int64              `json:"tracking_period_id"`
-	Appid                     int64              `json:"appid"`
-	SnapshotAt                pgtype.Timestamptz `json:"snapshot_at"`
-	TrackedAtEnd              bool               `json:"tracked_at_end"`
-	Name                      string             `json:"name"`
-	NameEn                    string             `json:"name_en"`
-	ViewCount                 int64              `json:"view_count"`
-	GameType                  *string            `json:"game_type"`
-	IsFree                    *bool              `json:"is_free"`
-	Windows                   *bool              `json:"windows"`
-	Mac                       *bool              `json:"mac"`
-	Linux                     *bool              `json:"linux"`
-	ReleaseAvailability       *string            `json:"release_availability"`
-	ReleasePrecision          *string            `json:"release_precision"`
-	ReleaseExactDate          pgtype.Date        `json:"release_exact_date"`
-	ReleaseYear               *int32             `json:"release_year"`
-	ReleaseMonth              *int32             `json:"release_month"`
-	ReleaseQuarter            *int32             `json:"release_quarter"`
-	ReleaseWindowStart        pgtype.Date        `json:"release_window_start"`
-	ReleaseWindowEnd          pgtype.Date        `json:"release_window_end"`
-	ReleaseObservedAt         pgtype.Timestamptz `json:"release_observed_at"`
-	FirstAvailablePrecision   *string            `json:"first_available_precision"`
-	FirstAvailableExactDate   pgtype.Date        `json:"first_available_exact_date"`
-	FirstAvailableYear        *int32             `json:"first_available_year"`
-	FirstAvailableMonth       *int32             `json:"first_available_month"`
-	FirstAvailableQuarter     *int32             `json:"first_available_quarter"`
-	FirstAvailableWindowStart pgtype.Date        `json:"first_available_window_start"`
-	FirstAvailableWindowEnd   pgtype.Date        `json:"first_available_window_end"`
-	FirstAvailableSource      *string            `json:"first_available_source"`
-	FirstAvailableInferred    *bool              `json:"first_available_inferred"`
-	LanguageCodes             []string           `json:"language_codes"`
-	UnknownLanguageNames      []string           `json:"unknown_language_names"`
-	FullAudioLanguageCodes    []string           `json:"full_audio_language_codes"`
-	LanguagesObservedAt       pgtype.Timestamptz `json:"languages_observed_at"`
-	Developers                []string           `json:"developers"`
-	Publishers                []string           `json:"publishers"`
-	PrimaryTagID              *int64             `json:"primary_tag_id"`
-	SecondaryTagID            *int64             `json:"secondary_tag_id"`
-	TagIds                    []int64            `json:"tag_ids"`
-	DetailsObservedAt         pgtype.Timestamptz `json:"details_observed_at"`
-	MaterializationSource     string             `json:"materialization_source"`
-	ProjectionVersion         int32              `json:"projection_version"`
-	FinalizedAt               pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                 pgtype.Timestamptz `json:"updated_at"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 游戏与 AppID 的历史跟踪区间身份，引用 gfg_game_tracking_periods
+	TrackingPeriodID int64 `json:"tracking_period_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 该行代表的历史快照时刻；不等同于原始证据观察时刻
+	SnapshotAt pgtype.Timestamptz `json:"snapshot_at"`
+	// 在该事实日结束边界是否仍具跟踪资格
+	TrackedAtEnd bool `json:"tracked_at_end"`
+	// 该历史快照的中文游戏名称，不回查当前目录改写
+	Name string `json:"name"`
+	// 该历史快照的英文游戏名称，不回查当前目录改写
+	NameEn string `json:"name_en"`
+	// 该历史快照记录的累计访问计数，不是当日新增访问
+	ViewCount int64 `json:"view_count"`
+	// 历史 Steam 应用类型；无详情证据时为 NULL
+	GameType *string `json:"game_type"`
+	// 历史免费支持证据；未知时为 NULL，不能当作付费
+	IsFree *bool `json:"is_free"`
+	// 历史 Windows 平台支持证据；未知时为 NULL
+	Windows *bool `json:"windows"`
+	// 历史 macOS 平台支持证据；未知时为 NULL
+	Mac *bool `json:"mac"`
+	// 历史 Linux 平台支持证据；未知时为 NULL
+	Linux *bool `json:"linux"`
+	// 历史规范发行可用性；无规范证据时为 NULL
+	ReleaseAvailability *string `json:"release_availability"`
+	// 历史规范发行日期精度；无规范证据时为 NULL
+	ReleasePrecision *string `json:"release_precision"`
+	// 历史精确发行日；非 day 精度或未知时为 NULL
+	ReleaseExactDate pgtype.Date `json:"release_exact_date"`
+	// 历史规范发行年份；无对应证据时为 NULL
+	ReleaseYear *int32 `json:"release_year"`
+	// 历史规范发行月份；无对应精度或未知时为 NULL
+	ReleaseMonth *int32 `json:"release_month"`
+	// 历史规范发行季度；无对应精度或未知时为 NULL
+	ReleaseQuarter *int32 `json:"release_quarter"`
+	// 历史发行日期窗口的包含起点；未知时为 NULL
+	ReleaseWindowStart pgtype.Date `json:"release_window_start"`
+	// 历史发行日期窗口的包含终点；未知时为 NULL
+	ReleaseWindowEnd pgtype.Date `json:"release_window_end"`
+	// 历史规范发行状态的实际观察时刻；沿用时不刷新
+	ReleaseObservedAt pgtype.Timestamptz `json:"release_observed_at"`
+	// 历史首次可用日期精度；未建立事实时为 NULL
+	FirstAvailablePrecision *string `json:"first_available_precision"`
+	// 历史首次可用精确日；非 day 精度时为 NULL
+	FirstAvailableExactDate pgtype.Date `json:"first_available_exact_date"`
+	// 历史首次可用年份；无证据时为 NULL
+	FirstAvailableYear *int32 `json:"first_available_year"`
+	// 历史首次可用月份；无对应精度时为 NULL
+	FirstAvailableMonth *int32 `json:"first_available_month"`
+	// 历史首次可用季度；无对应精度时为 NULL
+	FirstAvailableQuarter *int32 `json:"first_available_quarter"`
+	// 历史首次可用窗口的包含起点；无证据时为 NULL
+	FirstAvailableWindowStart pgtype.Date `json:"first_available_window_start"`
+	// 历史首次可用窗口的包含终点；无证据时为 NULL
+	FirstAvailableWindowEnd pgtype.Date `json:"first_available_window_end"`
+	// 历史首次可用事实来源，区分人工、可用性转变与回填
+	FirstAvailableSource *string `json:"first_available_source"`
+	// 历史首次可用事实是否为推断；未建立事实时为 NULL
+	FirstAvailableInferred *bool `json:"first_available_inferred"`
+	// 历史规范语言代码集合；尚无语言证据时为 NULL
+	LanguageCodes []string `json:"language_codes"`
+	// 历史上游未识别语言名称集合；尚无语言证据时为 NULL
+	UnknownLanguageNames []string `json:"unknown_language_names"`
+	// 历史确认完整配音的语言代码集合；尚无语言证据时为 NULL
+	FullAudioLanguageCodes []string `json:"full_audio_language_codes"`
+	// 历史语言事实实际观察时刻；沿用证据不刷新
+	LanguagesObservedAt pgtype.Timestamptz `json:"languages_observed_at"`
+	// 历史快照中的开发者名称数组
+	Developers []string `json:"developers"`
+	// 历史快照中的发行商名称数组
+	Publishers []string `json:"publishers"`
+	// 该历史快照的主标签身份；未分配时为 NULL，后续归档不改写
+	PrimaryTagID *int64 `json:"primary_tag_id"`
+	// 该历史快照的次标签身份；未分配时为 NULL，后续归档不改写
+	SecondaryTagID *int64 `json:"secondary_tag_id"`
+	// 该历史快照的标签身份集合，不由当前关系回填覆盖
+	TagIds []int64 `json:"tag_ids"`
+	// 历史 Steam 详情实际观察时刻；无详情证据时为 NULL
+	DetailsObservedAt pgtype.Timestamptz `json:"details_observed_at"`
+	// 事实来源：bootstrap 初始快照、observed 当日观察或 carried_forward 沿用先前证据
+	MaterializationSource string `json:"materialization_source"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 历史日完成投影的 UTC 时刻；当前日可变快照为 NULL
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 游戏每日历史维度与状态的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏每日历史维度与状态的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 当前 Steam 非本地化详情；规范发行、语言与价格另有独立合同
 type GfgGameDetail struct {
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	Source             string             `json:"source"`
-	Type               string             `json:"type"`
-	Name               string             `json:"name"`
-	IsFree             bool               `json:"is_free"`
-	Website            string             `json:"website"`
-	HeaderUrl          string             `json:"header_url"`
-	Developers         []byte             `json:"developers"`
-	Publishers         []byte             `json:"publishers"`
-	ReleaseComingSoon  bool               `json:"release_coming_soon"`
-	ReleaseDateText    string             `json:"release_date_text"`
-	Platforms          []byte             `json:"platforms"`
-	SupportedLanguages string             `json:"supported_languages"`
-	SupportInfo        []byte             `json:"support_info"`
-	ContentDescriptors []byte             `json:"content_descriptors"`
-	Ratings            []byte             `json:"ratings"`
-	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 本次详情的上游接口来源标识
+	Source string `json:"source"`
+	// Steam 应用类型，如 game 或 dlc，不是运营标签
+	Type string `json:"type"`
+	// 上游详情中的游戏名称，不覆盖运营维护名称
+	Name string `json:"name"`
+	// 上游当前是否标记为免费；地区价格状态由价格表持有
+	IsFree bool `json:"is_free"`
+	// 上游登记的游戏官网地址
+	Website string `json:"website"`
+	// 上游详情中的头图 URL，不是 Managed Asset 对象键
+	HeaderUrl string `json:"header_url"`
+	// 上游开发者列表 JSON
+	Developers []byte `json:"developers"`
+	// 上游发行商列表 JSON
+	Publishers []byte `json:"publishers"`
+	// 上游原始即将发行标记；业务发行判定读取规范 release_state
+	ReleaseComingSoon bool `json:"release_coming_soon"`
+	// 上游原始发行日期文本；不能直接当作精确日期
+	ReleaseDateText string `json:"release_date_text"`
+	// Steam 平台支持对象 JSON，包含 Windows、macOS、Linux 证据
+	Platforms []byte `json:"platforms"`
+	// 上游语言支持原文；规范语言事实由 game_languages 持有
+	SupportedLanguages string `json:"supported_languages"`
+	// 上游客服支持信息 JSON
+	SupportInfo []byte `json:"support_info"`
+	// 上游内容描述符 JSON，不替代运营 Adult 标签治理
+	ContentDescriptors []byte `json:"content_descriptors"`
+	// 上游地区分级资料 JSON
+	Ratings []byte `json:"ratings"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+	// 当前 Steam 非本地化详情的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// Steam 游戏详情原始快照；按 AppID、语言、地区保留受限历史
 type GfgGameDetailSnapshot struct {
-	ID          int64              `json:"id"`
-	GameID      int64              `json:"game_id"`
-	Appid       int64              `json:"appid"`
-	Lang        string             `json:"lang"`
-	Region      string             `json:"region"`
-	Source      string             `json:"source"`
-	PayloadHash string             `json:"payload_hash"`
-	RawPayload  []byte             `json:"raw_payload"`
+	// Steam 游戏详情原始快照的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 该次详情请求的语言代码
+	Lang string `json:"lang"`
+	// 该次详情请求的商店地区代码
+	Region string `json:"region"`
+	// 详情原始快照的上游接口来源
+	Source string `json:"source"`
+	// 原始详情内容的哈希，用于识别相同内容快照
+	PayloadHash string `json:"payload_hash"`
+	// 该次上游详情响应的原始 JSON，保留以便追溯与重新解释
+	RawPayload []byte `json:"raw_payload"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
 	CollectedAt pgtype.Timestamptz `json:"collected_at"`
 }
 
-// Write-once canonical date or range when a game first became formally purchasable or playable.
+// 游戏首次可购买或游玩的规范日期事实；用于 New Release，建立后不随当前发行状态覆盖
 type GfgGameFirstAvailable struct {
-	GameID            int64              `json:"game_id"`
-	Precision         string             `json:"precision"`
-	ExactDate         pgtype.Date        `json:"exact_date"`
-	ReleaseYear       int32              `json:"release_year"`
-	ReleaseMonth      *int32             `json:"release_month"`
-	ReleaseQuarter    *int32             `json:"release_quarter"`
-	WindowStart       pgtype.Date        `json:"window_start"`
-	WindowEnd         pgtype.Date        `json:"window_end"`
-	Source            string             `json:"source"`
-	Inferred          bool               `json:"inferred"`
-	SourceRaw         string             `json:"source_raw"`
-	SourceObservedAt  pgtype.Timestamptz `json:"source_observed_at"`
-	NormalizerVersion string             `json:"normalizer_version"`
-	EstablishedAt     pgtype.Timestamptz `json:"established_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 首次可用日期精度，仅允许 day、month、quarter 或 year
+	Precision string `json:"precision"`
+	// 精确发行日；只有 day 精度才有值
+	ExactDate pgtype.Date `json:"exact_date"`
+	// 首次可用事实对应的年份，建立该事实时必须已知
+	ReleaseYear int32 `json:"release_year"`
+	// 规范发行月份 1..12；不是 day 或 month 精度时为 NULL
+	ReleaseMonth *int32 `json:"release_month"`
+	// 规范发行季度 1..4；非 quarter 精度时为 NULL
+	ReleaseQuarter *int32 `json:"release_quarter"`
+	// 首次可用日期窗口的包含起点；必须有值，day 精度等于 exact_date
+	WindowStart pgtype.Date `json:"window_start"`
+	// 首次可用日期窗口的包含终点；必须有值，day 精度等于 exact_date
+	WindowEnd pgtype.Date `json:"window_end"`
+	// 首次可用证据来源：legacy_manual、observed_transition 或 steam_backfill
+	Source string `json:"source"`
+	// 是否由 steam_backfill 推断；人工历史或实际可用性转变不标记为推断
+	Inferred bool `json:"inferred"`
+	// 建立首次可用事实所依据的原始日期文本
+	SourceRaw string `json:"source_raw"`
+	// 建立该事实的源观察时刻；历史人工证据可为 NULL
+	SourceObservedAt pgtype.Timestamptz `json:"source_observed_at"`
+	// 将上游原文规范化为业务事实的规则版本
+	NormalizerVersion string `json:"normalizer_version"`
+	// 首次建立这条事实的 UTC 时刻，不是游戏发行时间
+	EstablishedAt pgtype.Timestamptz `json:"established_at"`
+	// 游戏首次可购买或游玩的规范日期事实的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Canonical game language support normalized from the US/English Storefront response.
+// 由 Steam US/English 证据规范化的游戏语言支持事实；未知能力保留 NULL
 type GfgGameLanguage struct {
-	ID                 int64              `json:"id"`
-	GameID             int64              `json:"game_id"`
-	LanguageCode       *string            `json:"language_code"`
-	SteamName          string             `json:"steam_name"`
-	SteamApiCode       *string            `json:"steam_api_code"`
-	SteamWebCode       *string            `json:"steam_web_code"`
-	Tier               string             `json:"tier"`
-	InterfaceSupported *bool              `json:"interface_supported"`
-	SubtitlesSupported *bool              `json:"subtitles_supported"`
-	FullAudioSupported *bool              `json:"full_audio_supported"`
-	SortOrder          int32              `json:"sort_order"`
-	Source             string             `json:"source"`
-	SourceRegion       string             `json:"source_region"`
-	SourceLocale       string             `json:"source_locale"`
-	NormalizerVersion  string             `json:"normalizer_version"`
-	ObservedAt         pgtype.Timestamptz `json:"observed_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	// 由 Steam US/English 证据规范化的游戏语言支持事实的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 规范语言代码；无法识别上游语言时为 NULL
+	LanguageCode *string `json:"language_code"`
+	// 上游语言名称原文，用于追溯未知或映射后的语言
+	SteamName string `json:"steam_name"`
+	// 对应 Steam API 语言代码；无映射时为 NULL
+	SteamApiCode *string `json:"steam_api_code"`
+	// 对应 Steam 网页语言代码；无映射时为 NULL
+	SteamWebCode *string `json:"steam_web_code"`
+	// 语言映射层级 platform、game_only 或 unknown
+	Tier string `json:"tier"`
+	// 是否支持该语言界面；证据未明确时为 NULL
+	InterfaceSupported *bool `json:"interface_supported"`
+	// 是否支持该语言字幕；证据未明确时为 NULL
+	SubtitlesSupported *bool `json:"subtitles_supported"`
+	// 是否支持该语言完整配音；证据未明确时为 NULL
+	FullAudioSupported *bool `json:"full_audio_supported"`
+	// 该语言在上游支持列表中的顺序
+	SortOrder int32 `json:"sort_order"`
+	// 语言支持证据的上游来源标识
+	Source string `json:"source"`
+	// 采集来源的商店地区代码；用于核对规范化证据
+	SourceRegion string `json:"source_region"`
+	// 采集来源的语言代码；用于核对规范化证据
+	SourceLocale string `json:"source_locale"`
+	// 将上游原文规范化为业务事实的规则版本
+	NormalizerVersion string `json:"normalizer_version"`
+	// 本条业务证据实际被观察到的 UTC 时刻
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+	// 由 Steam US/English 证据规范化的游戏语言支持事实的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 按语言保存的 Steam 游戏详情正文；与运营摘要分别维护
 type GfgGameLocalizedDetail struct {
-	GameID              int64              `json:"game_id"`
-	Appid               int64              `json:"appid"`
-	Lang                string             `json:"lang"`
-	Name                string             `json:"name"`
-	ShortDescription    string             `json:"short_description"`
-	DetailedDescription string             `json:"detailed_description"`
-	AboutTheGame        string             `json:"about_the_game"`
-	CollectedAt         pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 该详情正文的语言代码，与 game_id 共同确定一行
+	Lang string `json:"lang"`
+	// 该语言的上游游戏名称
+	Name string `json:"name"`
+	// 该语言的上游简短介绍
+	ShortDescription string `json:"short_description"`
+	// 该语言的上游详细介绍，可包含上游 HTML
+	DetailedDescription string `json:"detailed_description"`
+	// 该语言的上游关于游戏正文，可包含上游 HTML
+	AboutTheGame string `json:"about_the_game"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+	// 按语言保存的 Steam 游戏详情正文的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 游戏截图和视频的当前媒体目录，保存上游地址与顺序
 type GfgGameMedium struct {
-	ID           int64              `json:"id"`
-	GameID       int64              `json:"game_id"`
-	Appid        int64              `json:"appid"`
-	MediaType    string             `json:"media_type"`
-	MediaKey     string             `json:"media_key"`
-	Title        string             `json:"title"`
-	Url          string             `json:"url"`
-	ThumbnailUrl string             `json:"thumbnail_url"`
-	Extra        []byte             `json:"extra"`
-	SortOrder    int32              `json:"sort_order"`
-	CollectedAt  pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	// 游戏截图和视频的当前媒体目录的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 媒体类别 screenshot 截图或 movie 视频
+	MediaType string `json:"media_type"`
+	// 上游媒体在所属游戏中的稳定标识，用于去重与更新
+	MediaKey string `json:"media_key"`
+	// 上游媒体标题，未提供时为空串
+	Title string `json:"title"`
+	// 原始上游媒体地址；不是 Managed Asset 对象键
+	Url string `json:"url"`
+	// 上游提供的媒体缩略图地址
+	ThumbnailUrl string `json:"thumbnail_url"`
+	// 媒体类型相关的补充 JSON，如视频格式或突出展示标记
+	Extra []byte `json:"extra"`
+	// 上游媒体列表的显示顺序
+	SortOrder int32 `json:"sort_order"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+	// 游戏截图和视频的当前媒体目录的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 游戏上游更新新闻与公告；保存原始正文、处理后正文及互动计数
 type GfgGameNews struct {
-	ID              int64              `json:"id"`
-	GameID          int64              `json:"game_id"`
-	Appid           int64              `json:"appid"`
-	Lang            string             `json:"lang"`
-	EventGid        string             `json:"event_gid"`
-	AnnouncementGid string             `json:"announcement_gid"`
-	ForumTopicID    string             `json:"forum_topic_id"`
-	Headline        string             `json:"headline"`
-	RawBody         string             `json:"raw_body"`
-	Html            string             `json:"html"`
-	PlainText       string             `json:"plain_text"`
-	Summary         string             `json:"summary"`
-	Url             string             `json:"url"`
-	Tags            []byte             `json:"tags"`
-	VoteUpCount     int32              `json:"vote_up_count"`
-	VoteDownCount   int32              `json:"vote_down_count"`
-	CommentCount    int32              `json:"comment_count"`
-	RawEvent        []byte             `json:"raw_event"`
-	PublishedAt     pgtype.Timestamptz `json:"published_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	CollectedAt     pgtype.Timestamptz `json:"collected_at"`
+	// 游戏上游更新新闻与公告的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 采集新闻使用的语言代码
+	Lang string `json:"lang"`
+	// Steam 事件全局身份
+	EventGid string `json:"event_gid"`
+	// Steam 公告全局身份
+	AnnouncementGid string `json:"announcement_gid"`
+	// 关联 Steam 论坛主题身份
+	ForumTopicID string `json:"forum_topic_id"`
+	// 该新闻的上游标题
+	Headline string `json:"headline"`
+	// 上游原始正文，保留原有标记以供追溯
+	RawBody string `json:"raw_body"`
+	// 从上游正文转换得到的 HTML 表示
+	Html string `json:"html"`
+	// 移除正文标记后的纯文本表示
+	PlainText string `json:"plain_text"`
+	// 为新闻列表生成的正文摘要
+	Summary string `json:"summary"`
+	// 该新闻的上游访问地址
+	Url string `json:"url"`
+	// 上游新闻标签列表 JSON，不是游戏分类关系
+	Tags []byte `json:"tags"`
+	// 采集时观察到的上游赞成票数
+	VoteUpCount int32 `json:"vote_up_count"`
+	// 采集时观察到的上游反对票数
+	VoteDownCount int32 `json:"vote_down_count"`
+	// 采集时观察到的上游评论数，不是 GoFurry 评论数
+	CommentCount int32 `json:"comment_count"`
+	// 上游新闻事件原始 JSON，用于追溯内容解释
+	RawEvent []byte `json:"raw_event"`
+	// 上游声明的新闻发布时间；未提供时为 NULL
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	// 上游声明的新闻更新时间；未提供时为 NULL，不是本地采集时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
 }
 
+// Steam 在线人数原始采样与请求结果；成功值和失败诊断不得混算
 type GfgGamePlayerCount struct {
-	ID                 int64              `json:"id"`
-	GameID             int64              `json:"game_id"`
-	Appid              int64              `json:"appid"`
-	Count              int64              `json:"count"`
-	Status             string             `json:"status"`
-	UpstreamStatusCode int32              `json:"upstream_status_code"`
-	ErrorKind          string             `json:"error_kind"`
-	ErrorMessage       string             `json:"error_message"`
-	CollectedAt        pgtype.Timestamptz `json:"collected_at"`
-	RunID              string             `json:"run_id"`
+	// Steam 在线人数原始采样与请求结果的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 该次成功采样的在线人数；请求失败时不能将默认零解释为零玩家
+	Count int64 `json:"count"`
+	// 该次在线人数采集结果；统计人数仅使用成功采样
+	Status string `json:"status"`
+	// Steam 响应的 HTTP 状态码；未取得响应时为零
+	UpstreamStatusCode int32 `json:"upstream_status_code"`
+	// 采集失败的稳定分类；无分类时为空串
+	ErrorKind string `json:"error_kind"`
+	// 采集失败的诊断摘要；无错误时为空串
+	ErrorMessage string `json:"error_message"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+	// 关联采集执行尝试的文本身份；旧采样无账本关联时为空串
+	RunID string `json:"run_id"`
 }
 
-// UTC Game player facts aggregated directly from successful daily raw samples.
+// 按历史跟踪区间保存的 UTC 日在线人数事实及采集质量；不将手动采集混入计划质量
 type GfgGamePlayerDaily struct {
-	TrackingPeriodID    int64              `json:"tracking_period_id"`
-	GameID              int64              `json:"game_id"`
-	Appid               int64              `json:"appid"`
-	FactDate            pgtype.Date        `json:"fact_date"`
-	MinPlayers          *int64             `json:"min_players"`
-	MaxPlayers          *int64             `json:"max_players"`
-	AvgPlayers          *float64           `json:"avg_players"`
-	MedianPlayers       *float64           `json:"median_players"`
-	ExpectedSamples     *int32             `json:"expected_samples"`
-	AttemptedSamples    int32              `json:"attempted_samples"`
-	SuccessfulSamples   int32              `json:"successful_samples"`
-	PartialSamples      int32              `json:"partial_samples"`
-	FailedSamples       int32              `json:"failed_samples"`
-	SkippedSamples      *int32             `json:"skipped_samples"`
-	MissedSamples       *int32             `json:"missed_samples"`
-	CanceledSamples     *int32             `json:"canceled_samples"`
-	UnattemptedSamples  *int32             `json:"unattempted_samples"`
-	FailureKindCounts   []byte             `json:"failure_kind_counts"`
-	FirstObservedAt     pgtype.Timestamptz `json:"first_observed_at"`
-	LastObservedAt      pgtype.Timestamptz `json:"last_observed_at"`
-	AvgObservationLagMs *int64             `json:"avg_observation_lag_ms"`
-	MaxObservationLagMs *int64             `json:"max_observation_lag_ms"`
-	QualityBasis        string             `json:"quality_basis"`
-	ProjectionVersion   int32              `json:"projection_version"`
-	FinalizedAt         pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	// 游戏与 AppID 的历史跟踪区间身份，引用 gfg_game_tracking_periods
+	TrackingPeriodID int64 `json:"tracking_period_id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 本时间桶成功在线人数采样的最小值；没有成功采样时为 NULL
+	MinPlayers *int64 `json:"min_players"`
+	// 本时间桶成功在线人数采样的最大值；没有成功采样时为 NULL
+	MaxPlayers *int64 `json:"max_players"`
+	// 本时间桶成功在线人数采样的算术均值；日值直接基于原始采样，不平均小时均值
+	AvgPlayers *float64 `json:"avg_players"`
+	// 本时间桶成功在线人数采样的中位数；无成功采样时为 NULL
+	MedianPlayers *float64 `json:"median_players"`
+	// 计划账本应有采样数；legacy_observed_only 时为 NULL，不推造分母
+	ExpectedSamples *int32 `json:"expected_samples"`
+	// 实际尝试采样数，等于 successful_samples + partial_samples + failed_samples
+	AttemptedSamples int32 `json:"attempted_samples"`
+	// 完整成功且可作为人数证据的采样次数
+	SuccessfulSamples int32 `json:"successful_samples"`
+	// 部分成功采样次数；不作为完整成功人数证据
+	PartialSamples int32 `json:"partial_samples"`
+	// 执行失败的采样次数；不当作零人数
+	FailedSamples int32 `json:"failed_samples"`
+	// 账本记录跳过的计划采样数；旧观察无完整账本时为 NULL
+	SkippedSamples *int32 `json:"skipped_samples"`
+	// 账本记录错过的计划采样数；旧观察无完整账本时为 NULL
+	MissedSamples *int32 `json:"missed_samples"`
+	// 账本记录取消的计划采样数；旧观察无完整账本时为 NULL
+	CanceledSamples *int32 `json:"canceled_samples"`
+	// 计划存在但没有执行尝试的采样数；旧观察无完整账本时为 NULL
+	UnattemptedSamples *int32 `json:"unattempted_samples"`
+	// 按失败类别汇总的次数 JSON 对象；与成功样本数分开解释
+	FailureKindCounts []byte `json:"failure_kind_counts"`
+	// 本时间桶关联原始采样的最早观察时刻；无采样时为 NULL
+	FirstObservedAt pgtype.Timestamptz `json:"first_observed_at"`
+	// 本时间桶关联原始采样的最晚观察时刻；无采样时为 NULL
+	LastObservedAt pgtype.Timestamptz `json:"last_observed_at"`
+	// 实际观察相对计划槽的平均延迟毫秒数；无可比计划时为 NULL
+	AvgObservationLagMs *int64 `json:"avg_observation_lag_ms"`
+	// 实际观察相对计划槽的最大延迟毫秒数；无可比计划时为 NULL
+	MaxObservationLagMs *int64 `json:"max_observation_lag_ms"`
+	// 质量分母依据：legacy_observed_only 只有历史观察，acquisition_ledger 才有完整计划账本
+	QualityBasis string `json:"quality_basis"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 该闭合时间桶投影完成的 UTC 时刻；下游可据此消费 finalized 事实
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 按历史跟踪区间保存的 UTC 日在线人数事实及采集质量的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 按历史跟踪区间保存的 UTC 日在线人数事实及采集质量的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// UTC Game player facts; scheduled acquisition quality is separate from numeric values.
+// 按历史跟踪区间保存的 UTC 小时在线人数事实及采集质量
 type GfgGamePlayerHourly struct {
-	TrackingPeriodID    int64              `json:"tracking_period_id"`
-	GameID              int64              `json:"game_id"`
-	Appid               int64              `json:"appid"`
-	BucketStart         pgtype.Timestamptz `json:"bucket_start"`
-	MinPlayers          *int64             `json:"min_players"`
-	MaxPlayers          *int64             `json:"max_players"`
-	AvgPlayers          *float64           `json:"avg_players"`
-	MedianPlayers       *float64           `json:"median_players"`
-	ExpectedSamples     *int32             `json:"expected_samples"`
-	AttemptedSamples    int32              `json:"attempted_samples"`
-	SuccessfulSamples   int32              `json:"successful_samples"`
-	PartialSamples      int32              `json:"partial_samples"`
-	FailedSamples       int32              `json:"failed_samples"`
-	SkippedSamples      *int32             `json:"skipped_samples"`
-	MissedSamples       *int32             `json:"missed_samples"`
-	CanceledSamples     *int32             `json:"canceled_samples"`
-	UnattemptedSamples  *int32             `json:"unattempted_samples"`
-	FailureKindCounts   []byte             `json:"failure_kind_counts"`
-	FirstObservedAt     pgtype.Timestamptz `json:"first_observed_at"`
-	LastObservedAt      pgtype.Timestamptz `json:"last_observed_at"`
-	AvgObservationLagMs *int64             `json:"avg_observation_lag_ms"`
-	MaxObservationLagMs *int64             `json:"max_observation_lag_ms"`
-	QualityBasis        string             `json:"quality_basis"`
-	ProjectionVersion   int32              `json:"projection_version"`
-	FinalizedAt         pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	// 游戏与 AppID 的历史跟踪区间身份，引用 gfg_game_tracking_periods
+	TrackingPeriodID int64 `json:"tracking_period_id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 该小时桶的 UTC 起点，包含此时刻且不包含下一小时起点
+	BucketStart pgtype.Timestamptz `json:"bucket_start"`
+	// 本时间桶成功在线人数采样的最小值；没有成功采样时为 NULL
+	MinPlayers *int64 `json:"min_players"`
+	// 本时间桶成功在线人数采样的最大值；没有成功采样时为 NULL
+	MaxPlayers *int64 `json:"max_players"`
+	// 本时间桶成功在线人数采样的算术均值；日值直接基于原始采样，不平均小时均值
+	AvgPlayers *float64 `json:"avg_players"`
+	// 本时间桶成功在线人数采样的中位数；无成功采样时为 NULL
+	MedianPlayers *float64 `json:"median_players"`
+	// 计划账本应有采样数；legacy_observed_only 时为 NULL，不推造分母
+	ExpectedSamples *int32 `json:"expected_samples"`
+	// 实际尝试采样数，等于 successful_samples + partial_samples + failed_samples
+	AttemptedSamples int32 `json:"attempted_samples"`
+	// 完整成功且可作为人数证据的采样次数
+	SuccessfulSamples int32 `json:"successful_samples"`
+	// 部分成功采样次数；不作为完整成功人数证据
+	PartialSamples int32 `json:"partial_samples"`
+	// 执行失败的采样次数；不当作零人数
+	FailedSamples int32 `json:"failed_samples"`
+	// 账本记录跳过的计划采样数；旧观察无完整账本时为 NULL
+	SkippedSamples *int32 `json:"skipped_samples"`
+	// 账本记录错过的计划采样数；旧观察无完整账本时为 NULL
+	MissedSamples *int32 `json:"missed_samples"`
+	// 账本记录取消的计划采样数；旧观察无完整账本时为 NULL
+	CanceledSamples *int32 `json:"canceled_samples"`
+	// 计划存在但没有执行尝试的采样数；旧观察无完整账本时为 NULL
+	UnattemptedSamples *int32 `json:"unattempted_samples"`
+	// 按失败类别汇总的次数 JSON 对象；与成功样本数分开解释
+	FailureKindCounts []byte `json:"failure_kind_counts"`
+	// 本时间桶关联原始采样的最早观察时刻；无采样时为 NULL
+	FirstObservedAt pgtype.Timestamptz `json:"first_observed_at"`
+	// 本时间桶关联原始采样的最晚观察时刻；无采样时为 NULL
+	LastObservedAt pgtype.Timestamptz `json:"last_observed_at"`
+	// 实际观察相对计划槽的平均延迟毫秒数；无可比计划时为 NULL
+	AvgObservationLagMs *int64 `json:"avg_observation_lag_ms"`
+	// 实际观察相对计划槽的最大延迟毫秒数；无可比计划时为 NULL
+	MaxObservationLagMs *int64 `json:"max_observation_lag_ms"`
+	// 质量分母依据：legacy_observed_only 只有历史观察，acquisition_ledger 才有完整计划账本
+	QualityBasis string `json:"quality_basis"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 该闭合时间桶投影完成的 UTC 时刻；下游可据此消费 finalized 事实
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 按历史跟踪区间保存的 UTC 小时在线人数事实及采集质量的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 按历史跟踪区间保存的 UTC 小时在线人数事实及采集质量的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 当前按地区保存的 Steam 报价；价格状态与格式化展示文本分开持有
 type GfgGamePrice struct {
-	GameID           int64              `json:"game_id"`
-	Appid            int64              `json:"appid"`
-	Region           string             `json:"region"`
-	IsFree           bool               `json:"is_free"`
-	Currency         string             `json:"currency"`
-	InitialAmount    int64              `json:"initial_amount"`
-	FinalAmount      int64              `json:"final_amount"`
-	DiscountPercent  int64              `json:"discount_percent"`
-	InitialFormatted string             `json:"initial_formatted"`
-	FinalFormatted   string             `json:"final_formatted"`
-	CollectedAt      pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
-	// Authoritative price state: free, priced, unpriced, or unknown.
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 价格所属商店地区代码；不同地区分别保留
+	Region string `json:"region"`
+	// 上游免费标记；业务读取以 price_state 为权威
+	IsFree bool `json:"is_free"`
+	// 商店报价的币种代码
+	Currency string `json:"currency"`
+	// 折扣前金额，单位为该币种的最小货币单位
+	InitialAmount int64 `json:"initial_amount"`
+	// 折扣后金额，单位为该币种的最小货币单位
+	FinalAmount int64 `json:"final_amount"`
+	// 上游折扣百分比，不是 0..1 的比例
+	DiscountPercent int64 `json:"discount_percent"`
+	// 上游格式化的折扣前价格文本，仅用于展示
+	InitialFormatted string `json:"initial_formatted"`
+	// 上游格式化的折扣后价格文本，仅用于展示
+	FinalFormatted string `json:"final_formatted"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
+	CollectedAt pgtype.Timestamptz `json:"collected_at"`
+	// 当前按地区保存的 Steam 报价的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	// 权威价格状态 free 免费、priced 有报价、unpriced 无报价、unknown 未知；不能只看金额推断
 	PriceState string `json:"price_state"`
 }
 
-// Historical regional price state with observation provenance and carry-forward source.
+// 游戏按跟踪区间和地区保存的历史日报价；保留未知与无报价语义
 type GfgGamePriceDaily struct {
-	TrackingPeriodID      int64              `json:"tracking_period_id"`
-	GameID                int64              `json:"game_id"`
-	Appid                 int64              `json:"appid"`
-	Region                string             `json:"region"`
-	FactDate              pgtype.Date        `json:"fact_date"`
-	PriceState            string             `json:"price_state"`
-	Currency              *string            `json:"currency"`
-	InitialAmount         *int64             `json:"initial_amount"`
-	FinalAmount           *int64             `json:"final_amount"`
-	DiscountPercent       *int32             `json:"discount_percent"`
-	ObservedAt            pgtype.Timestamptz `json:"observed_at"`
-	MaterializationSource string             `json:"materialization_source"`
-	ProjectionVersion     int32              `json:"projection_version"`
-	FinalizedAt           pgtype.Timestamptz `json:"finalized_at"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	// 游戏与 AppID 的历史跟踪区间身份，引用 gfg_game_tracking_periods
+	TrackingPeriodID int64 `json:"tracking_period_id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 价格所属商店地区代码；不同地区分别保留
+	Region string `json:"region"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 权威价格状态 free 免费、priced 有报价、unpriced 无报价、unknown 未知；不能只看金额推断
+	PriceState string `json:"price_state"`
+	// 有报价时的币种代码；无有效报价时为 NULL
+	Currency *string `json:"currency"`
+	// 折扣前最小货币单位金额；free、unpriced、unknown 状态为 NULL 而非零
+	InitialAmount *int64 `json:"initial_amount"`
+	// 折扣后最小货币单位金额；free、unpriced、unknown 状态为 NULL 而非零
+	FinalAmount *int64 `json:"final_amount"`
+	// 有效报价的折扣百分比；无有效报价时为 NULL
+	DiscountPercent *int32 `json:"discount_percent"`
+	// 此报价实际被观察的 UTC 时刻；沿用时不刷新，未知时为 NULL
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+	// 事实来源：bootstrap 初始快照、observed 当日观察或 carried_forward 沿用先前证据
+	MaterializationSource string `json:"materialization_source"`
+	// 历史事实投影的语义版本；用于解释和校验下游证据
+	ProjectionVersion int32 `json:"projection_version"`
+	// 历史日投影完成的 UTC 时刻；当日可变标记尚未完成时为 NULL
+	FinalizedAt pgtype.Timestamptz `json:"finalized_at"`
+	// 游戏按跟踪区间和地区保存的历史日报价的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏按跟踪区间和地区保存的历史日报价的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Precomputed similar-game recommendations. One algorithm_version represents one scoring contract.
+// 预计算的游戏相似推荐；分类语义变化会失效缓存，保留算法版本以解释结果
 type GfgGameRecommendation struct {
+	// 请求相似推荐时的源游戏身份
 	SourceGameID int64 `json:"source_game_id"`
+	// 该源游戏对应的推荐目标游戏身份
 	TargetGameID int64 `json:"target_game_id"`
-	// Raw hybrid content similarity score in range 0..1.
+	// 算法计算的原始相似度分值，范围 0..1
 	Score float64 `json:"score"`
-	// Presentation score in range 0..1 after non-linear stretching.
+	// 为界面展示拉伸后的相似分值，范围 0..1；不替代原始 score
 	DisplayScore float64 `json:"display_score"`
-	Rank         int32   `json:"rank"`
-	// Short explainable recommendation reasons for UI display and later tuning.
-	ReasonJson       []byte             `json:"reason_json"`
-	AlgorithmVersion string             `json:"algorithm_version"`
-	ComputedAt       pgtype.Timestamptz `json:"computed_at"`
+	// 在该源游戏推荐列表中的位置
+	Rank int32 `json:"rank"`
+	// 用于解释推荐的理由列表 JSON
+	ReasonJson []byte `json:"reason_json"`
+	// 生成此推荐结果的算法版本
+	AlgorithmVersion string `json:"algorithm_version"`
+	// 本条派生结果最近一次计算完成的 UTC 时刻
+	ComputedAt pgtype.Timestamptz `json:"computed_at"`
 }
 
-// Semantic snapshots of canonical release-state changes; raw-text-only changes do not append rows.
+// 规范发行语义变化的追加历史；保留已删除游戏的身份，不因原文字形变化制造事件
 type GfgGameReleaseHistory struct {
-	ID                int64              `json:"id"`
-	GameID            int64              `json:"game_id"`
-	Availability      string             `json:"availability"`
-	Precision         string             `json:"precision"`
-	ExactDate         pgtype.Date        `json:"exact_date"`
-	ReleaseYear       *int32             `json:"release_year"`
-	ReleaseMonth      *int32             `json:"release_month"`
-	ReleaseQuarter    *int32             `json:"release_quarter"`
-	WindowStart       pgtype.Date        `json:"window_start"`
-	WindowEnd         pgtype.Date        `json:"window_end"`
-	RawText           string             `json:"raw_text"`
-	Source            string             `json:"source"`
-	SourceRegion      string             `json:"source_region"`
-	SourceLocale      string             `json:"source_locale"`
-	NormalizerVersion string             `json:"normalizer_version"`
-	ObservedAt        pgtype.Timestamptz `json:"observed_at"`
-	RecordedAt        pgtype.Timestamptz `json:"recorded_at"`
+	// 规范发行语义变化的追加历史的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 发生发行语义变化的历史游戏身份；不外键依赖当前游戏目录
+	GameID int64 `json:"game_id"`
+	// 规范发行可用性 upcoming、available 或 unknown；不是日期精度
+	Availability string `json:"availability"`
+	// 发行日期精度 day、month、quarter、year、tba、none 或 unknown
+	Precision string `json:"precision"`
+	// 精确发行日；只有 day 精度才有值
+	ExactDate pgtype.Date `json:"exact_date"`
+	// 规范发行年份；无可用日历证据时为 NULL
+	ReleaseYear *int32 `json:"release_year"`
+	// 规范发行月份 1..12；不是 day 或 month 精度时为 NULL
+	ReleaseMonth *int32 `json:"release_month"`
+	// 规范发行季度 1..4；非 quarter 精度时为 NULL
+	ReleaseQuarter *int32 `json:"release_quarter"`
+	// 发行日期窗口的包含起点；day 精度等于 exact_date，无日历证据时为 NULL
+	WindowStart pgtype.Date `json:"window_start"`
+	// 发行日期窗口的包含终点；day 精度等于 exact_date，无日历证据时为 NULL
+	WindowEnd pgtype.Date `json:"window_end"`
+	// 用于规范化的上游发行日期原文
+	RawText string `json:"raw_text"`
+	// 规范发行证据来源标识；当前 Steam 合同以 US/English Storefront 为准
+	Source string `json:"source"`
+	// 采集来源的商店地区代码；用于核对规范化证据
+	SourceRegion string `json:"source_region"`
+	// 采集来源的语言代码；用于核对规范化证据
+	SourceLocale string `json:"source_locale"`
+	// 将上游原文规范化为业务事实的规则版本
+	NormalizerVersion string `json:"normalizer_version"`
+	// 本条业务证据实际被观察到的 UTC 时刻
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+	// 此发行语义变化写入历史的 UTC 时刻，与 observed_at 分开保存
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
 }
 
-// Current canonical Steam release state normalized from the US/English Storefront response.
+// 游戏当前规范发行状态；统一使用 Steam US/English 证据，不混用本地化日期
 type GfgGameReleaseState struct {
-	GameID            int64              `json:"game_id"`
-	Availability      string             `json:"availability"`
-	Precision         string             `json:"precision"`
-	ExactDate         pgtype.Date        `json:"exact_date"`
-	ReleaseYear       *int32             `json:"release_year"`
-	ReleaseMonth      *int32             `json:"release_month"`
-	ReleaseQuarter    *int32             `json:"release_quarter"`
-	WindowStart       pgtype.Date        `json:"window_start"`
-	WindowEnd         pgtype.Date        `json:"window_end"`
-	RawText           string             `json:"raw_text"`
-	Source            string             `json:"source"`
-	SourceRegion      string             `json:"source_region"`
-	SourceLocale      string             `json:"source_locale"`
-	NormalizerVersion string             `json:"normalizer_version"`
-	ObservedAt        pgtype.Timestamptz `json:"observed_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 规范发行可用性 upcoming、available 或 unknown；不是日期精度
+	Availability string `json:"availability"`
+	// 发行日期精度 day、month、quarter、year、tba、none 或 unknown
+	Precision string `json:"precision"`
+	// 精确发行日；只有 day 精度才有值
+	ExactDate pgtype.Date `json:"exact_date"`
+	// 规范发行年份；无可用日历证据时为 NULL
+	ReleaseYear *int32 `json:"release_year"`
+	// 规范发行月份 1..12；不是 day 或 month 精度时为 NULL
+	ReleaseMonth *int32 `json:"release_month"`
+	// 规范发行季度 1..4；非 quarter 精度时为 NULL
+	ReleaseQuarter *int32 `json:"release_quarter"`
+	// 发行日期窗口的包含起点；day 精度等于 exact_date，无日历证据时为 NULL
+	WindowStart pgtype.Date `json:"window_start"`
+	// 发行日期窗口的包含终点；day 精度等于 exact_date，无日历证据时为 NULL
+	WindowEnd pgtype.Date `json:"window_end"`
+	// 用于规范化的上游发行日期原文
+	RawText string `json:"raw_text"`
+	// 规范发行证据来源标识；当前 Steam 合同以 US/English Storefront 为准
+	Source string `json:"source"`
+	// 采集来源的商店地区代码；用于核对规范化证据
+	SourceRegion string `json:"source_region"`
+	// 采集来源的语言代码；用于核对规范化证据
+	SourceLocale string `json:"source_locale"`
+	// 将上游原文规范化为业务事实的规则版本
+	NormalizerVersion string `json:"normalizer_version"`
+	// 本条业务证据实际被观察到的 UTC 时刻
+	ObservedAt pgtype.Timestamptz `json:"observed_at"`
+	// 游戏当前规范发行状态的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// Steam 游戏各操作系统配置要求的当前 JSON 文档
 type GfgGameRequirement struct {
-	GameID      int64              `json:"game_id"`
-	Appid       int64              `json:"appid"`
-	Pc          []byte             `json:"pc"`
-	Mac         []byte             `json:"mac"`
-	Linux       []byte             `json:"linux"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// Windows 最低及推荐配置的上游 JSON；不是是否支持 Windows 的布尔值
+	Pc []byte `json:"pc"`
+	// macOS 最低及推荐配置的上游 JSON；不是是否支持 macOS 的布尔值
+	Mac []byte `json:"mac"`
+	// Linux 最低及推荐配置的上游 JSON；不是是否支持 Linux 的布尔值
+	Linux []byte `json:"linux"`
+	// 采集器取得并持久化本条上游观察的 UTC 时刻
 	CollectedAt pgtype.Timestamptz `json:"collected_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	// Steam 游戏各操作系统配置要求的当前 JSON 文档的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+// 当前游戏分类的唯一关系来源；主次标签角色也由此表持有
 type GfgGameTag struct {
-	GameID     int64            `json:"game_id"`
-	TagID      int64            `json:"tag_id"`
-	Role       string           `json:"role"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 分配给游戏的标签身份，引用 gfg_tag
+	TagID int64 `json:"tag_id"`
+	// 标签在该游戏中的角色 normal、primary 或 secondary
+	Role string `json:"role"`
+	// 当前游戏分类的唯一关系来源的记录创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 当前游戏分类的唯一关系来源的记录最近更新时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 
-// Immutable Game/AppID eligibility periods used by historical facts; no FK to current gfg_game.
+// 游戏与 Steam AppID 的历史跟踪资格区间；不外键依赖当前游戏目录
 type GfgGameTrackingPeriod struct {
-	ID            int64              `json:"id"`
-	GameID        int64              `json:"game_id"`
-	Appid         int64              `json:"appid"`
-	TrackedFrom   pgtype.Timestamptz `json:"tracked_from"`
-	TrackedUntil  pgtype.Timestamptz `json:"tracked_until"`
-	TrackingBasis string             `json:"tracking_basis"`
-	OpenedReason  string             `json:"opened_reason"`
-	ClosedReason  *string            `json:"closed_reason"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	// 游戏与 Steam AppID 的历史跟踪资格区间的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 采集对象的 Steam AppID；与 GoFurry 游戏身份分别保存
+	Appid int64 `json:"appid"`
+	// 跟踪资格生效的 UTC 时刻，区间包含此起点
+	TrackedFrom pgtype.Timestamptz `json:"tracked_from"`
+	// 跟踪资格失效的 UTC 时刻，区间不包含此终点；NULL 表示仍在跟踪
+	TrackedUntil pgtype.Timestamptz `json:"tracked_until"`
+	// 区间依据：explicit 明确纳入跟踪，legacy_observed 由历史观察恢复
+	TrackingBasis string `json:"tracking_basis"`
+	// 建立该历史跟踪区间的业务原因
+	OpenedReason string `json:"opened_reason"`
+	// 关闭该历史跟踪区间的业务原因；未关闭时为 NULL
+	ClosedReason *string `json:"closed_reason"`
+	// 游戏与 Steam AppID 的历史跟踪资格区间的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏与 Steam AppID 的历史跟踪资格区间的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type GfgLegacyRunJobMap struct {
@@ -632,143 +1145,337 @@ type GfgLegacyRunJobMap struct {
 	JobID int64  `json:"job_id"`
 }
 
-// Independent ordered checkpoints for each Game metric version.
+// 游戏指标各版本的独立有序水位；重建不能倒退该水位
 type GfgMetricCheckpoint struct {
-	MetricKey        string             `json:"metric_key"`
-	MetricVersion    int32              `json:"metric_version"`
-	SourceStartDate  pgtype.Date        `json:"source_start_date"`
-	ProcessedThrough pgtype.Date        `json:"processed_through"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 可重建源证据的首个 UTC 日期；NULL 表示尚无起始证据
+	SourceStartDate pgtype.Date `json:"source_start_date"`
+	// 已连续处理完成的最后一个 UTC 日期；NULL 表示尚未完成任何一天
+	ProcessedThrough pgtype.Date `json:"processed_through"`
+	// 游戏指标各版本的独立有序水位的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 游戏指标各版本的独立有序水位的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Global and single-dimension Game metric state counts; ratios are query-time only.
+// 游戏指标每日全局及单维度状态计数；比例在查询时计算，不落最终百分比
 type GfgMetricDaily struct {
-	MetricKey          string             `json:"metric_key"`
-	MetricVersion      int32              `json:"metric_version"`
-	FactDate           pgtype.Date        `json:"fact_date"`
-	DimensionKey       string             `json:"dimension_key"`
-	DimensionValue     string             `json:"dimension_value"`
-	PopulationCount    int64              `json:"population_count"`
-	EligibleCount      int64              `json:"eligible_count"`
-	NotApplicableCount int64              `json:"not_applicable_count"`
-	PositiveCount      int64              `json:"positive_count"`
-	NegativeCount      int64              `json:"negative_count"`
-	StaleCount         int64              `json:"stale_count"`
-	NotProbedCount     int64              `json:"not_probed_count"`
-	ProbeFailedCount   int64              `json:"probe_failed_count"`
-	UnknownCount       int64              `json:"unknown_count"`
-	ComputedAt         pgtype.Timestamptz `json:"computed_at"`
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// 汇总维度名；全局汇总使用 global，其它取注册合同允许的单维度
+	DimensionKey string `json:"dimension_key"`
+	// 该维度的历史取值；全局汇总使用 all
+	DimensionValue string `json:"dimension_value"`
+	// 实体总体数，等于 eligible_count + not_applicable_count
+	PopulationCount int64 `json:"population_count"`
+	// 适用实体数，等于除 not_applicable 外六种状态的计数之和
+	EligibleCount int64 `json:"eligible_count"`
+	// 不适用该指标的实体数，不进入适用分母
+	NotApplicableCount int64 `json:"not_applicable_count"`
+	// 有明确正向证据的实体数，与 negative_count 共同组成已知分母
+	PositiveCount int64 `json:"positive_count"`
+	// 有明确反向证据的实体数；不能由未知或失败推断
+	NegativeCount int64 `json:"negative_count"`
+	// 证据已超过该版本新鲜度门槛的实体数
+	StaleCount int64 `json:"stale_count"`
+	// 历史上尚未执行所需探测的实体数
+	NotProbedCount int64 `json:"not_probed_count"`
+	// 所需探测失败且不能得到有效判定的实体数
+	ProbeFailedCount int64 `json:"probe_failed_count"`
+	// 证据不足以判定正反状态的实体数
+	UnknownCount int64 `json:"unknown_count"`
+	// 本条派生结果最近一次计算完成的 UTC 时刻
+	ComputedAt pgtype.Timestamptz `json:"computed_at"`
 }
 
-// Explainable per-Game historical metric state derived only from finalized Game Facts.
+// 游戏实体每日可解释指标状态；仅从已 finalized 的历史事实产生
 type GfgMetricEntityDaily struct {
-	MetricKey                string             `json:"metric_key"`
-	MetricVersion            int32              `json:"metric_version"`
-	FactDate                 pgtype.Date        `json:"fact_date"`
-	GameID                   int64              `json:"game_id"`
-	State                    string             `json:"state"`
-	ReasonCode               string             `json:"reason_code"`
-	SourceObservedAt         pgtype.Timestamptz `json:"source_observed_at"`
-	DimensionValues          []byte             `json:"dimension_values"`
-	SourceProjectionVersions []byte             `json:"source_projection_versions"`
-	EvaluatedAt              pgtype.Timestamptz `json:"evaluated_at"`
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 该历史事实或指标所属的 UTC 日期
+	FactDate pgtype.Date `json:"fact_date"`
+	// GoFurry 游戏身份，不是 Steam AppID
+	GameID int64 `json:"game_id"`
+	// 七态结果 positive、negative、stale、not_probed、probe_failed、unknown、not_applicable；未知不能当作否定
+	State string `json:"state"`
+	// 解释该实体为何进入当前指标状态的稳定原因代码
+	ReasonCode string `json:"reason_code"`
+	// 来源证据的实际观察时刻；无可用证据时为 NULL，沿用证据不刷新此时刻
+	SourceObservedAt pgtype.Timestamptz `json:"source_observed_at"`
+	// 该历史日的维度值 JSON 对象，不回查当前目录改写历史
+	DimensionValues []byte `json:"dimension_values"`
+	// 所用历史事实及其投影版本的 JSON 对象
+	SourceProjectionVersions []byte `json:"source_projection_versions"`
+	// 本次指标状态判定完成的 UTC 时刻
+	EvaluatedAt pgtype.Timestamptz `json:"evaluated_at"`
 }
 
-// Goose-owned versioned Game metric contracts; runtime and Admin are read-only.
+// 游戏指标版本注册合同；仅 Goose 修改，运行时和 Admin 只读
 type GfgMetricRegistry struct {
-	MetricKey         string             `json:"metric_key"`
-	MetricVersion     int32              `json:"metric_version"`
-	MetricKind        string             `json:"metric_kind"`
-	EntityLevel       string             `json:"entity_level"`
-	TimeGrain         string             `json:"time_grain"`
-	SourceFacts       []string           `json:"source_facts"`
-	EligibilityPolicy string             `json:"eligibility_policy"`
-	StatePolicy       string             `json:"state_policy"`
-	CoveragePolicy    string             `json:"coverage_policy"`
-	FreshnessSeconds  *int64             `json:"freshness_seconds"`
-	AllowedDimensions []string           `json:"allowed_dimensions"`
-	Status            string             `json:"status"`
-	Description       string             `json:"description"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	RetiredAt         pgtype.Timestamptz `json:"retired_at"`
+	// 指标合同的稳定标识，与 metric_version 共同定位注册合同
+	MetricKey string `json:"metric_key"`
+	// 指标语义版本；已发布版本不可原地改义
+	MetricVersion int32 `json:"metric_version"`
+	// 指标类型；当前仅为 state_ratio，即按实体状态计算比例
+	MetricKind string `json:"metric_kind"`
+	// 指标实体层级；此库固定为 game
+	EntityLevel string `json:"entity_level"`
+	// 指标处理粒度；当前固定为 day，即 UTC 日
+	TimeGrain string `json:"time_grain"`
+	// 指标依赖的历史事实合同标识列表，不允许改用当前目录或原始采集替代
+	SourceFacts []string `json:"source_facts"`
+	// 判定实体是否属于指标适用总体的编译策略标识
+	EligibilityPolicy string `json:"eligibility_policy"`
+	// 由历史证据推导七态结果的编译策略标识
+	StatePolicy string `json:"state_policy"`
+	// 定义已知证据覆盖范围及统计分母的编译策略标识
+	CoveragePolicy string `json:"coverage_policy"`
+	// 相对历史日结束时刻的证据有效秒数；NULL 表示无此新鲜度门槛
+	FreshnessSeconds *int64 `json:"freshness_seconds"`
+	// 允许生成的单一维度名称列表；空列表表示仅全局汇总
+	AllowedDimensions []string `json:"allowed_dimensions"`
+	// 合同状态 active 或 retired；已退休版本仍可按原语义重建
+	Status string `json:"status"`
+	// 该指标版本的业务口径说明
+	Description string `json:"description"`
+	// 游戏指标版本注册合同的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 合同停止作为活跃版本的 UTC 时刻；active 时为 NULL
+	RetiredAt pgtype.Timestamptz `json:"retired_at"`
 }
 
-// 抽奖活动表
+// GoFurry 抽奖活动配置及奖品密钥；不是展柜推广活动
 type GfgPrize struct {
-	// 抽奖活动表id
+	// GoFurry 抽奖活动配置及奖品密钥的行身份；用于稳定引用该记录
 	ID int64 `json:"id"`
-	// 标题
+	// 抽奖活动中文标题
 	Title string `json:"title"`
-	// 描述
+	// 抽奖活动中文说明
 	Desc string `json:"desc"`
-	// 奖品
+	// 奖品列表 JSON，含标题、平台和可分配密钥；属于敏感运营数据
 	Prize []byte `json:"prize"`
-	// 参与密钥
+	// 参与该抽奖活动所需的访问密钥，不是奖品激活码
 	Key string `json:"key"`
-	// 开始时间
+	// 活动允许参与的开始时间，按 Asia/Shanghai 运营墙上时间解释
 	StartTime pgtype.Timestamp `json:"start_time"`
-	// 结束时间
+	// 活动允许参与的结束时间，按 Asia/Shanghai 运营墙上时间解释
 	EndTime pgtype.Timestamp `json:"end_time"`
-	// 创建时间
+	// GoFurry 抽奖活动配置及奖品密钥的记录创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 状态
+	// 活动开放开关；false 时不允许参与，即使时间窗口符合
 	Status bool `json:"status"`
+	// 抽奖活动英文标题；空串时按抽奖展示合同回退中文
+	TitleEn string `json:"title_en"`
+	// 抽奖活动英文说明；空串时按抽奖展示合同回退中文
+	DescEn string `json:"desc_en"`
 }
 
-// 抽奖活动参与表
+// 抽奖活动参与记录及中奖分配结果，包含参与者联系方式
 type GfgPrizeMember struct {
-	// 抽奖活动参与表id
+	// 抽奖活动参与记录及中奖分配结果的行身份；用于稳定引用该记录
 	ID int64 `json:"id"`
-	// 抽奖活动id
+	// 参与的抽奖活动身份
 	PrizeID int64 `json:"prize_id"`
-	// 参与者名称
+	// 参与者填写的展示名称
 	Name string `json:"name"`
-	// 参与者邮箱
+	// 参与者填写的联系邮箱
 	Email string `json:"email"`
-	// 参与者ip
+	// 提交参与请求的客户端来源地址
 	Ip string `json:"ip"`
-	// User-Agent
+	// 参与请求的 User-Agent，用于诊断和参与风控
 	Agent string `json:"agent"`
-	// 是否获奖
+	// 该参与记录是否被选为中奖者
 	IsWinner bool `json:"is_winner"`
-	// 获奖key
+	// 分配给中奖参与者的奖品密钥；尚未分配时为 NULL，不能公开批量展示
 	PrizeKey *string `json:"prize_key"`
-	// 创建时间
+	// 抽奖活动参与记录及中奖分配结果的记录创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
 }
 
-// 游戏标签表
-type GfgTag struct {
-	// 标签表id
+// 展柜事件校验和抗刷的每日全局质量计数；不持久化事件、IP、会话或 User-Agent
+type GfgShowcaseAnalyticsDailyQuality struct {
+	// Asia/Shanghai 运营日；不是 UTC 日，也不是事件原始时刻
+	StatDate pgtype.Date `json:"stat_date"`
+	// 因 HMAC 追踪 token 校验失败而拒绝的事件数
+	InvalidTokenEvents int64 `json:"invalid_token_events"`
+	// 因请求 Origin 不在允许范围而拒绝的事件数
+	InvalidOriginEvents int64 `json:"invalid_origin_events"`
+	// 因 User-Agent 过滤规则而拒绝的事件数
+	FilteredUserAgentEvents int64 `json:"filtered_user_agent_events"`
+	// 会话去重命中的重复曝光事件数，不计入有效曝光
+	DuplicateImpressions int64 `json:"duplicate_impressions"`
+	// 会话去重命中的重复点击事件数，不计入有效点击
+	DuplicateClicks int64 `json:"duplicate_clicks"`
+	// 会话级速率限制命中的事件数
+	SessionRateLimited int64 `json:"session_rate_limited"`
+	// 来源地址级速率限制命中的事件数；这里只存计数，不存地址或地址哈希
+	IpRateLimited int64 `json:"ip_rate_limited"`
+	// 事件结构或字段无效而被拒绝的次数
+	MalformedEvents int64 `json:"malformed_events"`
+	// 该日 Redis 聚合绝对值最近写入 PostgreSQL 的 UTC 时刻
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 首页展柜人工活动；排期、选取权重和固定位置不等同于当前已被编排展示
+type GfgShowcaseCampaign struct {
+	// 首页展柜人工活动的行身份；用于稳定引用该记录
 	ID int64 `json:"id"`
-	// 标签名称
+	// 仅供后台识别的活动名称，不作为公开标题
+	InternalName string `json:"internal_name"`
+	// 推广内容类型 game、crowdfunding、tabletop、merchandise 或 other
+	ContentType string `json:"content_type"`
+	// 是否为商业推广；必须公开披露且不得填写 Editorial Note
+	Sponsored bool `json:"sponsored"`
+	// 关联的 GoFurry 游戏身份；非游戏活动可为空，游戏删除后置空
+	LinkedGameID *int64 `json:"linked_game_id"`
+	// 活动持久状态 draft、published、paused 或 archived；展示状态还取决于排期及资格
+	State string `json:"state"`
+	// 展示排期的 UTC 起点；未配置草稿可为 NULL，后台按 Asia/Shanghai 编辑
+	StartsAt pgtype.Timestamptz `json:"starts_at"`
+	// 展示排期的 UTC 终点；未配置草稿可为 NULL，到期后不参与展示
+	EndsAt pgtype.Timestamptz `json:"ends_at"`
+	// 确定性加权选取的权重，范围 1..10000，默认 100；不决定最终展示位置
+	Weight int32 `json:"weight"`
+	// 优先固定的展示位置 1..4；NULL 表示交由编排自动分配
+	PinPosition *int16 `json:"pin_position"`
+	// 桌面 1600×800 AVIF 的 Managed Asset 对象键；未配置为 NULL，不保存 CDN 域名
+	DesktopObjectKey *string `json:"desktop_object_key"`
+	// 移动端 1200×675 AVIF 的 Managed Asset 对象键；未配置为 NULL，不保存 CDN 域名
+	MobileObjectKey *string `json:"mobile_object_key"`
+	// 响应式裁切的水平主体焦点，0 左侧、0.5 居中、1 右侧
+	FocalX float64 `json:"focal_x"`
+	// 响应式裁切的垂直主体焦点，0 顶部、0.5 居中、1 底部
+	FocalY float64 `json:"focal_y"`
+	// 主动作固定类型 game、project、product 或 website；草稿可未配置
+	PrimaryActionType *string `json:"primary_action_type"`
+	// 主动作的目标值；按动作类型校验，不允许自由按钮文案代替动作合同
+	PrimaryTarget *string `json:"primary_target"`
+	// 可选次动作类型 steam、kickstarter、website 或 other
+	SecondaryActionType *string `json:"secondary_action_type"`
+	// 次动作目标值；未配置次动作时为 NULL
+	SecondaryTarget *string `json:"secondary_target"`
+	// 首页展柜人工活动的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 首页展柜人工活动的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 展柜活动按 zh/en 显式维护的内容；未启用或缺失语言不跨语言回退
+type GfgShowcaseCampaignLocale struct {
+	// 所属展柜活动身份，活动删除时级联删除语言内容
+	CampaignID int64 `json:"campaign_id"`
+	// 公开内容语言 zh 或 en，与活动身份共同确定一行
+	Lang string `json:"lang"`
+	// 是否允许该语言参加展示；默认 false
+	Enabled bool `json:"enabled"`
+	// 该语言公开展示的活动标题
+	Title string `json:"title"`
+	// 该语言公开展示的活动摘要
+	Summary string `json:"summary"`
+	// 该语言最多三个简短展示标签，不是游戏分类关系
+	Tags []string `json:"tags"`
+	// 可选编辑推荐说明；Sponsored 活动不得填写
+	EditorialNote *string `json:"editorial_note"`
+	// 展柜活动按 zh/en 显式维护的内容的记录创建时间
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	// 展柜活动按 zh/en 显式维护的内容的记录最近更新时间
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 展柜主体每日合格曝光、点击及会话估算；每五分钟以绝对值幂等覆盖，不存原始事件
+type GfgShowcaseDailyStat struct {
+	// Asia/Shanghai 运营日；不是 UTC 日，也不是事件原始时刻
+	StatDate pgtype.Date `json:"stat_date"`
+	// 统计主体的稳定键，用于区分人工活动与自动候选
+	SubjectKey string `json:"subject_key"`
+	// 主体类别 managed 人工活动或 automatic 自动推荐
+	SubjectKind string `json:"subject_kind"`
+	// 人工活动的历史身份；自动推荐可为 NULL，不外键依赖当前活动
+	CampaignID *int64 `json:"campaign_id"`
+	// 统计关联的历史游戏身份；无关联游戏可为 NULL
+	GameID *int64 `json:"game_id"`
+	// 展示原因 editorial、sponsored、upcoming、new_release 或 trending
+	Reason string `json:"reason"`
+	// 通过 token、来源、限流及会话去重的有效曝光数；合格点击可补隐式曝光
+	ValidImpressions int64 `json:"valid_impressions"`
+	// 经去重和校验的有效点击总数，不超过 valid_impressions，等于四类来源之和
+	QualifiedClicks int64 `json:"qualified_clicks"`
+	// 有效点击中来自素材区域的次数
+	ClickArtwork int64 `json:"click_artwork"`
+	// 有效点击中来自标题区域的次数
+	ClickTitle int64 `json:"click_title"`
+	// 有效点击中来自主动作的次数
+	ClickPrimary int64 `json:"click_primary"`
+	// 有效点击中来自次动作的次数
+	ClickSecondary int64 `json:"click_secondary"`
+	// 在第 1 个展示位置记录的有效曝光数
+	ImpressionPosition1 int64 `json:"impression_position_1"`
+	// 在第 2 个展示位置记录的有效曝光数
+	ImpressionPosition2 int64 `json:"impression_position_2"`
+	// 在第 3 个展示位置记录的有效曝光数
+	ImpressionPosition3 int64 `json:"impression_position_3"`
+	// 在第 4 个展示位置记录的有效曝光数
+	ImpressionPosition4 int64 `json:"impression_position_4"`
+	// Redis HLL 估计的该日独立会话数；跨日求和不是整个期间去重人数
+	SessionEstimate int64 `json:"session_estimate"`
+	// 该日 Redis 聚合绝对值最近写入 PostgreSQL 的 UTC 时刻
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+// 游戏可分配标签身份；Adult 等业务判断使用稳定 code，不依赖显示名
+type GfgTag struct {
+	// 游戏可分配标签身份的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 运营维护的中文分类名称
 	Name string `json:"name"`
-	// 标签英文名称
+	// 运营维护的英文分类名称
 	NameEn string `json:"name_en"`
-	// 标签简介
+	// 运营维护的中文分类说明
 	Info string `json:"info"`
-	// 标签英文简介
+	// 运营维护的英文分类说明
 	InfoEn string `json:"info_en"`
-	// 创建时间
+	// 游戏可分配标签身份的记录创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
-	// 修改时间
+	// 游戏可分配标签身份的记录最近更新时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
-	Code       string           `json:"code"`
-	CategoryID int64            `json:"category_id"`
+	// 稳定业务代码，小写 kebab-case；普通修改不能改写，数字身份不携带业务语义
+	Code string `json:"code"`
+	// 所属标签类别身份；恢复标签要求类别处于可用状态
+	CategoryID int64 `json:"category_id"`
+	// 归档时间；NULL 表示可用，历史引用不因归档而改写
 	ArchivedAt pgtype.Timestamp `json:"archived_at"`
 }
 
+// 游戏标签类别及其显示次序；有活跃标签时不可归档
 type GfgTagCategory struct {
-	ID         int64            `json:"id"`
-	Code       string           `json:"code"`
-	Name       string           `json:"name"`
-	NameEn     string           `json:"name_en"`
-	Info       string           `json:"info"`
-	InfoEn     string           `json:"info_en"`
-	SortOrder  int32            `json:"sort_order"`
+	// 游戏标签类别及其显示次序的行身份；用于稳定引用该记录
+	ID int64 `json:"id"`
+	// 稳定业务代码，小写 kebab-case；普通修改不能改写，数字身份不携带业务语义
+	Code string `json:"code"`
+	// 运营维护的中文分类名称
+	Name string `json:"name"`
+	// 运营维护的英文分类名称
+	NameEn string `json:"name_en"`
+	// 运营维护的中文分类说明
+	Info string `json:"info"`
+	// 运营维护的英文分类说明
+	InfoEn string `json:"info_en"`
+	// 类别在运营与展示列表中的排序值
+	SortOrder int32 `json:"sort_order"`
+	// 归档时间；NULL 表示可用，历史引用不因归档而改写
 	ArchivedAt pgtype.Timestamp `json:"archived_at"`
+	// 游戏标签类别及其显示次序的记录创建时间
 	CreateTime pgtype.Timestamp `json:"create_time"`
+	// 游戏标签类别及其显示次序的记录最近更新时间
 	UpdateTime pgtype.Timestamp `json:"update_time"`
 }
 

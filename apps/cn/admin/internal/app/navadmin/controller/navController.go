@@ -537,9 +537,7 @@ func decodeUpdateNotice(c fiber.Ctx) (models.UpdateNoticePayload, time.Time, com
 	if err := adminutil.DecodeBody(c, &req); err != nil {
 		return req, time.Time{}, err
 	}
-	title, titleEn, body, bodyEn, publishedAt, err := normalizeUpdateNoticePayload(req)
-	req.Title, req.TitleEn, req.Body, req.BodyEn = title, titleEn, body, bodyEn
-	return req, publishedAt, err
+	return normalizeUpdateNoticePayload(req)
 }
 
 func decodeCollectorDomain(c fiber.Ctx) (models.CollectorDomainPayload, common.Error) {
@@ -622,19 +620,6 @@ func validateSitePayload(req models.SitePayload) common.Error {
 		return common.NewValidationError("name and name_en are required")
 	}
 	return nil
-}
-
-func normalizeUpdateNoticePayload(req models.UpdateNoticePayload) (string, string, string, string, time.Time, common.Error) {
-	title, titleEn := strings.TrimSpace(req.Title), strings.TrimSpace(req.TitleEn)
-	body, bodyEn := strings.TrimSpace(req.Body), strings.TrimSpace(req.BodyEn)
-	if title == "" || titleEn == "" || body == "" || bodyEn == "" {
-		return "", "", "", "", time.Time{}, common.NewValidationError("title, title_en, body and body_en are required")
-	}
-	publishedAt, err := parseDateTime(req.PublishedAt)
-	if err != nil {
-		return "", "", "", "", time.Time{}, common.NewValidationError("invalid published_at")
-	}
-	return title, titleEn, body, bodyEn, publishedAt, nil
 }
 
 func parseDateTime(value string) (time.Time, error) {

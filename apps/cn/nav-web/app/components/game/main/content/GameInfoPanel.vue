@@ -1,5 +1,6 @@
 <template>
   <div class="game-info-shell mb-8 p-5">
+    <GameHomeShowcase v-if="showcase?.items.length" :snapshot="showcase" />
     <GameInfoGroup
       v-if="firstGroup"
       :key="firstGroup.title"
@@ -37,6 +38,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import GameInfoGroup from '@/components/game/main/content/GameInfoGroup.vue'
+import GameHomeShowcase from '@/components/game/main/content/GameHomeShowcase.vue'
 import GameStatsPanels from '@/components/game/main/content/GameStatsPanels.vue'
 import GameUpdateNews from '@/components/game/main/content/GameUpdateNews.vue'
 import type {
@@ -46,6 +48,7 @@ import type {
   GameV2FirstAvailable,
   GameV2ReleaseState,
   LatestNewsRecord,
+  GameShowcaseSnapshot,
 } from '~/types/game'
 
 interface GameItem {
@@ -68,6 +71,7 @@ const props = defineProps<{
   initialRawData?: GameGroupRecord | null
   initialPanelData?: GamePanelRecord | null
   initialNewsRecord?: LatestNewsRecord | null
+  showcase?: GameShowcaseSnapshot
 }>()
 
 const { locale } = useI18n()

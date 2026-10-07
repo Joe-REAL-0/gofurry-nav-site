@@ -107,6 +107,7 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 				t.Fatalf("inspect fresh %s schema: %v", test.label, err)
 			}
 			if updateFinal {
+				assertReadability(t, actual)
 				writeFinalExpectedSnapshot(t, repositoryRoot, test.label, actual)
 				return
 			}
@@ -117,6 +118,7 @@ func TestPostgresFreshAndBaselineAdoption(t *testing.T) {
 			if difference := schema.Difference(expected, actual); difference != "" {
 				t.Fatalf("fresh %s schema drift: %s", test.label, difference)
 			}
+			assertReadability(t, actual)
 
 			// Exercise the deployed alpha.2 starting boundary through current. Game
 			// additionally proves both the pre-P0.2 Raw floor and the follow-up

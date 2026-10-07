@@ -1,0 +1,18 @@
+.release-writing-grid { height: clamp(22rem, 55vh, 38rem); }
+.release-markdown { overflow-wrap: anywhere; font-size: .875rem; line-height: 1.75; }
+.release-markdown > :first-child { margin-top: 0; }
+.release-markdown > * + * { margin-top: .85rem; }
+.release-markdown :is(h2,h3,h4,h5,h6) { font-weight: 600; line-height: 1.4; margin-block: 1.2rem .5rem; }
+.release-markdown h2 { font-size: 1.35rem; }
+.release-markdown h3 { font-size: 1.15rem; }
+.release-markdown :is(ul,ol) { padding-left: 1.5rem; }
+.release-markdown ul { list-style-type: disc; }
+.release-markdown ol { list-style-type: decimal; }
+.release-markdown li + li { margin-top: .25rem; }
+.release-markdown blockquote { border-left: 2px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
+.release-markdown a { color: var(--primary); text-decoration: underline; text-underline-offset: .15em; }
+.release-markdown img { max-width: 100%; height: auto; border-radius: .375rem; }
+.release-markdown code { border-radius: .25rem; padding: .1rem .3rem; background: var(--surface-muted); font-family: var(--font-mono); font-size: .85em; }
+.release-markdown pre { max-width: 100%; overflow-x: auto; padding: .75rem; border-radius: .375rem; background: var(--surface-muted); }
+.release-markdown pre code { padding: 0; background: transparent; }
+.release-markdown hr { border: 0; border-top: 1px solid var(--border); margin-block: 1rem; }

@@ -14,6 +14,9 @@ import (
 
 func gameV2Api(g fiber.Router, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeAPI) {
 	registerGameInsightRoutes(g, gameAPI)
+	g.Get("/collections/home", gameAPI.GetCollectionHome)
+	g.Get("/collections", gameAPI.GetCollections)
+	g.Get("/collections/:code", gameAPI.GetCollection)
 	g.Get("/list", gameAPI.GetGameList)
 	g.Get("/info", gameAPI.GetGameInfo)
 	g.Get("/tags", gameAPI.GetTags)
@@ -21,6 +24,10 @@ func gameV2Api(g fiber.Router, gameAPI *gamev2.GameV2API, prizeAPI *prize.PrizeA
 	g.Get("/news", gameAPI.GetGameNews)
 	g.Get("/news/latest", gameAPI.GetLatestGameNews)
 	g.Get("/home", gameAPI.GetHome)
+	g.Get("/home/showcase", gameAPI.GetShowcase)
+	g.Post("/home/showcase/events", gameAPI.ShowcaseEvent)
+	g.Get("/internal/showcase/composition", gamev2.RequireAdminToken(), gameAPI.GetShowcase)
+	g.Get("/internal/showcase/candidates", gamev2.RequireAdminToken(), gameAPI.GetShowcaseCandidates)
 	g.Get("/panel/main", gameAPI.GetPanelMain)
 	g.Post("/games/:id/view", gameAPI.TouchGameView)
 	g.Post("/search/simple", gameAPI.SearchSimple)

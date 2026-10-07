@@ -19,6 +19,16 @@ components/ui -> components/admin -> features
 
 TanStack Query owns server state. Route filters, search, pagination, sorting, and workspace tabs use URL state where practical. React local state owns transient UI. Do not introduce a second server-state copy or a role-based client store.
 
+Search inputs that update URL state, remote queries/options, or selection/submit
+actions must be IME composition-safe. Composition start and intermediate changes
+update local displayed text only; composition end commits the final text once,
+including browsers that emit a trailing change. External values synchronize only
+outside composition. Keyboard selection must not consume IME confirmation or
+navigation keys while the composing ref or native `isComposing` is true. Debounce
+starts from committed text and is not a substitute for this boundary. Use the small
+`useCompositionSafeSearch` hook for these owners; DataTable retains its equivalent
+contract. Ordinary local form fields and local-only filters do not need this guard.
+
 Admin business forms use the shared Base UI-backed Select, DatePicker, and DateTimePicker controls rather than browser-native select/date controls. Shared controls own the common height, focus treatment, and popup behavior.
 
 Themes default to the system preference. The shared header exposes a single Light/Dark toggle; the first manual choice becomes an explicit persisted `light` or `dark` preference. Business components consume semantic tokens: background, surface, surface-muted, foreground, muted-foreground, border, primary, success, warning, danger, and info.
@@ -48,9 +58,13 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 /nav/hero-assets
 /nav/background-patterns
 /nav/update-notices
+/nav/update-notices/new
+/nav/update-notices/:id
 /nav/sayings
 /game/games
 /game/games/:id
+/game/showcase
+/game/showcase/:id
 /game/tags
 /game/tag-categories
 /game/comments
@@ -66,7 +80,76 @@ Top-level groups are Workbench, Collaboration, Nav Content, Game Content, Data O
 
 Site Group exposes a homepage curation page showing the first eight active sites and the remaining members. Operators move sites instead of entering weights. Group-oriented GET/PUT `/api/v1/nav/site-groups/:id/curation` uses `content.read`/`content.write`, a revision-checked complete member order, and the existing Nav transaction/audit/cache invalidation path. It persists only mapping weights; site-level bulk replacement preserves existing weights. Public derived caches refresh on the existing ten-minute schedule, so saving is not an immediate public-cache publication.
 
-Site and Game are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
+Site, Game, Release Notes and Showcase are dedicated workspaces. Simple resources use the typed Resource Engine. Persistence mapping tables are managed as relationships inside workspaces, not exposed as primary navigation.
+
+Showcase consumes the frozen [backend contract](../docs/game-showcase.md) through
+`content.read/write`. Its routes precede `/game/:resource`; composition, Campaign
+list and discovery tabs, locale, filters and pagination use URL state. Creation
+opens a real Draft ID workspace with overview/content/assets/schedule/stats.
+Read-only users can inspect every tab without mutation controls. Lifecycle actions
+and artwork clear require confirmation; dirty forms and staged uploads protect
+navigation/unload and disable lifecycle actions. Archived Campaigns are read-only.
+
+Campaign locale editors are independent zh/en RHF fields. Sponsored payloads clear
+both Editorial Notes; action types remain fixed. Artwork uploads retain original
+AVIF bytes and use the shared session/CSRF transport. Local object URLs are revoked;
+persisted artwork shows provider-neutral keys, without guessed CDN URLs. Focal
+controls live in Assets but save the complete `/content` payload. A nine-button
+grid selects x/y at 0, 0.5 or 1 and highlights the nearest preset; staged local
+preview clicks set clamped proportional coordinates and immediately update
+object-position. Neither interaction auto-saves or changes image bytes. Native
+preview buttons support keyboard centering; the grid is the precise keyboard
+alternative. Numeric values are diagnostic TechnicalLabel text, not primary
+inputs. Without a local preview the grid remains usable; read-only/busy controls
+are disabled. Weight is labeled “选取权重” (1..10000), Pin “固定展示位置”
+(自动排序/null or 第 1–4 位), preserving the backend selection/position semantics.
+Scheduling uses
+the shared DateTimePicker and explicit Asia/Shanghai RFC3339 conversion independent
+of the workstation timezone. Backend readiness/diagnostics remain authoritative.
+
+Statistics use backend totals, at most 366 inclusive dates, two count-series
+ECharts and same-origin CSV links. HLL session totals are labeled estimates with
+possible cross-day duplication. Lists never request per-row statistics. Discovery
+shows internal evidence and links to Game Classification; only that existing form
+writes `showcase_eligible` with its complete classification payload. The Campaign
+Header has an “操作审计” action only for `auth.can('audit.read')`, after 返回活动
+and before lifecycle actions. It opens `/system/audit?resource=gfg_showcase_campaign`
+without claiming target-ID filtering. History and its intermediary component are
+removed; old `tab=history` naturally renders overview without redirecting. Dirty
+navigation protection also applies to the Header action.
+Public Hero, public tracking, new cloud resolvers and backend changes are outside
+this frontend workspace. See [React Admin](../docs/admin-react.md) for acceptance.
+
+Discovery defaults to eligible candidates and exposes pending-approval, blocked,
+and all-diagnostics groups with server counts. Keyword, status, exclusion, sorting,
+pool, locale and pagination persist in URL state. The internal diagnostic API owns
+whole-set filtering/sorting before pagination; React must not filter only a fetched
+page or fetch every page to simulate global search. Pool order is explicitly not
+homepage position. Technical evidence lives in an accessible diagnostic dialog;
+read-only accounts get inspection links without mutation wording. Pending approval
+never includes a Game blocked by any other condition. Empty eligible results offer
+pending/all views instead of suggesting a service failure.
+
+Lottery remains a simple Resource Engine resource. Activity title/description and
+prize title/platform each have Chinese and English fields; participation passwords
+and redemption keys are language-independent. String-array controls MUST retain
+blank lines and whitespace during editing. Submit validation trims/removes empty
+key lines and requires at least one usable key; backend normalization remains
+authoritative. Do not normalize a controlled textarea on each keystroke.
+
+Release Notes routes precede `/nav/:resource`; `update-notices` is not a generic
+resource. The existing navigation and `content.read/write` capabilities apply.
+One RHF form owns both languages and shared metadata. Opening `/new` creates no
+record. Publish/Schedule must await a successful save of dirty content; Publish
+Now omits the timestamp and Schedule sends the chosen future China-site time.
+Dirty Unpublish is disabled; Delete and all publication changes require explicit
+confirmation. Browser unload and internal routing protect unsaved work.
+Status badges are display-only and interpret unzoned timestamps as Asia/Shanghai.
+Markdown preview follows [the shared contract](update-markdown.md); it stores
+source text, sanitizes all generated HTML and adds no upload or public-page owner.
+The P3.1 writing workspace combines metadata and localized content in one Section.
+It has no Markdown toolbar; Desktop editor/preview share equal panes, with a local
+Edit/Preview switch on narrow layouts. Publication and dirty guards stay unchanged.
 
 Collection, Metric, and Change reuse their existing business APIs and frozen Fact/Metric/Detector/Collection semantics. Operator-facing views require their read capabilities; schedule control, Metric technical contracts, and Change technical contracts additionally require their native capabilities.
 
@@ -90,9 +173,35 @@ independently of selected IDs.
 Category and Tag resources create explicit stable codes with database-assigned IDs;
 code controls are read-only after creation. Categories are selected by name and
 normal removal is visibly archive/restore. Game classification saves weight,
-nullable primary/secondary IDs and the complete Tag set in one
+nullable primary/secondary IDs, the complete Tag set and independent
+`showcase_eligible` in one
 `PUT /api/v1/game/games/:id/classification` request; content saves do not overwrite
 classification. The returned workspace includes the role union and resets the form.
+
+## Game Collection curation
+
+`/game/collections`, `/game/collections/new`, `/game/collections/:id` and
+`/game/collections/home-curation` are native content workspaces, separate from
+the singular `/collection` Collector Control Plane. Use backend `content.read/write`
+and `audit.read`; no new capability. Existing Code is read-only. Members are an
+unordered complete set selected through the existing games RemoteSelect, with
+code-based Adult badges for inspection only. No upload, NSFW setting or item order.
+
+Content and membership share a baseVersion. Own successful writes advance it while
+preserving other local edits; background updates cannot overwrite dirty drafts or
+silently rebase them. HTTP 409 retains the draft, presents an Alert and requires
+explicit reload. All lifecycle writes require ConfirmAction and are disabled while
+dirty. Archived content remains inspectable and only Restore is writable. Protect
+content, members and Home drafts with useUnsavedChanges. Home sends all five slots
+and its original placement revision; the fixed sixth entry is never in the payload.
+Home pickers request published + home_eligible=true and exclude duplicate selections.
+Keep all search owners IME-safe. Membership search/pagination are local (20 per page);
+retain the complete draft and always submit the full canonical member ID set.
+Keep reload in header actions; clean reload is immediate, dirty discard requires
+confirmation and reloads both drafts plus the server version. Conflicts never
+auto-reload. Success toasts say only “已保存”; Home removal is reflected by home_slot.
+Do not render persistent cache-refresh explanations or promise publication timing. Stage C public UI
+is outside this contract. See [Game Collections](../docs/game-collections.md).
 
 ## Collaboration Center
 

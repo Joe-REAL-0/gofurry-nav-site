@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-var objectKeyPattern = regexp.MustCompile(`^(nav/sites/[1-9][0-9]*/icon/[a-f0-9]{32}(\.[a-z0-9]{1,16})?|nav/hero/(desktop|mobile)/[a-f0-9]{32}\.avif|nav/patterns/[a-f0-9]{32}\.svg)$`)
+var objectKeyPattern = regexp.MustCompile(`^(nav/sites/[1-9][0-9]*/icon/[a-f0-9]{32}(\.[a-z0-9]{1,16})?|nav/hero/(desktop|mobile)/[a-f0-9]{32}\.avif|nav/patterns/[a-f0-9]{32}\.svg|game/showcase/[1-9][0-9]*/(desktop|mobile)/[a-f0-9]{32}\.avif)$`)
 
 func ValidKey(key string) bool { return key == ProbeKey || objectKeyPattern.MatchString(key) }
 
@@ -19,6 +19,19 @@ func Validate(kind, filename string, data []byte) (string, string, error) {
 		return "", "", errors.New("empty file or upload exceeds 5 MiB")
 	}
 	switch kind {
+	case "showcase-desktop", "showcase-mobile":
+		w, h, err := showcaseAVIFDimensions(data)
+		if err != nil {
+			return "", "", err
+		}
+		wantW, wantH := uint32(1600), uint32(800)
+		if kind == "showcase-mobile" {
+			wantW, wantH = 1200, 675
+		}
+		if w != wantW || h != wantH {
+			return "", "", errors.New("Showcase AVIF has incorrect dimensions")
+		}
+		return "image/avif", ".avif", nil
 	case "site-icon":
 		if len(data) > 2<<20 {
 			return "", "", errors.New("site icon exceeds 2 MiB")

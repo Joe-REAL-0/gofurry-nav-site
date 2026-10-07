@@ -7,7 +7,9 @@ describe('Resource Engine definitions', () => {
   it('keeps simple resources schema-driven and excludes Site/Game workspaces', () => {
     const keys = resourceDefinitions.map((definition) => `${definition.section}/${definition.key}`)
     expect(new Set(keys).size).toBe(keys.length)
-    expect(keys).toEqual(expect.arrayContaining(['nav/sayings', 'nav/update-notices', 'nav/site-groups', 'game/tags', 'game/comments', 'game/prizes']))
+    expect(keys).toEqual(expect.arrayContaining(['nav/sayings', 'nav/site-groups', 'game/tags', 'game/comments', 'game/prizes']))
+    expect(keys).not.toContain('nav/update-notices')
+    expect(findResource('nav', 'update-notices')).toBeUndefined()
     expect(keys).not.toContain('nav/sites')
     expect(keys).not.toContain('game/games')
   })
@@ -23,5 +25,15 @@ describe('Resource Engine definitions', () => {
     const content = comments?.columns.find((column) => column.key === 'content')
     render(createElement(Fragment, null, content?.format?.('完整的长评论内容', {})))
     expect(screen.getByTitle('完整的长评论内容')).toHaveClass('max-w-[36rem]', 'text-ellipsis')
+  })
+
+  it('normalizes prize key lines only at submission and retains both languages', () => {
+    const definition = findResource('game', 'prizes')!
+    const draft = { ...definition.defaults, title: '中文', title_en: 'English', start_time: '2026-10-01 19:00', end_time: '2026-10-07 18:00',
+      desc: '描述', desc_en: 'Description', prize: { title: '礼品卡', title_en: 'Gift card', platform: '平台', platform_en: 'Platform', keys: [' A\r', '', '  ', 'B ', ''] } }
+    const parsed = definition.schema.parse(draft)
+    expect(parsed).toEqual({ ...draft, prize: { ...draft.prize, keys: ['A', 'B'] } })
+    expect(draft.prize.keys).toEqual([' A\r', '', '  ', 'B ', ''])
+    expect(definition.schema.safeParse({ ...draft, prize: { ...draft.prize, keys: [' ', '\r', ''] } }).success).toBe(false)
   })
 })

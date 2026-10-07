@@ -134,14 +134,6 @@ func cachePrizeWinner(prizeDAO *pd.PrizeDAO) {
 			continue
 		}
 
-		// 不缓存 keys
-		var prizeDisplay struct {
-			Title    string `json:"title"`
-			Platform string `json:"platform"`
-		}
-		prizeDisplay.Title = prizeModels.Title
-		prizeDisplay.Platform = prizeModels.Platform
-
 		// 查询中奖者
 		winners, wErr := prizeDAO.GetWinners(v.ID)
 		if wErr != nil {
@@ -166,14 +158,14 @@ func cachePrizeWinner(prizeDAO *pd.PrizeDAO) {
 
 		newRecord := pm.PrizeCacheSaveModel{
 			Name:    v.Title,
+			NameEn:  v.TitleEn,
 			Desc:    v.Desc,
+			DescEn:  v.DescEn,
 			EndTime: v.EndTime,
 			Winner:  winnerCache,
 			Count:   int(count),
 		}
-		newRecord.Prize.Title = prizeDisplay.Title
-		newRecord.Prize.Platform = prizeDisplay.Platform
-		newRecord.Prize.Count = len(prizeModels.Keys)
+		newRecord.Prize = prizeModels.Display()
 
 		cacheRecords = append(cacheRecords, newRecord)
 	}

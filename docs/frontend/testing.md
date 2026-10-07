@@ -19,6 +19,117 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## Games Home optional recovery (#140-C follow-up)
+
+The shared Games Home fixture gates all three SSR reads. Slow optional slices
+remain held beyond the real 1s server budget while Home renders, then release to
+one mounted recovery. Transient/permanent 503 cases distinguish recovery success
+from silent absence; valid empty and successful SSR never recover. Browser GET
+and upstream ledgers count recoveries separately from analytics POSTs. Nuxt tests
+cover language races, abort/unmount and no retry loop. At 390/1024 shortcut DOM is
+absent; at 1440 the Sidebar owns the compact links and computed Daily Game material.
+Only the two desktop Games Home goldens are updated for this follow-up; mobile
+keeps its existing Home structure. Index/Timeline goldens are unchanged.
+
+## Game Collections (#140-C)
+
+The Games Home fixture now gates all three SSR reads before releasing any response:
+Home, Showcase, Collections Home. Exact unordered set/query/count assertions cover
+successful hydration and local NSFW storage. Collection failure/empty and a held upstream
+prove optional isolation with the real 1-second timeout, without fixed sleeps.
+Other fixtures that navigate to Home explicitly include the third read.
+
+`game-collections.ts` reuses the production Nitro/runtime fixture with date-only
+`as_of_date=2026-10-06`, local media, complete chronology phases and controlled mode/
+pagination faults and gates. Its regression owner covers SFW SSR, NSFW hydration,
+latest-mode wins, retained ready content, load-more dedupe/reset, initial HTTP
+404/503, neutral zero-visible detail, responsive geometry and western timezone.
+Unit/Nuxt tests cover presentation, shared geometry consumption, endpoint budgets,
+mode lifecycle and cleanup. Index additionally verifies a single request generation
+for IME/debounced keyword, atomic Filter Apply/Cancel, mode and pagination; retained
+ready cards, stale load-more rejection and exact discovery query propagation.
+Showcase sparse/editorial/sponsored fixtures enforce <=1px height delta at
+390/768/1024/1440 plus CTA border, clamp, action/control bounds and artwork geometry.
+Index visual changes require human review before updating its two goldens;
+Detail Timeline goldens remain unchanged.
+New Collection endpoints also disable Nitro proxy
+retries, so an injected 503 is one upstream request until the user retries.
+
+Run the normal frozen install/static/Unit/Nuxt/typecheck/build sequence, then:
+
+```sh
+pnpm exec playwright test tests/browser/regression/games-home.spec.ts tests/browser/regression/games-home-showcase.spec.ts tests/browser/regression/game-collections.spec.ts --workers=1
+```
+
+`visual/game-collections.spec.ts` owns six new Index/Timeline Light/Dark Desktop/
+Mobile captures. The desktop root Home images include populated 5+1
+shortcuts while mobile keeps its original structure; existing News/Reviews goldens are outside this update scope. Use the
+pinned runner with `--config playwright.visual.config.ts` (the Functional config
+intentionally excludes Visual). Missing/different baselines remain pending human
+acceptance; never use a blanket update. Register the new regression in the existing
+explicit Full Games inventory; no runner or CI job is added.
+
+## Games Home Showcase (#119-C, Functional first pass)
+
+`games-home-showcase.spec.ts` extends the existing production Games Home fixture,
+which defaults to an empty Showcase slice. After #140-C its SSR barrier proves all
+three Home/Showcase/Collections reads start concurrently. Every case checks their
+unordered exact SSR GET set and locale/region/mode, zero hydration GET for success
+or one recovery for each unavailable optional slice, and separate event POSTs.
+Populated cases exercise cardinality, SSR content, strict locale, navigation,
+media routing/exhaustion, responsive overflow and tracking/error isolation.
+Faults have exact asset/event diagnostics; no general browser-error exemption is
+added. Save-Data isolates image-fallback tests from unrelated provider probes.
+
+Pure presentation/key tests and real Nuxt service/component/tracking tests own
+canonical dates, destination safety, empty 204, snapshot/page index reset, UUIDv4,
+blocked storage, continuous 1000ms visibility, interruption, dedupe and cleanup.
+Follow-up regressions disable HTTP cache and assert one viewport artwork variant,
+retained DOM/request counts on revisits, gated slow-media handoff and late-response
+races, pending-frame impression exclusion, 200ms switching/reduced-motion behavior,
+matching Home material and a separate narrow-screen navigation row. Shared image
+Nuxt tests retain single-image consumers and independent responsive fallback.
+After the full install/static/Unit/Nuxt/typecheck/production build sequence, run:
+
+```sh
+pnpm exec playwright test tests/browser/regression/games-home.spec.ts tests/browser/regression/games-home-closure.spec.ts tests/browser/regression/games-home-showcase.spec.ts --workers=1
+```
+
+Related Home consumers retain their existing assertions with an empty Showcase
+response and the additional explicit read budget. The new spec is registered in
+the Full Games inventory; run its repository inventory guard. Local Functional
+passes do not imply remote Fast/Full/Visual or maintainer UI acceptance. This pass
+does not create/update accepted Visual files. Desktop/Tablet/Mobile review must
+precede separately authorized pinned Showcase golden generation.
+
+Optional `GOFURRY_SHOWCASE_REVIEW_DIR` writes temporary reviewer screenshots from
+these same Functional cases. Choose an ignored local directory; these images are
+not goldens and carry no visual approval.
+
+### Showcase circular Autoplay
+
+`game-showcase-autoplay.nuxt.test.ts` mounts the real composable with fake timers
+and controlled browser signals: exact 6000ms readiness windows, interruptions,
+pause/page lifetime, reduced motion, boundaries, batched intersections and cleanup.
+`games-home-showcase.spec.ts` uses Playwright clock after the existing fixture's
+SSR/RAF/font readiness, with native intersection and gated real asset responses.
+A controlled document visibility property/event covers hidden-tab interruption;
+it does not replace either real composable or the analytics sender. No real
+six-second sleeps, new fixture app or Visual baseline is introduced.
+
+Browser cases separately prove slow-image handoff, hover/focus/intersection/tab
+interruptions, manual reset, Pause/Play, 4-to-1 automatic wrap, both manual
+boundary wraps, silent auto changes, repeated-loop impression dedupe and decoded
+node retention. Responsive first-item artwork can be gated while displaying the
+last item to prove a wrapped slow handoff starts its own full window. Reduced
+motion completely disables autoplay while manual circular navigation remains.
+The normal Browser/Visual reduced-motion default remains unchanged. Run the
+requested frozen install/static/Unit/Nuxt/build gates, then:
+
+```sh
+pnpm exec playwright test tests/browser/regression/games-home-showcase.spec.ts --workers=1
+```
+
 ## CI tiers (#134)
 
 | Tier | Trigger | Required work |
@@ -42,7 +153,7 @@ their existing owners. `pnpm run test:browser:smoke --workers=1` runs this tier 
 after a production build; do not use the dev fixture for CI acceptance.
 
 Full uses `.github/scripts/nav-web-regression-groups.mjs` as the authoritative
-explicit inventory: Games 12 specs (~298s supplied test-time estimate), Sites + Other
+explicit inventory: Games 14 specs (including Showcase and Collections; the previous 12-spec estimate was ~298s), Sites + Other
 15 (~277s), Insights + Nav 18 (~252s). These are planning estimates, not measured
 new job durations. The inventory guard rejects unassigned/new, missing and duplicate
 specs. Workflows run the CLI-produced file list with one worker; no `--shard`,
@@ -696,7 +807,13 @@ top veil, desktop columns/mobile stack, loaded avatar/actions and Legal wrapping
 P4.3.2 starts only after that approval and must pass the accepted images without
 updating them. P4.3.1 changes no production source or style debt.
 
-### Updates runtime and appearance (P4.4.1)
+### Updates runtime and appearance (P4.4.1 — historical)
+
+Superseded by #132 P3: the Timeline, its helpers and four viewport assumptions
+are retired. Current `regression/updates.spec.ts` checks the editorial index and
+SSR article; `visual/updates-page.spec.ts` owns eight complete root captures at
+1440×900 and 390×900. See [Release Notes](../release-notes.md) and its acceptance
+ledger. The following record preserves the original migration evidence.
 
 `tests/browser/fixtures/updates.ts` serves both `regression/updates.spec.ts` and
 `visual/updates-page.spec.ts`. It reuses `startInsightsFixtureApp` for production
@@ -914,19 +1031,28 @@ exercises the real fallback. The explicit Add action additionally permits its
 known `example.com` favicon. No CDN/favicon-origin wildcard is allowed.
 
 Home is requested exactly once on SSR, with empty groups/spotlights, a non-null
-saying and deterministic Hero. Hydration cannot refetch Home. Only real Bing
-`wolf`/`noresult` suggestion requests may follow, through the production debounce
-and API chain. A response gate exposes loading and releases in failure cleanup.
+saying and deterministic Hero. Hydration cannot refetch Home. Suggestions use only
+q and schema 2 through the production debounce/API chain. Each test explicitly
+registers query responses and per-query gates; gates release in failure cleanup.
 The production exact Tianqi iframe is isolated locally; external traffic and
-unexpected failures/errors must remain zero. Bing popup navigation is allowed
-only at the exact selected-suggestion URL after the real Enter action.
+unexpected failures/errors must remain zero. Search popup navigation is allowed
+only at the exact registered destination after the real Enter action (Bing,
+Google and Xiaohongshu). Provider selection never changes destination semantics.
+
+Issue #123 extends this fixture with controlled-clock 600ms debounce, cancellation
+of gated requests, stale-response isolation, final-only Chinese IME queries and
+unconsumed IME Enter/Arrow/Escape keys. Malicious provider HTML stays literal text
+with safe highlight segments. Empty keeps its empty state; unavailable, injected
+503/429 and one exact network abort silently close the dropdown without retry.
+Expected Chromium network diagnostics are scoped to injected URLs; application
+errors/hydration mismatches still fail. No test sends public provider requests.
 
 Mobile Home reuses the existing `assertHeroHydration` strict Footer mismatch
 contract, with an observer recording the earliest real SSR Hero. Raw errors stay
 attached; only that verified initial mismatch is consumed. Every later error
 still fails, and Desktop keeps zero browser errors.
 
-Two regressions protect Search typography/theme parity, debounce/loading/empty,
+The original regressions protect Search typography/theme parity, debounce/loading/empty,
 keyboard/popup and reveal lock; plus QuickAccess slots/favicon fallback and
 Modal validation/add/delete/localStorage. The audited chip transition is
 `background, box-shadow, color` at 500ms each: existing unlayered Less overrides

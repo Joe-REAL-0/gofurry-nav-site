@@ -202,6 +202,11 @@ tasks:
       - go tool sqlc vet -f ../sqlc.yaml
       - go run ./check-sqlc
 
+  check:db-readability:
+    desc: Check Chinese comments in final schema snapshots (no DB or writes)
+    cmds:
+      - go -C tools test ./db-baseline -run TestExpectedFinalReadabilityPolicy -count=1
+
   generate:sqlc:
     desc: Explicitly regenerate committed service-local SQL code
     dir: tools
@@ -216,6 +221,7 @@ tasks:
       - task: typecheck
       - task: check:policy
       - task: check:sqlc
+      - task: check:db-readability
 
   verify:
     desc: Install, build frontends, check, test and build Go locally

@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countPublicUpdateNotices = `-- name: CountPublicUpdateNotices :one
+SELECT count(*) FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= $1::timestamp
+`
+
+func (q *Queries) CountPublicUpdateNotices(ctx context.Context, asOf pgtype.Timestamp) (int64, error) {
+	row := q.db.QueryRow(ctx, countPublicUpdateNotices, asOf)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const foundationPing = `-- name: FoundationPing :one
 SELECT 1::bigint AS value
 `
@@ -20,6 +33,78 @@ func (q *Queries) FoundationPing(ctx context.Context) (int64, error) {
 	var value int64
 	err := row.Scan(&value)
 	return value, err
+}
+
+const getNextPublicUpdateNotice = `-- name: GetNextPublicUpdateNotice :one
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= $1::timestamp
+  AND (published_at, id) > ($2::timestamp, $3::bigint)
+ORDER BY published_at ASC, id ASC LIMIT 1
+`
+
+type GetNextPublicUpdateNoticeParams struct {
+	AsOf        pgtype.Timestamp `json:"as_of"`
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+	ID          int64            `json:"id"`
+}
+
+func (q *Queries) GetNextPublicUpdateNotice(ctx context.Context, arg GetNextPublicUpdateNoticeParams) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, getNextPublicUpdateNotice, arg.AsOf, arg.PublishedAt, arg.ID)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
+	)
+	return i, err
+}
+
+const getPreviousPublicUpdateNotice = `-- name: GetPreviousPublicUpdateNotice :one
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= $1::timestamp
+  AND (published_at, id) < ($2::timestamp, $3::bigint)
+ORDER BY published_at DESC, id DESC LIMIT 1
+`
+
+type GetPreviousPublicUpdateNoticeParams struct {
+	AsOf        pgtype.Timestamp `json:"as_of"`
+	PublishedAt pgtype.Timestamp `json:"published_at"`
+	ID          int64            `json:"id"`
+}
+
+func (q *Queries) GetPreviousPublicUpdateNotice(ctx context.Context, arg GetPreviousPublicUpdateNoticeParams) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, getPreviousPublicUpdateNotice, arg.AsOf, arg.PublishedAt, arg.ID)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
+	)
+	return i, err
 }
 
 const getPublicSiteByID = `-- name: GetPublicSiteByID :one
@@ -64,6 +149,39 @@ func (q *Queries) GetPublicSiteByID(ctx context.Context, siteID int64) (GetPubli
 		&i.Icon,
 		&i.Deleted,
 		&i.ViewCount,
+	)
+	return i, err
+}
+
+const getPublicUpdateNotice = `-- name: GetPublicUpdateNotice :one
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice
+WHERE id = $1 AND deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= $2::timestamp
+`
+
+type GetPublicUpdateNoticeParams struct {
+	ID   int64            `json:"id"`
+	AsOf pgtype.Timestamp `json:"as_of"`
+}
+
+func (q *Queries) GetPublicUpdateNotice(ctx context.Context, arg GetPublicUpdateNoticeParams) (GfnNavUpdateNotice, error) {
+	row := q.db.QueryRow(ctx, getPublicUpdateNotice, arg.ID, arg.AsOf)
+	var i GfnNavUpdateNotice
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.TitleEn,
+		&i.Body,
+		&i.BodyEn,
+		&i.PublishedAt,
+		&i.CreateTime,
+		&i.UpdateTime,
+		&i.Deleted,
+		&i.Version,
+		&i.CommitSha,
+		&i.Summary,
+		&i.SummaryEn,
+		&i.PublicationState,
 	)
 	return i, err
 }
@@ -347,16 +465,20 @@ func (q *Queries) ListPublicSites(ctx context.Context) ([]ListPublicSitesRow, er
 }
 
 const listPublicUpdateNotices = `-- name: ListPublicUpdateNotices :many
-SELECT id, title, title_en, body, body_en, published_at,
-       create_time, update_time, deleted
-FROM gfn_nav_update_notice
-WHERE deleted IS NOT TRUE
-ORDER BY published_at DESC, id DESC
-LIMIT $1
+SELECT id, title, title_en, body, body_en, published_at, create_time, update_time, deleted, version, commit_sha, summary, summary_en, publication_state FROM gfn_nav_update_notice
+WHERE deleted IS NOT TRUE AND publication_state = 'published'
+  AND published_at IS NOT NULL AND published_at <= $1::timestamp
+ORDER BY published_at DESC, id DESC LIMIT $3 OFFSET $2::integer
 `
 
-func (q *Queries) ListPublicUpdateNotices(ctx context.Context, rowLimit int32) ([]GfnNavUpdateNotice, error) {
-	rows, err := q.db.Query(ctx, listPublicUpdateNotices, rowLimit)
+type ListPublicUpdateNoticesParams struct {
+	AsOf      pgtype.Timestamp `json:"as_of"`
+	RowOffset int32            `json:"row_offset"`
+	RowLimit  int32            `json:"row_limit"`
+}
+
+func (q *Queries) ListPublicUpdateNotices(ctx context.Context, arg ListPublicUpdateNoticesParams) ([]GfnNavUpdateNotice, error) {
+	rows, err := q.db.Query(ctx, listPublicUpdateNotices, arg.AsOf, arg.RowOffset, arg.RowLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -374,6 +496,11 @@ func (q *Queries) ListPublicUpdateNotices(ctx context.Context, rowLimit int32) (
 			&i.CreateTime,
 			&i.UpdateTime,
 			&i.Deleted,
+			&i.Version,
+			&i.CommitSha,
+			&i.Summary,
+			&i.SummaryEn,
+			&i.PublicationState,
 		); err != nil {
 			return nil, err
 		}
@@ -532,6 +659,18 @@ func (q *Queries) ListTargetObservations(ctx context.Context, arg ListTargetObse
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateNoticeClock = `-- name: UpdateNoticeClock :one
+SELECT date_trunc('second', CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::timestamp AS as_of
+`
+
+// Existing China-site wall timestamps; do not depend on the DB session timezone.
+func (q *Queries) UpdateNoticeClock(ctx context.Context) (pgtype.Timestamp, error) {
+	row := q.db.QueryRow(ctx, updateNoticeClock)
+	var as_of pgtype.Timestamp
+	err := row.Scan(&as_of)
+	return as_of, err
 }
 
 const updateSiteViewCount = `-- name: UpdateSiteViewCount :exec

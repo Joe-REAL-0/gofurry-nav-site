@@ -85,7 +85,7 @@
 | `GET /api/v1/nav/page/site/list` | 导航首页站点列表、sitemap | 首页首屏已迁移到 v2 home；sitemap 仍需迁移到 v2 sites index | 部分完成 |
 | `GET /api/v1/nav/page/group/list` | 导航首页分组 | 首页首屏已迁移到 v2 home | 已完成 |
 | `GET /api/v1/nav/page/ping/list` | 导航首页站点延迟、定时刷新 | 首页首屏和定时刷新已迁移到 v2 home/home-ping | 已完成 |
-| `GET /api/v1/nav/page/search/:engine` | 搜索建议代理 | 前端已迁移到 `/api/v2/nav/search/suggestions`，v1 暂保留兼容 | 已迁移 |
+| `GET /api/v1/nav/page/search/:engine` | 搜索建议代理 | 旧路由已不注册；#123 删除遗留 Suggest controller/reader/service | 已迁移 |
 | `GET /api/v1/nav/page/header/getSaying` | 首页随机金句 | 首页首屏已合并进 v2 home；客户端 fallback 仍可后续清理 | 部分完成 |
 | `GET /api/v1/nav/page/header/image/url` | 首页随机背景图 | 首页首屏已合并进 v2 home；NavHeader fallback 仍可后续清理 | 部分完成 |
 | `GET /api/v1/nav/site/changelog` | 更新公告列表 | 已由 `/api/v2/nav/updates` 和 `gfn_nav_update_notice` 替代 | 已迁移 |
@@ -259,40 +259,52 @@ GET /api/v2/nav/updates?lang=en
 已新增：
 
 ```txt
-GET /api/v2/nav/search/suggestions?engine=bing&q=keyword
+GET /api/v2/nav/search/suggestions?q=keyword
 ```
 
-### 后端任务
+### 当前合同（#123 收敛）
 
-- [x] 定义 engine 白名单：`baidu`、`bing`、`google`、`bilibili`、`duckduckgo`。
-- [x] 复用现有第三方解析逻辑。
-- [x] 为 `engine + normalized query` 加 Redis 短 TTL 缓存，当前 TTL 为 90 秒。
-- [x] 使用 `singleflight` 合并相同 engine/query 的并发请求。
-- [x] 第三方失败时返回空 suggestions 或 error state，不暴露上游细节给前端。
-- [x] 保留现有 timeout、body limit、query length limit。
-- [x] 增加按可信客户端 IP 的 v2 suggestions 专属限流：30 分钟最多 30 次，超限返回 HTTP 429 和 `Retry-After`。
-- [x] 增加缓存命中、查询归一化、非法 engine、v2 envelope 和限流测试。
+最初阶段 4 使用五个 provider、engine/query 缓存和 30/30m 限流；以下为
+#123 替代后的当前合同，不代表初次迁移时的实现。
 
-### 前端任务
+- Search domain 独立拥有 `duckduckgoProvider.go`，最小接口为
+  `Fetch(ctx, query) ([]string, error)`。固定 HTTPS DuckDuckGo endpoint；
+  128-rune query、3 秒 timeout、64 KiB body 上限、固定 UA、trim/dedupe。
+- 每个应用 Search service 复用一个 HTTP client 和克隆的 DefaultTransport，
+  保留连接/TLS 复用。`proxy.url` 为空才直连；非空必须走代理，非法配置直接
+  unavailable，不读取环境代理、不回退直连。错误日志不包含代理地址/凭据。
+- Public schema_version=2；仅 `q` 是查询合同，额外 `engine` 被忽略，响应无 engine。
+  `ready` 表示有建议，`empty` 表示正常空结果，`unavailable` 表示上游失败。
+- query-only Redis key 为 `nav:v2:search:suggestions:v2:{query_hash}`；TTL 10 分钟。
+  ready/empty 可缓存；unavailable 不写正常缓存、无 stale fallback。singleflight
+  合并同 query 并发；单个等待者取消不取消共享的有界上游请求。
+- 可信客户端 IP 的 Redis 专属限流为 300/10m；超限 HTTP 429 + `Retry-After`。
+- 删除旧 navPage 中 Baidu/Bing/Google/Bilibili/DDG Suggest 方法、解析/HTTP helper，
+  未注册 Suggest controller 和 reader interface 方法，以及对应旧测试。
+  其它 Nav V1 endpoint 和 `legacy/**` 不变。
 
-- [x] `SearchBox.vue` 改用 `services/nav.ts`。
-- [x] 请求使用 `AbortController`，输入变化时取消旧请求。
-- [x] 防止旧响应晚于新响应返回后覆盖 suggestions。
-- [x] 删除 `utils/api/nav.ts` 中搜索建议相关旧封装。
-- [x] 防抖时间从 300ms 增加到 600ms，降低高频输入触发量。
+### 前端合同
 
-### 完成标准
+- `getSearchSuggestion(keyword, signal)` 只发 q，与最终搜索目的地解耦。
+  Search category 下所有现有平台共享同一建议 API，原 doSearch 跳转逻辑不变。
+- 600ms debounce、AbortController 和响应序号防止旧结果覆盖；不自动重试失败。
+- IME composition 只更新本地输入；结束后最终文本仅启动一次 debounce。
+  composing/native isComposing 时不消费 Enter/ArrowUp/ArrowDown/Escape。
+- ready 正常展示，empty 展示原空状态；unavailable/network/429 静默关闭建议。
+- 建议按文本插值和高亮分段渲染，不使用 v-html。
 
-- [x] 搜索框不再走旧 axios nav 封装。
-- [x] 后端同一 engine/query 的并发请求会被合并。
-- [x] 第三方搜索服务异常时前端可平稳显示空建议。
-- [x] 单 IP 30 分钟最多请求 30 次 v2 suggestions。
-- [x] 前端输入变化不会让旧响应覆盖新 suggestions。
+### 验证入口
 
-验证记录：
+- Backend：Search provider 本地 TLS/CONNECT proxy fixture、decode/timeout/body bound、
+  invalid proxy fail-closed、cache/singleflight、schema/q-only/ignored engine 和限流测试。
+- Nav Web：现有 `nav-home-header.spec.ts` 扩展 controlled clock、IME、安全文本、
+  stale/cancel、失败隔离以及 Bing/Google/其它目的地。原 Quick Sites/Visual 合同保留。
+- 真实代理验收仅用 ignored local server.yaml 手工运行；不进入 CI。
 
-- `gofurry-nav-backend`：`go test ./apps/nav/... ./routers/...` 通过。
-- `gofurry-nav-web`：`npm run typecheck` 通过。
+2026-10-06 本地验收：当前二进制通过 `serve --config <ignored-local-config>`
+启动，沿用非空 proxy.url；`furry`、`兽人` 均返回 schema 2、ready、8 条建议，
+无 engine，首次 miss、第二次 hit。日志无 Provider/代理传输错误；未改为直连。
+本地验收进程结束后已停止，不代表生产部署已完成。
 
 ## 阶段 5：前端请求封装统一
 
@@ -374,7 +386,7 @@ GET /api/v2/nav/home/ping
 GET /api/v2/nav/home/saying
 GET /api/v2/nav/home/backgrounds
 GET /api/v2/nav/sites/index?lang=zh
-GET /api/v2/nav/search/suggestions?engine=&q=
+GET /api/v2/nav/search/suggestions?q=
 GET /api/v2/nav/updates?lang=zh
 POST /api/v2/nav/stats/page-view?page=nav_home
 ```

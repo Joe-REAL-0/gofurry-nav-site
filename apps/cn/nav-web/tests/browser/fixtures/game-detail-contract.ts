@@ -284,7 +284,7 @@ export async function assertDetailAppearance(scene: DetailScene) {
   await expect(page.locator('.game-detail-cover')).toHaveCSS('box-shadow', theme === 'dark' ? 'none' : 'rgba(91, 62, 28, 0.03) 0px 4px 12px 0px')
   await expect(page.locator('.game-detail-tag').first()).toHaveCSS('border-radius', '8.8px')
   await expect(page.locator('.game-detail-tag-tip').first()).toHaveCSS('background-color', theme === 'dark' ? 'rgba(2, 6, 23, 0.96)' : 'rgba(31, 41, 55, 0.94)')
-  await expect(page.locator('.game-detail-action--primary')).toHaveCSS('font-weight', '750')
+  await expect(page.locator('.game-detail-action--primary')).toHaveCSS('font-weight', '600')
   await expect(page.locator('.link-tag').first()).toHaveCSS('border-radius', '9.92px')
   await expect(page.locator('.game-detail-title')).toHaveCSS('color', theme === 'dark' ? 'rgba(241, 245, 249, 0.88)' : 'rgba(71, 42, 20, 0.92)')
   const card = page.locator('.game-detail-content-card, .game-detail-comment, .game-detail-news-item').first()
@@ -295,7 +295,7 @@ export async function assertDetailAppearance(scene: DetailScene) {
   }
   for (const [selector, size, height, weight] of [
     ['.game-detail-load-more', '14px', '20px', '700'], ['.game-detail-news-title', '18px', '28.0001px', '700'],
-    ['.game-detail-info-label', '14px', '20px', '760'], ['.game-detail-comment-body', '14px', '20px', '400'],
+    ['.game-detail-info-label', '14px', '20px', '600'], ['.game-detail-comment-body', '14px', '20px', '400'],
     ['.game-detail-intro-card', '14px', '24.08px', '400'],
   ]) {
     const node = page.locator(selector!).first()

@@ -30,6 +30,40 @@ function renderResource(section: 'nav' | 'game', resource: string) {
   )
 }
 
+describe('Prize editor', () => {
+  beforeEach(() => { vi.clearAllMocks(); authTestState.canWrite = true })
+
+  it('preserves Enter, blank lines and pasted keys until saving bilingual content', async () => {
+    const prize = { id: 81, title: '测试抽奖', title_en: 'Lottery', desc: '描述', desc_en: 'Description', key: 'join', status: true,
+      start_time: '2026-10-01 19:00:00', end_time: '2026-10-07 18:00:00',
+      prize: { title: '礼品卡', title_en: 'Gift card', platform: '平台', platform_en: 'Platform', keys: ['OLD-A', 'OLD-B'] } }
+    vi.mocked(listJSON).mockResolvedValue({ list: [prize], total: 1 })
+    vi.mocked(getJSON).mockResolvedValue(prize)
+    vi.mocked(sendJSON).mockResolvedValue(prize)
+    renderResource('game', 'prizes')
+    await userEvent.click(await screen.findByText('测试抽奖'))
+    const keys = await screen.findByLabelText(/^奖品 Key/)
+    expect(keys).toHaveValue('OLD-A\nOLD-B')
+    await userEvent.clear(keys)
+    await userEvent.type(keys, 'KEY-A{Enter}')
+    expect(keys).toHaveValue('KEY-A\n')
+    await userEvent.type(keys, '{Enter}KEY-B{Enter}')
+    expect(keys).toHaveValue('KEY-A\n\nKEY-B\n')
+    await userEvent.paste(' KEY-C\r\nKEY-D\r\n')
+    expect(keys).toHaveValue('KEY-A\n\nKEY-B\n KEY-C\nKEY-D\n')
+    await userEvent.clear(screen.getByLabelText('英文标题'))
+    await userEvent.type(screen.getByLabelText('英文标题'), 'Updated Lottery')
+    expect(screen.getByLabelText('英文描述')).toHaveValue('Description')
+    expect(screen.getByLabelText('奖品英文标题')).toHaveValue('Gift card')
+    expect(screen.getByLabelText('英文平台')).toHaveValue('Platform')
+    await userEvent.click(screen.getByRole('button', { name: '保存修改' }))
+    await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/prizes/81', 'PUT', expect.objectContaining({
+      title: '测试抽奖', title_en: 'Updated Lottery', desc_en: 'Description',
+      prize: { ...prize.prize, keys: ['KEY-A', 'KEY-B', 'KEY-C', 'KEY-D'] },
+    })))
+  })
+})
+
 describe('Resource Engine remote options', () => {
   beforeEach(() => { vi.clearAllMocks(); authTestState.canWrite = false; vi.mocked(listJSON).mockResolvedValue({ list: [], total: 0 }) })
 
@@ -66,7 +100,6 @@ describe('Resource Engine route definitions', () => {
 
   it.each([
     ['nav', 'site-groups', '网站分组'],
-    ['nav', 'update-notices', '更新公告'],
     ['nav', 'sayings', '金句'],
     ['game', 'tags', '标签'],
     ['game', 'comments', '评论'],

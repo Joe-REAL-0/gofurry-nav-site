@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, createEvent, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -10,6 +10,95 @@ vi.mock('../../lib/api', () => ({ listJSON: vi.fn() }))
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.resetAllMocks() })
 
 describe('game tag searches', () => {
+  it.each([0, 300])('keeps remote IME drafts local with debounceMs=%i and queries the final text once', async (debounceMs) => {
+    vi.mocked(listJSON).mockResolvedValue({ total: 1, list: [{ id: '1', label: '冒险' }] })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const onChange = vi.fn()
+    render(<QueryClientProvider client={client}><RemoteSelect endpoint="/api/v1/options/tags" pageSize={10} debounceMs={debounceMs} value={{ id: '99', label: '已选标签' }} onChange={onChange} /></QueryClientProvider>)
+    const input = screen.getByRole('combobox')
+    act(() => input.focus())
+    await screen.findByRole('option', { name: '冒险' })
+    vi.useFakeTimers()
+    vi.mocked(listJSON).mockClear()
+    fireEvent.compositionStart(input)
+    const active = input.getAttribute('aria-activedescendant')
+    for (const value of ['mao', '冒xian']) {
+      fireEvent.change(input, { target: { value } })
+      await act(async () => { await vi.advanceTimersByTimeAsync(500) })
+      expect(input).toHaveValue(value)
+      expect(listJSON).not.toHaveBeenCalled()
+      expect(input).toHaveAttribute('aria-activedescendant', active)
+    }
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.compositionEnd(input, { target: { value: '冒险' } })
+    fireEvent.change(input, { target: { value: '冒险' } })
+    if (debounceMs) {
+      await act(async () => { await vi.advanceTimersByTimeAsync(299) })
+      expect(listJSON).not.toHaveBeenCalled()
+    }
+    await act(async () => { await vi.advanceTimersByTimeAsync(debounceMs ? 1 : 0) })
+    expect(listJSON).toHaveBeenCalledExactlyOnceWith('/api/v1/options/tags', 1, 10, '冒险')
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(input).toHaveValue('已选标签')
+    expect(onChange).not.toHaveBeenCalled()
+    client.clear()
+  })
+
+  it.each(['ref', 'native'])('does not consume IME confirmation/navigation keys (%s), then restores Enter selection', async (guard) => {
+    const option = { id: '1', label: '冒险' }
+    vi.mocked(listJSON).mockResolvedValue({ total: 2, list: [option, { id: '2', label: '解谜' }] })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const onChange = vi.fn()
+    render(<QueryClientProvider client={client}><RemoteSelect endpoint="/api/v1/options/tags" value={null} onChange={onChange} /></QueryClientProvider>)
+    const input = screen.getByRole('combobox')
+    act(() => input.focus())
+    await screen.findByRole('option', { name: '冒险' })
+    const active = input.getAttribute('aria-activedescendant')
+    if (guard === 'ref') {
+      fireEvent.compositionStart(input)
+      fireEvent.change(input, { target: { value: 'maoxian' } })
+    }
+    for (const key of ['ArrowDown', 'ArrowUp', 'Enter', 'Escape']) {
+      const event = createEvent.keyDown(input, { key, isComposing: guard === 'native', cancelable: true })
+      fireEvent(input, event)
+      expect(event.defaultPrevented).toBe(false)
+      expect(input).toHaveAttribute('aria-activedescendant', active)
+      expect(input).toHaveAttribute('aria-expanded', 'true')
+    }
+    expect(onChange).not.toHaveBeenCalled()
+    if (guard === 'ref') fireEvent.compositionEnd(input, { target: { value: '冒险' } })
+    await screen.findByRole('option', { name: '冒险' })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(option)
+    client.clear()
+  })
+
+  it('preserves an IME draft through blur without committing or selecting it', async () => {
+    vi.mocked(listJSON).mockResolvedValue({ total: 1, list: [{ id: '1', label: '冒险' }] })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const onChange = vi.fn()
+    render(<QueryClientProvider client={client}><RemoteSelect endpoint="/api/v1/options/tags" debounceMs={300} value={{ id: '99', label: '已选标签' }} onChange={onChange} /></QueryClientProvider>)
+    const input = screen.getByRole('combobox')
+    act(() => input.focus())
+    await screen.findByRole('option', { name: '冒险' })
+    vi.useFakeTimers()
+    vi.mocked(listJSON).mockClear()
+    fireEvent.compositionStart(input)
+    fireEvent.change(input, { target: { value: 'maoxian' } })
+    act(() => input.blur())
+    await act(async () => { await vi.advanceTimersByTimeAsync(500) })
+    expect(input).toHaveValue('maoxian')
+    expect(listJSON).not.toHaveBeenCalled()
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.compositionEnd(input, { target: { value: '冒险' } })
+    await act(async () => { await vi.advanceTimersByTimeAsync(300) })
+    expect(listJSON).toHaveBeenCalledExactlyOnceWith('/api/v1/options/tags', 1, 50, '冒险')
+    expect(input).toHaveValue('已选标签')
+    expect(input).toHaveAttribute('aria-expanded', 'false')
+    expect(onChange).not.toHaveBeenCalled()
+    client.clear()
+  })
+
   it('requests ten results and debounces remote searches while retaining the selection', async () => {
     vi.mocked(listJSON).mockResolvedValue({ total: 1, list: [{ id: '1', label: '冒险' }] })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })

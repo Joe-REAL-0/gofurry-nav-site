@@ -36,6 +36,7 @@ export type FeaturedSite = { id: number; site_id: number; weight: number }
 export type SiteWorkspace = { site: Site; targets: CollectorTarget[]; groups: SiteGroupRelation[]; featured: FeaturedSite | null }
 
 export type Game = {
+  showcase_eligible: boolean
   id: number; name: string; name_en: string; info: string; info_en: string
   create_time: string; update_time: string; resources: KeyValue[]; groups: KeyValue[]
   developers: string[]; publishers: string[]; appid: number; header: string; links: KeyValue[]

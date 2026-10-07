@@ -134,6 +134,7 @@ func TestPostgresNavBackendPersistenceSemantics(t *testing.T) {
 		t.Fatalf("target observation history: %+v err=%v", history, gfErr)
 	}
 
+	testReleaseNoteVisibilityAndNeighbors(t, ctx, pool)
 	updates := updatesservice.New(queries).GetUpdates("en")
 	if updates.State != "ready" || len(updates.Items) != 1 || updates.Items[0].Title != "English notice" {
 		t.Fatalf("public updates: %+v", updates)
@@ -440,10 +441,10 @@ INSERT INTO gfn_featured_site (id,site_id,weight,create_time,update_time) VALUES
 INSERT INTO gfn_saying (id,author,saying,create_time,update_time,language) VALUES
     (1,NULL,'你好',$1,$1,'zh'), (2,NULL,'Hello',$1,$1,'en');
 INSERT INTO gfn_nav_update_notice
-    (id,title,title_en,body,body_en,published_at,create_time,update_time,deleted)
+    (id,title,title_en,body,body_en,published_at,create_time,update_time,deleted,publication_state)
 VALUES
-    (1,'公告','English notice','正文','English body',$1,$1,$1,false),
-    (2,'隐藏','Hidden','隐藏','Hidden',$1,$1,$1,true);
+    (1,'公告','English notice','正文','English body',$1,$1,$1,false,'published'),
+    (2,'隐藏','Hidden','隐藏','Hidden',$1,$1,$1,true,'published');
 INSERT INTO gfn_collector_observation
     (id,site_id,target,protocol,status,observed_at,duration_ms,error_code,error_message,payload,schema_version,create_time)
 VALUES

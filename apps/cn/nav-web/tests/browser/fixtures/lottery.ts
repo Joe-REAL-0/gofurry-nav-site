@@ -10,7 +10,7 @@ type Submission = { id: number, name: string, email: string, key: string }
 type Gate = { promise: Promise<void>, received: boolean, completed: boolean, request?: Request,
   release(): void, waitReceived(): Promise<void>, waitCompleted(): Promise<void> }
 type PostGate = Gate & { reply: Exclude<Reply, 'empty'>, body?: Submission }
-type State = { replies: Reply[], reads: string[], unexpected: string[], gates: Gate[], elapsed: boolean }
+type State = { replies: Reply[], reads: string[], unexpected: string[], gates: Gate[], elapsed: boolean, translations: boolean }
 type App = Awaited<ReturnType<typeof startInsightsFixtureApp>>
 type Worker = { app: App, current: State | null }
 const readPath = '/api/v2/game/prizes', postPath = `${readPath}/participation`
@@ -19,9 +19,9 @@ export const lotteryNow = '2026-09-18T12:40:00+08:00'
 export const lotteryRejection = '本地拒绝：抽奖密钥错误'
 export const lotteryDraft: Submission = { id: 7301, name: 'Audit Member', email: 'audit@example.test', key: 'fixture-key' }
 
-function payload(elapsed = false) {
+function payload(elapsed = false, lang = 'zh', translations = false) {
   const prize = { title: 'Fixture Game Bundle', platform: 'Steam', count: 2 }
-  return { active: [
+  const result = { active: [
     { lottery: { id: '7301', title: '社区游戏奖池', desc: '这是用于契约验收的固定奖池，报名后通过邮件完成激活。',
       start_time: '2026-09-17 12:40:00', end_time: '2026-09-19 12:40:00', prize }, count: 12,
     member: Array.from({ length: 12 }, (_, index) => ({ name: `Member ${index + 1}`, email: `m${index + 1}***@example.test` })) },
@@ -33,6 +33,16 @@ function payload(elapsed = false) {
       winner: [{ name: 'Winner One', email: 'one***@example.test' }, { name: 'Winner Two', email: 'two***@example.test' }] },
     { name: '社区体验活动', desc: '历史活动的无中奖记录状态。', end_time: '2026-09-01 18:00:00', prize: { ...prize, count: 1 }, count: 3, winner: [] },
   ] } }
+  if (translations && lang === 'en') {
+    Object.assign(result.active[0]!.lottery, { title: 'Community Giveaway', desc: 'Join the community giveaway.' })
+    Object.assign(result.active[0]!.lottery.prize, { title: 'Gift Card', platform: 'Steam Store' })
+    Object.assign(result.history.prize[0]!, { name: 'Autumn Giveaway', desc: 'Previous community giveaway.' })
+    // The second record intentionally has no translation: each missing field falls back.
+  }
+  return result
+}
+function validRead(url: URL) {
+  return url.pathname === readPath && url.searchParams.size === 1 && ['zh', 'en'].includes(url.searchParams.get('lang') ?? '')
 }
 function makeGate(): Gate {
   let release!: () => void
@@ -43,7 +53,7 @@ function makeGate(): Gate {
   }
   return gate
 }
-type OpenOptions = { theme?: Theme, locale?: Locale, width?: number, ready?: boolean, activation?: 'success' | 'fail', message?: string, elapsed?: boolean }
+type OpenOptions = { theme?: Theme, locale?: Locale, width?: number, ready?: boolean, activation?: 'success' | 'fail', message?: string, elapsed?: boolean, translations?: boolean }
 export type LotteryScene = {
   page: Page, root: Locator, modal: Locator, dialog: Locator, inputs: Locator, submit: Locator,
   theme: Theme, locale: Locale, paused: boolean, rendered: string, reads: string[], submissions: Submission[],
@@ -62,20 +72,20 @@ export const test = base.extend<{ lottery: LotteryScene }, { lotteryApp: Worker 
       const state = worker.current
       if (!state) throw new Error('Lottery request outside its test scenario')
       state.reads.push(url.pathname)
-      if (url.pathname !== readPath || url.search) { state.unexpected.push(`upstream ${url.href}`); return { status: 500 } }
+      if (!validRead(url)) { state.unexpected.push(`upstream ${url.href}`); return { status: 500 } }
       const reply = state.replies.shift() ?? 'success'
       const gate = state.gates.find(item => !item.received)
       if (gate) { gate.received = true; await gate.promise; gate.completed = true }
       if (reply === 'unavailable') return { status: 503 }
       if (reply === 'rejected') return { status: 200 }
-      return { data: reply === 'empty' ? { active: [], history: { prize_count: 0, prize: [] } } : payload(state.elapsed) }
+      return { data: reply === 'empty' ? { active: [], history: { prize_count: 0, prize: [] } } : payload(state.elapsed, url.searchParams.get('lang') ?? 'zh', state.translations) }
     }, { TZ: 'Asia/Shanghai' })
     try { await use(worker) } finally { await worker.app.close() }
   }, { scope: 'worker' }],
   baseURL: async ({ lotteryApp }, use) => { await use(lotteryApp.app.base) },
   lottery: async ({ page, context, lotteryApp }, use, testInfo) => {
     expect(lotteryApp.current).toBeNull()
-    const state: State = { replies: [], reads: [], unexpected: [], gates: [], elapsed: false }
+    const state: State = { replies: [], reads: [], unexpected: [], gates: [], elapsed: false, translations: false }
     lotteryApp.current = state
     const { app } = lotteryApp, upstreamStart = app.requests.length
     const expectedURLs = new Set<string>(), errors = captureBrowserErrors(page, expectedURLs)
@@ -90,7 +100,7 @@ export const test = base.extend<{ lottery: LotteryScene }, { lotteryApp: Worker 
     context.on('request', request => {
       const url = new URL(request.url())
       if (url.origin !== app.base || !url.pathname.startsWith('/api/')) return
-      if (url.pathname === readPath && request.method() === 'GET' && !url.search) {
+      if (validRead(url) && request.method() === 'GET') {
         gets.push(request)
         const gate = state.gates.find(item => !item.request)
         if (gate) gate.request = request
@@ -129,7 +139,7 @@ export const test = base.extend<{ lottery: LotteryScene }, { lotteryApp: Worker 
         tasks.add(task); try { await task } finally { tasks.delete(task) }
         return
       }
-      if (url.pathname.startsWith('/api/') && (url.pathname !== readPath || request.method() !== 'GET' || url.search)) {
+      if (url.pathname.startsWith('/api/') && (!validRead(url) || request.method() !== 'GET')) {
         state.unexpected.push(`blocked ${request.method()} ${url.href}`); return route.abort('blockedbyclient')
       }
       return route.continue()
@@ -142,7 +152,7 @@ export const test = base.extend<{ lottery: LotteryScene }, { lotteryApp: Worker 
         expect(state.reads).toHaveLength(0)
         state.replies = replies.flatMap(reply => reply === 'unavailable' ? Array<Reply>(4).fill(reply) : [reply])
         read503Budget = replies.filter(reply => reply === 'unavailable').length * 2
-        if (read503Budget) expectedURLs.add(`${app.base}${readPath}`)
+        if (read503Budget) for (const lang of ['zh', 'en']) expectedURLs.add(`${app.base}${readPath}?lang=${lang}`)
       },
       holdRead() { const gate = makeGate(); state.gates.push(gate); return gate },
       queueSubmit(reply = 'success') {
@@ -151,9 +161,9 @@ export const test = base.extend<{ lottery: LotteryScene }, { lotteryApp: Worker 
         if (reply === 'unavailable') expectedURLs.add(`${app.base}${postPath}`)
         return gate
       },
-      async open({ theme = 'light', locale = 'zh', width = 1440, ready = true, activation, message, elapsed = false } = {}) {
+      async open({ theme = 'light', locale = 'zh', width = 1440, ready = true, activation, message, elapsed = false, translations = false } = {}) {
         expect(opened).toBe(false); opened = true
-        Object.assign(scene, { theme, locale, paused: Boolean(activation) }); state.elapsed = elapsed
+        Object.assign(scene, { theme, locale, paused: Boolean(activation) }); state.elapsed = elapsed; state.translations = translations
         await page.setViewportSize({ width, height: width < 768 ? 844 : 900 })
         if (activation) { await page.clock.install({ time: new Date(lotteryNow) }); await page.clock.pauseAt(new Date(lotteryNow)) }
         else await page.clock.setFixedTime(new Date(lotteryNow))

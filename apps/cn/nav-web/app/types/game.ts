@@ -312,6 +312,7 @@ export interface CommentReq {
 
 // 抽奖
 
+// Business text is localized by Game Backend's lang query, with per-field zh fallback.
 export interface LotteryResp {
     history: LotteryHistoryModel
     active: LotteryActiveModel[]
@@ -443,6 +444,64 @@ export interface GameHomeApiResponse {
     latest_news: GameHomeApiNewsRecord
     latest_reviews: AnonymousReviewModel[]
 }
+
+// Independent optional Home slice. IDs and signed tokens stay opaque strings.
+export interface GameShowcaseAction {
+    type: 'game' | 'project' | 'product' | 'website'
+    game_id?: string
+    target?: string
+}
+
+export interface GameShowcaseSecondaryAction {
+    type: 'steam' | 'kickstarter' | 'website' | 'other'
+    target?: string
+}
+
+export interface GameShowcaseArtwork {
+    kind: 'managed' | 'steam'
+    url?: string
+    desktop_object_key?: string
+    mobile_object_key?: string
+    focal_x?: number
+    focal_y?: number
+}
+
+export type GameShowcaseRelease = Pick<GameV2Release, 'availability' | 'precision' | 'exact_date'
+    | 'year' | 'month' | 'quarter' | 'window_start' | 'window_end'>
+
+export interface GameShowcaseItem {
+    key: string
+    source: 'managed' | 'automatic'
+    reason: 'editorial' | 'sponsored' | 'upcoming' | 'new_release' | 'trending'
+    content_type: 'game' | 'crowdfunding' | 'tabletop' | 'merchandise' | 'other'
+    sponsored: boolean
+    campaign_id?: string
+    game_id?: string
+    title: string
+    summary: string
+    tags: string[]
+    editorial_note?: string
+    artwork: GameShowcaseArtwork
+    primary_action: GameShowcaseAction
+    secondary_action?: GameShowcaseSecondaryAction
+    release?: GameShowcaseRelease
+    position: number
+    tracking_token: string
+}
+
+export interface GameShowcaseSnapshot {
+    schema_version: 1
+    snapshot_id: string
+    generated_at: string
+    valid_until: string
+    items: GameShowcaseItem[]
+}
+
+export type GameShowcaseClickSource = 'artwork' | 'title' | 'primary' | 'secondary'
+export type GameShowcaseEvent = {
+    tracking_token: string
+    session_id: string
+} & ({ event: 'impression'; source?: never } | { event: 'click'; source: GameShowcaseClickSource })
 
 export interface GameViewTouchResponse {
     game_id: number
@@ -629,4 +688,39 @@ export interface GameTagCategory {
     code: string
     name: string
     tags: GameTagRecord[]
+}
+// Collection schema v1: order, visibility and chronology are Backend-owned.
+export type GameCollectionMode = 'sfw' | 'nsfw'
+export type GameCollectionPhase = 'released' | 'released_unknown' | 'upcoming_overdue' | 'upcoming' | 'upcoming_tba' | 'unknown'
+export interface GameCollectionMetadata { schema_version: 1; generated_at: string; as_of_date: string }
+export interface GameCollectionInfo { code: string; name: string; info: string; visible_game_count: number; published_at: string }
+export interface GameCollectionPreviewGame { game_id: string; name: string; header_url: string }
+export interface GameCollectionSummary extends GameCollectionInfo { preview_games: GameCollectionPreviewGame[] }
+export interface GameCollectionHome extends GameCollectionMetadata { slots: { slot: number; collection: GameCollectionSummary }[] }
+export interface GameCollectionIndex extends GameCollectionMetadata { page: number; page_size: number; total: number; has_more: boolean; items: GameCollectionSummary[] }
+export interface GameCollectionChronology {
+  source: 'first_available' | 'release'
+  precision: 'day' | 'month' | 'quarter' | 'year'
+  window_start: string
+  window_end: string
+  inferred: boolean
+}
+export interface GameCollectionTimelineItem {
+  game_id: string; name: string; summary: string; header_url: string
+  phase: GameCollectionPhase; chronology: GameCollectionChronology | null
+  // Additive schema v1 fields may be absent in pre-upgrade cached responses.
+  primary_tag?: { code: string; name: string } | null
+  secondary_tag?: { code: string; name: string } | null
+  rating?: { average: number; count: number } | null
+  online?: { count: number; collected_at: string } | null
+  community_count?: number
+}
+export interface GameCollectionDetail extends GameCollectionMetadata { collection: GameCollectionInfo; items: GameCollectionTimelineItem[] }
+
+export type GameCollectionPhaseFilter = 'all' | 'released' | 'upcoming' | 'mixed'
+export type GameCollectionSort = 'published_desc' | 'count_desc' | 'count_asc' | 'name_asc' | 'name_desc'
+export interface GameCollectionCriteria {
+  q: string
+  phase: GameCollectionPhaseFilter
+  sort: GameCollectionSort
 }

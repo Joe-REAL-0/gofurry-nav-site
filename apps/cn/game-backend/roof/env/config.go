@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -64,6 +65,11 @@ func readServerConfig(configFile string) (*serverConfig, error) {
 }
 
 func (cfg *serverConfig) validate() error {
+	for _, cidr := range cfg.Server.TrustedProxyCIDRs {
+		if _, err := netip.ParsePrefix(cidr); err != nil {
+			return errors.New("server.trusted_proxy_cidrs must contain valid CIDRs")
+		}
+	}
 	if cfg.Server.DevelopmentHomeCacheSeconds < 0 || cfg.Server.DevelopmentHomeCacheSeconds > 30 {
 		return errors.New("server.development_home_cache_seconds must be between 0 and 30")
 	}
@@ -103,7 +109,9 @@ type serverConfig struct {
 }
 
 type GameConfig struct {
-	OnlinePeakCacheDays int `yaml:"online_peak_cache_days"`
+	ShowcaseTrackingSecret      string `yaml:"showcase_tracking_secret"`
+	ShowcaseAnalyticsHashSecret string `yaml:"showcase_analytics_hash_secret"`
+	OnlinePeakCacheDays         int    `yaml:"online_peak_cache_days"`
 }
 
 type AdminConfig struct {
@@ -208,14 +216,15 @@ func (cfg DataBaseConfig) ConnectionString() string {
 }
 
 type ServerConfig struct {
-	DevelopmentHomeCacheSeconds int    `yaml:"development_home_cache_seconds"`
-	Mode                        string `yaml:"mode"`
-	IPAddress                   string `yaml:"ip_address"`
-	Port                        string `yaml:"port"`
-	MemoryLimit                 int    `yaml:"memory_limit"`
-	GCPercent                   int    `yaml:"gc_percent"`
-	Network                     string `yaml:"network"`
-	EnablePrefork               bool   `yaml:"enable_prefork"`
+	TrustedProxyCIDRs           []string `yaml:"trusted_proxy_cidrs"`
+	DevelopmentHomeCacheSeconds int      `yaml:"development_home_cache_seconds"`
+	Mode                        string   `yaml:"mode"`
+	IPAddress                   string   `yaml:"ip_address"`
+	Port                        string   `yaml:"port"`
+	MemoryLimit                 int      `yaml:"memory_limit"`
+	GCPercent                   int      `yaml:"gc_percent"`
+	Network                     string   `yaml:"network"`
+	EnablePrefork               bool     `yaml:"enable_prefork"`
 }
 
 func InitServerConfig(projectName string) {

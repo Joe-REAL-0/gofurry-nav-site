@@ -11,7 +11,7 @@ vi.mock('../../lib/api', async (original) => ({ ...await original<typeof import(
 vi.mock('../auth/auth-context', () => ({ useAuth: () => ({ can: () => true }) }))
 
 afterEach(() => { cleanup(); vi.resetAllMocks() })
-const game: Game = { id: 1, name: '游戏', name_en: 'Game', info: '', info_en: '', create_time: '', update_time: '', resources: [], groups: [], developers: [], publishers: [], appid: 82, header: '', links: [], weight: 1, primary_tag: 1, secondary_tag: 0 }
+const game: Game = { showcase_eligible: false, id: 1, name: '游戏', name_en: 'Game', info: '', info_en: '', create_time: '', update_time: '', resources: [], groups: [], developers: [], publishers: [], appid: 82, header: '', links: [], weight: 1, primary_tag: 1, secondary_tag: 0 }
 
 function setup(element: React.ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -79,5 +79,17 @@ it('wires both remote selectors and saves all selected tags after local filterin
   fireEvent.click(screen.getByRole('checkbox', { name: '解谜' }))
   expect(listJSON).toHaveBeenCalledTimes(requests)
   fireEvent.click(screen.getByRole('button', { name: '保存分类与展示' }))
-  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/games/1/classification', 'PUT', { weight: 1, primary_tag_id: 1, secondary_tag_id: null, tag_ids: [1, 2] }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/games/1/classification', 'PUT', { weight: 1, primary_tag_id: 1, secondary_tag_id: null, tag_ids: [1, 2], showcase_eligible: false }))
+})
+
+it.each([true, false])('saves Showcase eligibility %s with the complete classification payload', async eligible => {
+  vi.mocked(listJSON).mockResolvedValue({ total: 2, list: [{ id: '1', label: '冒险' }, { id: '2', label: '解谜' }] })
+  const tags = [{ tag_id: 1, tag_name: '冒险' }, { tag_id: 2, tag_name: '解谜' }]
+  vi.mocked(sendJSON).mockResolvedValue({ game: { ...game, showcase_eligible: eligible }, tags })
+  setup(<GameClassificationForm workspace={{ game: { ...game, showcase_eligible: !eligible }, tags } as Parameters<typeof GameClassificationForm>[0]['workspace']} />)
+  const checkbox = await screen.findByRole('checkbox', { name: '允许作为自动发现候选' })
+  fireEvent.click(checkbox); fireEvent.click(screen.getByRole('button', { name: '保存分类与展示' }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith('/api/v1/game/games/1/classification', 'PUT', { weight: 1, primary_tag_id: 1, secondary_tag_id: null, tag_ids: [1, 2], showcase_eligible: eligible }))
+  await waitFor(() => expect(screen.getByRole('button', { name: '保存分类与展示' })).toBeDisabled())
+  expect(checkbox).toHaveProperty('checked', eligible)
 })

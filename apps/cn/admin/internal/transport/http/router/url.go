@@ -150,6 +150,8 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Post("/update-notices", authmw.Require(authorization.ContentWrite), api.CreateUpdateNotice)
 	root.Get("/update-notices/:id", authmw.Require(authorization.ContentRead), api.GetUpdateNotice)
 	root.Put("/update-notices/:id", authmw.Require(authorization.ContentWrite), api.UpdateUpdateNotice)
+	root.Post("/update-notices/:id/publish", authmw.Require(authorization.ContentWrite), api.PublishUpdateNotice)
+	root.Post("/update-notices/:id/unpublish", authmw.Require(authorization.ContentWrite), api.UnpublishUpdateNotice)
 	root.Delete("/update-notices/:id", authmw.Require(authorization.ContentWrite), api.DeleteUpdateNotice)
 
 	root.Get("/collector-domains", authmw.Require(authorization.ContentRead), api.ListCollectorDomains)
@@ -190,6 +192,8 @@ func navRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 }
 
 func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	gameCollectionRoutes(root.Group("/collections"), runtime)
+	showcaseRoutes(root.Group("/showcase"), runtime)
 	api := runtime.GameAPI
 	root.Get("/games", authmw.Require(authorization.ContentRead), api.ListGames)
 	root.Post("/games", authmw.Require(authorization.ContentWrite), api.CreateGame)
@@ -225,6 +229,21 @@ func gameRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
 	root.Put("/tags/:id", authmw.Require(authorization.ContentWrite), api.UpdateTag)
 	root.Delete("/tags/:id", authmw.Require(authorization.ContentWrite), api.ArchiveTag)
 	root.Post("/tags/:id/restore", authmw.Require(authorization.ContentWrite), api.RestoreTag)
+}
+
+func gameCollectionRoutes(root fiber.Router, runtime *bootstrap.Runtime) {
+	api := runtime.GameAPI
+	root.Get("/", authmw.Require(authorization.ContentRead), api.ListGameCollections)
+	root.Post("/", authmw.Require(authorization.ContentWrite), api.CreateGameCollection)
+	root.Get("/home-curation", authmw.Require(authorization.ContentRead), api.GetGameCollectionHome)
+	root.Put("/home-curation", authmw.Require(authorization.ContentWrite), api.ReplaceGameCollectionHome)
+	root.Get("/:id", authmw.Require(authorization.ContentRead), api.GetGameCollection)
+	root.Put("/:id", authmw.Require(authorization.ContentWrite), api.UpdateGameCollection)
+	root.Get("/:id/members", authmw.Require(authorization.ContentRead), api.GetGameCollectionMembers)
+	root.Put("/:id/members", authmw.Require(authorization.ContentWrite), api.ReplaceGameCollectionMembers)
+	for _, action := range []string{"publish", "unpublish", "archive", "restore"} {
+		root.Post("/:id/"+action, authmw.Require(authorization.ContentWrite), api.TransitionGameCollection(action))
+	}
 }
 
 func collaborationRoutes(root fiber.Router, runtime *bootstrap.Runtime) {

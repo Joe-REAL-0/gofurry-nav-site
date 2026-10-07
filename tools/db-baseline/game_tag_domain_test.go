@@ -75,7 +75,9 @@ func TestGameTagDomainMigration(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			err := goose.UpContext(ctx, db, dir)
+			// Keep this migration's irreversible-Down assertion independent of
+			// later migrations; full-chain coverage belongs to the baseline suite.
+			err := goose.UpToContext(ctx, db, dir, 20260916020000)
 			if tc.want != "" {
 				if err == nil || !strings.Contains(err.Error(), tc.want) {
 					t.Fatalf("got %v, want rejection %s", err, tc.want)

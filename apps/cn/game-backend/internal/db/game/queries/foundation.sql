@@ -2,7 +2,7 @@
 SELECT 1::bigint AS value;
 
 -- name: GetPrizeByID :one
-SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status
+SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status, title_en, desc_en
 FROM gfg_prize WHERE id = sqlc.arg(id);
 
 -- name: GetPrizeMemberByEmail :one
@@ -11,7 +11,7 @@ FROM gfg_prize_member
 WHERE prize_id = sqlc.arg(prize_id) AND email = sqlc.arg(email);
 
 -- name: ListActivePrizes :many
-SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status
+SELECT id, title, "desc", prize, "key", start_time, end_time, create_time, status, title_en, desc_en
 FROM gfg_prize WHERE status IS TRUE;
 
 -- name: ListPrizeMembers :many
@@ -19,7 +19,7 @@ SELECT id, prize_id, name, email, ip, agent, is_winner, prize_key, create_time
 FROM gfg_prize_member WHERE prize_id = sqlc.arg(prize_id);
 
 -- name: ListPrizeHistory :many
-SELECT id, title, "desc", end_time, prize
+SELECT id, title, title_en, "desc", desc_en, end_time, prize
 FROM gfg_prize WHERE status IS FALSE ORDER BY end_time DESC;
 
 -- name: CountPrizeMembers :one
@@ -31,7 +31,7 @@ FROM gfg_prize_member
 WHERE prize_id = sqlc.arg(prize_id) AND is_winner IS TRUE;
 
 -- name: ListActiveLotteries :many
-SELECT id, title, "desc", start_time, end_time, prize
+SELECT id, title, title_en, "desc", desc_en, start_time, end_time, prize
 FROM gfg_prize WHERE status IS TRUE ORDER BY end_time DESC;
 
 -- name: InsertPrizeMember :exec
@@ -50,7 +50,7 @@ WHERE id = sqlc.arg(id);
 
 -- name: SavePrize :execrows
 UPDATE gfg_prize
-SET title = sqlc.arg(title), "desc" = sqlc.arg(description), prize = sqlc.arg(prize)::jsonb,
+SET title = sqlc.arg(title), title_en = sqlc.arg(title_en), "desc" = sqlc.arg(description), desc_en = sqlc.arg(desc_en), prize = sqlc.arg(prize)::jsonb,
     "key" = sqlc.arg(key), start_time = sqlc.arg(start_time),
     end_time = sqlc.arg(end_time), status = sqlc.arg(status)
 WHERE id = sqlc.arg(id);

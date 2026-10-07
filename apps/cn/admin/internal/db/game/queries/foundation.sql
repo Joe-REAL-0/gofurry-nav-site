@@ -10,7 +10,7 @@ SELECT COUNT(*)::bigint FROM gfg_game WHERE sqlc.arg(keyword)::text='' OR name I
  OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
 -- name: ListGames :many
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+SELECT showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game
 WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR name_en ILIKE '%'||sqlc.arg(keyword)||'%'
@@ -18,7 +18,7 @@ WHERE sqlc.arg(keyword)::text='' OR name ILIKE '%'||sqlc.arg(keyword)||'%' OR na
 ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetGame :one
-SELECT id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+SELECT showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag FROM gfg_game WHERE id=sqlc.arg(id);
 
@@ -33,14 +33,14 @@ SELECT id,name,appid FROM gfg_game WHERE appid=sqlc.arg(appid) AND id<>sqlc.arg(
 -- name: InsertGame :one
 INSERT INTO gfg_game (id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count)
 VALUES (sqlc.arg(id),sqlc.arg(name),sqlc.arg(name_en),sqlc.arg(info),sqlc.arg(info_en),NOW()::timestamp(0),NOW()::timestamp(0),sqlc.arg(resources),sqlc.arg(groups),sqlc.arg(developers),sqlc.arg(publishers),sqlc.arg(appid),sqlc.arg(header),sqlc.arg(links),sqlc.arg(weight),0)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+RETURNING showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag;
 
 -- name: UpdateGame :one
 UPDATE gfg_game SET name=sqlc.arg(name),name_en=sqlc.arg(name_en),info=sqlc.arg(info),info_en=sqlc.arg(info_en),resources=sqlc.arg(resources),groups=sqlc.arg(groups),developers=sqlc.arg(developers),publishers=sqlc.arg(publishers),appid=sqlc.arg(appid),header=sqlc.arg(header),links=sqlc.arg(links),update_time=NOW()::timestamp(0)
 WHERE id=sqlc.arg(id)
-RETURNING id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
+RETURNING showcase_eligible,id,name,name_en,info,info_en,create_time,update_time,resources,groups,developers,publishers,appid,header,links,weight,view_count,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='primary'),0)::bigint AS primary_tag,
  COALESCE((SELECT tag_id FROM gfg_game_tag WHERE game_id=gfg_game.id AND role='secondary'),0)::bigint AS secondary_tag;
 
@@ -78,25 +78,25 @@ WITH lock_row AS MATERIALIZED (SELECT pg_advisory_xact_lock(hashtext('gfg_prize'
 SELECT (COALESCE(MAX(id),0)+1)::bigint FROM gfg_prize CROSS JOIN lock_row;
 
 -- name: CountPrizes :one
-SELECT COUNT(*)::bigint FROM gfg_prize WHERE sqlc.arg(keyword)::text='' OR title ILIKE '%'||sqlc.arg(keyword)||'%'
+SELECT COUNT(*)::bigint FROM gfg_prize WHERE sqlc.arg(keyword)::text='' OR title ILIKE '%'||sqlc.arg(keyword)||'%' OR title_en ILIKE '%'||sqlc.arg(keyword)||'%'
  OR "desc" ILIKE '%'||sqlc.arg(keyword)||'%' OR id::text ILIKE '%'||sqlc.arg(keyword)||'%';
 
 -- name: ListPrizes :many
-SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status FROM gfg_prize
-WHERE sqlc.arg(keyword)::text='' OR title ILIKE '%'||sqlc.arg(keyword)||'%' OR "desc" ILIKE '%'||sqlc.arg(keyword)||'%'
+SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en FROM gfg_prize
+WHERE sqlc.arg(keyword)::text='' OR title ILIKE '%'||sqlc.arg(keyword)||'%' OR title_en ILIKE '%'||sqlc.arg(keyword)||'%' OR "desc" ILIKE '%'||sqlc.arg(keyword)||'%'
  OR id::text ILIKE '%'||sqlc.arg(keyword)||'%' ORDER BY id DESC LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: GetPrize :one
-SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status FROM gfg_prize WHERE id=sqlc.arg(id);
+SELECT id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en FROM gfg_prize WHERE id=sqlc.arg(id);
 
 -- name: InsertPrize :one
-INSERT INTO gfg_prize (id,title,"desc",prize,"key",start_time,end_time,create_time,status)
-VALUES (sqlc.arg(id),sqlc.arg(title),sqlc.arg(description),sqlc.arg(prize),sqlc.arg(key),sqlc.arg(start_time),sqlc.arg(end_time),NOW()::timestamp(0),sqlc.arg(status))
-RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status;
+INSERT INTO gfg_prize (id,title,title_en,"desc",desc_en,prize,"key",start_time,end_time,create_time,status)
+VALUES (sqlc.arg(id),sqlc.arg(title),sqlc.arg(title_en),sqlc.arg(description),sqlc.arg(desc_en),sqlc.arg(prize),sqlc.arg(key),sqlc.arg(start_time),sqlc.arg(end_time),NOW()::timestamp(0),sqlc.arg(status))
+RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en;
 
 -- name: UpdatePrize :one
-UPDATE gfg_prize SET title=sqlc.arg(title),"desc"=sqlc.arg(description),prize=sqlc.arg(prize),"key"=sqlc.arg(key),start_time=sqlc.arg(start_time),end_time=sqlc.arg(end_time),status=sqlc.arg(status)
-WHERE id=sqlc.arg(id) RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status;
+UPDATE gfg_prize SET title=sqlc.arg(title),title_en=sqlc.arg(title_en),"desc"=sqlc.arg(description),desc_en=sqlc.arg(desc_en),prize=sqlc.arg(prize),"key"=sqlc.arg(key),start_time=sqlc.arg(start_time),end_time=sqlc.arg(end_time),status=sqlc.arg(status)
+WHERE id=sqlc.arg(id) RETURNING id,title,"desc",prize,"key",start_time,end_time,create_time,status,title_en,desc_en;
 
 -- name: DeletePrize :execrows
 DELETE FROM gfg_prize WHERE id=sqlc.arg(id);

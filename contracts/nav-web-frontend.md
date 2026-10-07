@@ -658,6 +658,50 @@ and remote results separately from explicit maintainer approval of the eight PNG
 Until that approval, the new baselines are review candidates, not accepted design.
 After approval #109 is closure-ready; subsequent product work uses a new task, not P9.
 
+## Game Collection Public ownership (#140-C)
+
+Home has exactly three concurrent SSR GETs: Home, Showcase and Collections Home.
+Collections Home is always SFW. Both optional slices have a 1000ms SSR budget,
+retry 0; unavailable slices get exactly one mounted recovery (8000ms, retry 0,
+including the Nitro proxy). Recovery failure stays absent and silent; successful
+SSR, including valid empty, never refetches. Language identity/unmount invalidate
+late recovery; mode changes never refetch Home. Valid empty slots retain All
+Collections on desktop. Shortcuts exist only in the xl Sidebar, sharing Daily
+Game's sidebar-action-button material and 2.45rem minimum height; below xl their
+DOM is removed. Showcase runtime/tracking remains independent.
+
+Collection Index/Detail SSR must be SFW. Detail retains its mode refresh owner;
+Index uses one discovery owner for committed q/phase/sort, mode, snapshot and pagination. It reads
+local storage only after mount, issues no extra SFW request, and one NSFW request
+when needed. Latest response wins; ready content survives pending/error, old-mode
+pagination cannot append, and successful Index mode refresh resets page one.
+No URL mode, frontend adult filtering, or frontend chronology sort is allowed.
+Detail partitions Backend order without changing it; past/future independently
+reuse compactPlacement/connector and retain chronological DOM order at every width.
+Only those two groups have connectors. Detail's compact Header groups H1/count with
+right-aligned text Back navigation. Timeline cards and NOW share Games Home material,
+transparent borders, and fixed two-line title/summary geometry. Optional schema v1
+metadata shows at most primary/secondary tags and rating/latest observed online/community
+counts with localized accessible labels; missing metadata is omitted, including old cached
+payloads. No client filtering or chronology change follows from decorations.
+Connectors are 2px dashed CSS gradients over 2.5rem gaps; right/left/down motion follows
+chronology, small screens flow down, reduced motion keeps static dashes. Connectors cannot
+capture pointer/focus or join undated phases. Date-only facts use UTC/component formatting
+and retain precision/inferred; NOW uses the response as_of_date. Missing Detail is
+404, initial upstream failure is HTTP 503 with Retry, adult-only SFW is neutral 200.
+Index begins visually with Search + Advanced Filter; its H1 is sr-only and SEO remains.
+Search is IME-safe with a 350ms debounce. The modal owns a local draft: Cancel has
+no side effects, Apply commits both criteria atomically. All criteria/mode requests
+share one generation, retain ready cards, reset page on success, and reject stale
+load-more responses. Server q/phase/sort results are authoritative; the frontend
+never filters adult members or infers phases. Cards use Games Home material and
+transparent borders with an inset rounded preview.
+Showcase primary CTA alone has a transparent border. Stacked content reserves
+context/release/title/summary/tags/note/footer geometry so slide height is stable;
+desktop retains lg:h-80 and 64/36. Autoplay/tracking/artwork ownership is unchanged.
+Collections use existing Games/global tokens and SteamAssetImage. New copy belongs
+to game.collections. Visual acceptance is separate from Functional completion.
+
 ## Styling ownership
 
 **Tailwind owns structure; Less owns appearance.**
@@ -767,11 +811,9 @@ color-transition property set, its 500ms duration and existing easing.
 Updates global selectors MUST use the `updates-*` domain namespace. State
 modifiers MAY use `is-*` only when attached to an Updates-owned base selector.
 Updates-owned custom properties MUST use `--updates-*`; domain styles MAY consume
-`--gf-*` global semantics. P4.4.2 normalizes Timeline/Year/Entry names without
-ancestor scoping or specificity changes; declarations and accepted visual behavior
-MUST remain equivalent. Stylelint enforces names only: Style Policy token owners
+`--gf-*` global semantics. P4.4.2's Timeline selector normalization is historical. #132 P3 retires that
+Timeline and its dynamic delay property; the same exact token declaration owners
 remain `.updates-page` / `html.dark .updates-page` with the `--updates-` prefix.
-`--updates-timeline-delay` is a dynamic runtime property, not a global design token.
 
 P2.1 MUST NOT prebuild typography, spacing, control-height, z-index or container
 scales. Later promotion requires repeated real needs and a scoped migration.
@@ -802,6 +844,41 @@ A comment merely saying "red" is not a rationale. A domain exception comment
 should explain its business role and why the global meaning does not fit.
 See the [design-system guide](../docs/frontend/design-system.md) for current
 repository examples; it is not a second token-value source.
+
+## Typography family and weight contract (#126)
+
+Gate A freezes Primary Sans as Manrope Variable + Noto Sans SC Variable through
+`--gf-font-sans`, and Technical Mono through `--gf-font-mono`, in the existing
+global token owner. Normal UI SHOULD inherit Sans. Explicit `font-family` values
+MUST use one of these tokens; raw business-owner family stacks are prohibited.
+`app/assets/styles/primitives/rating.less` alone MAY retain `Arial, sans-serif`
+for its star glyph implementation, not as a third text role.
+
+Normal authored `font-weight` MUST be 400 (Body), 500 (Secondary), 600 (UI
+Emphasis), 700 (Strong Heading) or 800 (Display only). Choose by actual UI role,
+not numeric proximity. 800 MUST NOT be used for ordinary controls, labels,
+section/card headings or small KPI values; retained Display owners are the large
+Error code and Games rank. Do not introduce weight tokens or locale-specific
+weight hierarchies. Tailwind does not own typography appearance; its existing
+appearance policy already covers `font-*`, `leading-*` and `tracking-*`.
+
+The existing Stylelint `declaration-property-value-allowed-list` enforces families,
+weights and `font: inherit` as the only allowed font shorthand. Do not introduce
+another typography scanner, plugin, debt manifest or Style Policy rule family.
+
+Issue #108 temporarily retains only its existing weight vocabulary:
+400/500/550/600/620/650/680/700/720/730/740/750/760/800. This override applies solely
+to `app/assets/styles/pages/insights.less` and
+`app/assets/styles/pages/insights/**/*.less`; it MUST be removed when #108 performs
+its semantic weight normalization. It grants no family or shorthand exception,
+no new intermediate values and no permission to compensate for shared primitive
+changes. Batch B does not directly edit those appearance files.
+
+Batch B changes weights only: the Gate A Fontsource packages/delivery, authored
+font size, line height, tracking, spacing/layout, style debt and Visual goldens
+remain unchanged. Historical migration pixel/weight notes below describe their
+original acceptance; this section supersedes their nonstandard weight values.
+Role examples belong in the [design system](../docs/frontend/design-system.md#typography-roles-126).
 
 ## Shared visual primitives and compound components
 
@@ -1364,6 +1441,17 @@ The shared fixture keeps real SSR/hydration/Hero rendering, exact local asset
 boundaries and one SSR Home request; it does not supersede Hero lifecycle or
 Nav Shell contracts. The chip transition's actual Less cascade (background,
 box-shadow and color, 500ms each) takes precedence over utility-name inference.
+Issue #123 separates Suggestion provider from Search destination. SearchBox calls
+`GET /api/v2/nav/search/suggestions?q=...` for non-empty Search-category input,
+regardless of platform. Schema 2 has no engine; ready renders suggestions, empty
+renders the existing empty state, unavailable/network/429 silently closes the
+optional dropdown without retry. Existing doSearch/platform URLs remain unchanged.
+Keep 600ms debounce, AbortController and stale-response protection. Composition
+updates local display only; compositionend schedules final text once. While the
+composition lifecycle or native isComposing flag is active, Enter/Arrow keys/Escape
+must not select, navigate or prevent IME confirmation. Render provider text with
+interpolation and highlighted segments, never v-html or manually escaped HTML.
+
 P5.2.2 keeps Header, Search, QuickAccess and Quick Sites appearance in
 `pages/nav.less`, with `--nav-home-*` declarations on `.nav-home-page`; do not split
 out a Header stylesheet. These Hero-backed semantics remain theme-independent,
@@ -1509,6 +1597,13 @@ Lottery Prize and Activation remain CSR/noindex surfaces. The mounted Prize GET
 MUST distinguish loading, ready-empty and unavailable data; Retry is local,
 single-flight and canceled on unmount. The live request owner is
 `app/utils/api/game.ts`, not the unused duplicate in `app/services/game.ts`.
+Prize reads pass `lang=zh|en`. Game Backend selects activity title/description and
+prize title/platform independently, falling back to Chinese for missing English.
+The same contract applies to active pools, Join and winner history. Locale changes
+cancel previous-language reads and retain stale-response protection; participation
+payloads, redemption-key privacy, CSR/noindex and the existing retry contract do
+not change. The shared history cache retains both languages without redemption
+keys, including compatibility with older single-language cache entries.
 The local body-mounted Lottery dialog owns focus trapping/restoration, background
 inertness and scroll cleanup. Validate a trimmed input snapshot before POST;
 pending Close/Cancel remains available, and late responses cannot affect a new
@@ -1645,3 +1740,133 @@ outcomes, update safety, fail-closed CLI behavior and current per-file parity.
 The existing Nav Web CI job runs each guard separately before the preserved
 typecheck, Insights semantics, SEO recovery and build steps. P1 adds no Vitest,
 Playwright Test migration, production style cleanup or UI behavior change.
+
+## Release Notes final public contract (#132 P3)
+
+The editorial `/updates` index and `/updates/:id` article, including `/en`, replace
+the historical Timeline. Index renders only metadata/summary and groups history
+by China-site month. Detail owns sanitized SSR body and API-provided older/newer
+neighbors. No year toggle, marker animation or Timeline owner remains. P3.1 replaces
+P3's all-history index with bounded SSR: Latest plus 20 history items. Subsequent
+pages require an explicit More action, never a hidden all-data fetch or infinite
+scroll. Errors retain loaded content; retry repeats that page. Pending clicks are
+deduplicated, and locale change/unmount protects against stale append responses.
+
+Each direct SSR entry requests its own API exactly once; hydration reuses payload.
+Detail 404 is HTTP 404 and upstream failure is 503. Index retains explicit loading,
+ready, empty and unavailable states with local retry. Locale preserves release ID.
+The public index projection is metadata-only; P1 lifecycle and visibility remain
+backend-authoritative. No new schema, permission or media integration is involved.
+
+Public rendering MUST satisfy every shared `contracts/fixtures/update-markdown.json`
+case and `contracts/update-markdown.md` using the exact P2 versions. Only sanitized
+renderer output may enter `v-html`. Metadata never derives summaries from body.
+App-level locale head remains canonical/hreflang owner; detail supplies localized
+SEO, article OG metadata and its own OG URL. Sitemap includes both localized
+public release IDs and fails closed if any inventory fails, including Updates.
+The sitemap's existing unpaged 100-release inventory remains unchanged. P3.1 index
+pagination defaults to page 1 / size 100 (max); the public UI explicitly uses 21.
+Detail labels are Previous/Next (上一篇/下一篇), while older/newer identity is unchanged.
+
+Functional `regression/updates.spec.ts` and `seo-recovery.spec.ts` own behavior;
+`visual/updates-page.spec.ts` owns exactly eight Index/Article × Light/Dark ×
+Desktop/Mobile goldens. This expressly supersedes the four Timeline goldens and
+historical viewport/marker assumptions above. Generate only this authorized spec
+in the pinned runner, then compare separately. No unrelated golden may change.
+Remote acceptance uses #134 Fast, Manual Full and Manual Visual independently;
+maintainer Admin/Index/Article review remains explicit, not inferred from pixels.
+
+## Games Home Showcase runtime (#119-C)
+
+`/games` and `/en/games` load Home and the independent optional Showcase through
+one SSR async-data owner (since #140-C also Collections Home): exactly three
+parallel GETs. Home/Showcase use normalized `lang` and `region=CN`. Tests assert
+exact unordered sets, not arrival order. Successful Showcase SSR, including empty,
+has zero hydration GETs; unavailable SSR gets one mounted recovery as specified
+above. Failure hides the entire surface and its margin without affecting Home. Neither the Home DTO/cache nor page SEO changes.
+
+`GameHomeShowcase` renders before Recently Released inside GameInfoPanel, in
+Composer order. Desktop uses 64/36 at 320px, Tablet stacks 2:1 artwork, Mobile
+stacks 16:9 with two tags/two summary lines and no Editorial Note. Fixed localized
+context/action copy surrounds strict backend-locale content. Sponsored never shows
+an Editorial Note. Managed/Steam images use their existing routing components;
+the managed resolver accepts only the frozen Showcase AVIF key grammar. Mobile
+artwork falls back to the desktop key when absent. Exhausted images retain the
+slide, count, text and actions on a neutral surface. ManagedAssetImage uses an
+optional mobile object key with native picture/source selection, so only the
+current viewport variant downloads. The default single-image contract is retained.
+Visited Showcase image nodes and their provider/failure state survive until the
+snapshot/page ends. A slow new image leaves the previous decoded artwork visible
+until ready; stale completions never replace a newer selection. No CDN URLs are
+constructed in business components.
+
+One item has no controls/count; two to four use native, circular Prev/Next
+(always enabled).
+Index lives only in the page instance and resets on snapshot change. Initial SSR
+has no animation; switching uses the existing 200ms media/text transition, instant
+under reduced motion. Rapid clicks update immediately without animation locks.
+There is no swipe, keyboard-shell capture or focus movement. Circular Autoplay below
+supersedes the earlier no-autoplay and non-circular restrictions. The polite live region is
+initially empty and updates only after a manual switch, never an automatic one.
+Internal actions use localized Game routes; external HTTPS
+actions use `noopener noreferrer` in a new tab. Artwork/title/actions are separate
+links, not one clickable Hero. Appearance belongs to `games.less` under
+`--games-home-showcase-*`; Tailwind owns structure. Existing style debt and goldens
+cannot be increased or updated by this implementation. Showcase material matches
+Games Home cards (Light 40%, Dark 6.5%, matching shadow/text family) through its
+own tokens. Narrow layouts place the 44px navigation controls below the CTAs.
+
+Tracking requires the active item, >=50% root intersection, a visible document
+and a continuous 1000ms interval. Leaving visibility, switching items/snapshots
+or unmounting cancels that timer. Page-local snapshot/item dedupe supplements the
+server authority. Pending media cannot generate impressions; the previous artwork
+keeps its own destination/token during handoff, while new text/CTA follow the
+selected index. Cached hidden frames never become tracking owners. Lazy UUIDv4
+identity uses sessionStorage only, with page-memory fallback when blocked;
+missing crypto.randomUUID disables tracking. Click sources
+are artwork/title/primary/secondary, sent without awaiting or blocking navigation.
+Direct best-effort `$fetch<void>` accepts the event endpoint's empty 204, with no
+useApi envelope, retry, toast or analytics-driven UI state. Browser accounting
+separates these POSTs from forbidden hydration refetches.
+
+The existing Games Home fixture defaults to empty Showcase and owns deterministic
+populated/failure scenarios. `games-home-showcase.spec.ts` is explicitly assigned
+to the existing Full Games regression group. Runtime/Functional completion is
+separate from maintainer Desktop/Tablet/Mobile review, new Visual acceptance and
+issue closure. No accepted Visual spec or snapshot changes in this first pass.
+
+
+### Showcase circular Autoplay (#119-C follow-up)
+
+`useGameShowcaseAutoplay` owns one forward-only timeout with
+`AUTO_ADVANCE_MS = 6000`. It owns its own intersection/visibility/hover/focus/media
+listeners; it neither imports Tracking nor sends analytics. It runs only for
+multiple items, including the last index, when the existing `artworkState.ready` is
+true and `artworkState.key === item.key`, root intersection is >=50%, the document
+is visible, the mouse is outside, focus is outside, the user has not paused and
+reduced motion is off. Every interruption clears the timeout; resumption starts a
+new complete 6000ms window. Pending pictures never consume that window.
+
+Manual Prev/Next reset the window without permanently disabling autoplay. Pause
+is page-instance memory only, survives snapshot changes, and writes no cookie or
+storage. Play restarts a full window when eligible. Both automatic and manual
+navigation wrap with modulo arithmetic: last Next returns to first, first Prev
+returns to last. This explicitly supersedes V1's stop-at-end/non-circular behavior.
+The navigation owner passes the actual move direction to Artwork so wrapping
+retains the existing forward/backward transition without inferring from indexes.
+Reduced motion disables autoplay completely and hides its control; zero/one item
+also hides the control and has no timer. Mount/unmount own and release every
+listener, observer and timer. Automatic changes never update aria-live.
+
+The compact Phosphor Pause/Play button reuses Showcase control appearance and the
+existing gameShowcase.control namespace. Only the control row may wrap when its
+added button requires space. Layout proportions, height, typography, colors,
+transitions, crop, CTA and disclosure are unchanged. Existing visited-image
+retention, slow/stale handoff and neutral fallback remain Artwork's responsibility.
+Tracking still requires its independent continuous one-second visibility window
+and snapshot/item dedupe across every loop; an auto switch does not create an
+impression itself.
+
+Maintainer approval of the preceding appearance is recorded separately from this
+autoplay follow-up's pending dynamic review. No Visual baseline update or final
+Visual Closure is authorized by this work.

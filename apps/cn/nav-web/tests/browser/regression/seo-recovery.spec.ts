@@ -68,7 +68,7 @@ test('SEO sitemap serializes only canonical localized public inventory', async (
   expect(response.status()).toBe(200); expect(response.headers()['content-type']).toContain('application/xml')
   const urls = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(match => new URL(match[1]!.replaceAll('&amp;', '&')))
   const paths = urls.map(url => url.pathname + url.search)
-  expect(paths).toEqual(expect.arrayContaining(['/site/41', '/en/site/41', '/games/82', '/en/games/82', '/site-groups/12', '/en/site-groups/12']))
+  expect(paths).toEqual(expect.arrayContaining(['/site/41', '/en/site/41', '/games/82', '/en/games/82', '/site-groups/12', '/en/site-groups/12', '/updates/109', '/en/updates/109']))
   expect(new Set(paths).size).toBe(paths.length)
   for (const path of paths) {
     if (/^\/(en\/)?site\//.test(path)) expect(new URL(path, runtime.app.base).search).toBe('')
@@ -76,12 +76,13 @@ test('SEO sitemap serializes only canonical localized public inventory', async (
     expect(path).not.toMatch(/^\/(en\/)?(?:games\/(?:search|prize(?:\/activation)?)|steam|insights\/(?:sites|games)\/compare)$/)
   }
   expect(xml).not.toMatch(/%7b%22|%7B%22|\{&quot;domain&quot;/)
-  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/game/list', '/api/v2/nav/site-groups', '/api/v2/nav/sites/index'])
+  expect(runtime.calls.map(call => call.url.pathname).sort()).toEqual(['/api/v2/game/list', '/api/v2/nav/site-groups', '/api/v2/nav/sites/index', '/api/v2/nav/updates'])
+  expect(runtime.calls.find(call => call.url.pathname.endsWith('/updates'))!.url.search).toBe('?lang=zh')
   runtime.assertQuiet()
 })
-for (const failure of ['site', 'game', 'sitemap'] as const) test('SEO fails closed on ' + failure + ' upstream failure', async ({ request, runtime }) => {
+for (const failure of ['site', 'game', 'sitemap', 'updates'] as const) test('SEO fails closed on ' + failure + ' upstream failure', async ({ request, runtime }) => {
   runtime.state.failure = failure
-  const response = await request.get(failure === 'sitemap' ? '/sitemap.xml' : failure === 'site' ? '/site/41' : '/games/82')
+  const response = await request.get(['sitemap', 'updates'].includes(failure) ? '/sitemap.xml' : failure === 'site' ? '/site/41' : '/games/82')
   expect(response.status()).toBe(503)
   for (const invalid of ['/site/abc', '/games/abc']) expect((await request.get(invalid)).status()).toBe(404)
   runtime.assertQuiet()

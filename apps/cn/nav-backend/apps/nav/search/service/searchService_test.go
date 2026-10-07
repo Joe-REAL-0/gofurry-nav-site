@@ -1,147 +1,172 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/gofurry/gofurry-nav-backend/common"
 )
+
+func TestSearchSuggestionsCacheStates(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		items []string
+		err   error
+		state string
+		calls int64
+	}{
+		{"ready", []string{"  furry  ", "furry", "", "兽人"}, nil, "ready", 1},
+		{"empty", []string{}, nil, "empty", 1},
+		{"unavailable", nil, errors.New("provider unavailable"), "unavailable", 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cache := newMemorySuggestionCache()
+			provider := &fakeSuggestionProvider{items: tc.items, err: tc.err}
+			svc := newSearchService(provider, cache, fixedSearchNow)
+			first := svc.GetSearchSuggestions(context.Background(), "  兽人  ")
+			second := svc.GetSearchSuggestions(context.Background(), "兽人")
+			if first.SchemaVersion != 2 || first.Query != "兽人" || first.State != tc.state || second.State != tc.state || first.CacheState != "miss" || first.Suggestions == nil {
+				t.Fatalf("unexpected responses: %#v %#v", first, second)
+			}
+			if provider.calls.Load() != tc.calls {
+				t.Fatalf("provider calls = %d", provider.calls.Load())
+			}
+			if tc.err == nil {
+				if second.CacheState != "hit" || cache.ttl != 10*time.Minute || cache.sets != 1 {
+					t.Fatalf("cache hit/TTL/write count: %#v %#v", second, cache)
+				}
+			} else if cache.sets != 0 || second.CacheState != "miss" {
+				t.Fatal("unavailable was cached")
+			}
+			if tc.name == "ready" && strings.Join(first.Suggestions, ",") != "furry,兽人" {
+				t.Fatal(first.Suggestions)
+			}
+		})
+	}
+}
 
 func TestSearchSuggestionsUsesCacheBeforeProvider(t *testing.T) {
 	cache := newMemorySuggestionCache()
-	cache.Set(searchSuggestionCacheKey("bing", "兽人"), []string{"cached"})
+	cache.Set(searchSuggestionCacheKey("兽人"), []string{"cached"}, 10*time.Minute)
 	provider := &fakeSuggestionProvider{}
 	svc := newSearchService(provider, cache, fixedSearchNow)
-
-	response := svc.GetSearchSuggestions("bing", "兽人")
-	if response.State != "ready" || response.CacheState != "hit" {
-		t.Fatalf("unexpected response state/cache: %#v", response)
+	response := svc.GetSearchSuggestions(context.Background(), "兽人")
+	if response.State != "ready" || response.CacheState != "hit" || response.Suggestions[0] != "cached" || provider.calls.Load() != 0 {
+		t.Fatalf("unexpected cache result: %#v", response)
 	}
-	if len(response.Suggestions) != 1 || response.Suggestions[0] != "cached" {
-		t.Fatalf("suggestions = %v", response.Suggestions)
-	}
-	if provider.calls != 0 {
-		t.Fatalf("provider calls = %d", provider.calls)
+	response.Suggestions[0] = "modified"
+	if svc.GetSearchSuggestions(context.Background(), "兽人").Suggestions[0] != "cached" {
+		t.Fatal("response mutated cache")
 	}
 }
 
-func TestSearchSuggestionsFetchesAndCachesSanitizedItems(t *testing.T) {
-	cache := newMemorySuggestionCache()
-	provider := &fakeSuggestionProvider{items: []string{"  furry  ", "furry", "", "兽人"}}
-	svc := newSearchService(provider, cache, fixedSearchNow)
-
-	response := svc.GetSearchSuggestions("google", "  test  ")
-	if response.State != "ready" || response.CacheState != "miss" {
-		t.Fatalf("unexpected response state/cache: %#v", response)
-	}
-	if provider.lastEngine != "google" || provider.lastQuery != "test" {
-		t.Fatalf("provider got engine/query = %q/%q", provider.lastEngine, provider.lastQuery)
-	}
-	if got := strings.Join(response.Suggestions, ","); got != "furry,兽人" {
-		t.Fatalf("suggestions = %v", response.Suggestions)
-	}
-
-	cached, ok := cache.Get(searchSuggestionCacheKey("google", "test"))
-	if !ok || strings.Join(cached, ",") != "furry,兽人" {
-		t.Fatalf("cache = %v, %v", cached, ok)
-	}
-}
-
-func TestSearchSuggestionsSupportsDuckDuckGoEngine(t *testing.T) {
-	cache := newMemorySuggestionCache()
-	provider := &fakeSuggestionProvider{items: []string{"furry", "furry suit"}}
-	svc := newSearchService(provider, cache, fixedSearchNow)
-
-	response := svc.GetSearchSuggestions("duckduckgo", "furry")
-	if response.State != "ready" {
-		t.Fatalf("state = %q", response.State)
-	}
-	if provider.lastEngine != "duckduckgo" {
-		t.Fatalf("provider engine = %q", provider.lastEngine)
-	}
-	if got := strings.Join(response.Suggestions, ","); got != "furry,furry suit" {
-		t.Fatalf("suggestions = %v", response.Suggestions)
-	}
-}
-
-func TestSearchSuggestionsRejectsUnsupportedEngine(t *testing.T) {
-	svc := newSearchService(&fakeSuggestionProvider{}, newMemorySuggestionCache(), fixedSearchNow)
-	response := svc.GetSearchSuggestions("yahoo", "furry")
-	if response.State != "error" {
-		t.Fatalf("state = %q", response.State)
-	}
-	if len(response.ReasonMessages) == 0 {
-		t.Fatalf("expected reason_messages")
-	}
-}
-
-func TestSearchSuggestionsNormalizesQueryLength(t *testing.T) {
+func TestSearchSuggestionsQueryAndNamespace(t *testing.T) {
 	provider := &fakeSuggestionProvider{items: []string{"ok"}}
 	svc := newSearchService(provider, newMemorySuggestionCache(), fixedSearchNow)
-	query := "  " + strings.Repeat("兽", searchSuggestionMaxQueryLen+8) + "  "
-
-	response := svc.GetSearchSuggestions("baidu", query)
-	if len([]rune(response.Query)) != searchSuggestionMaxQueryLen {
-		t.Fatalf("query length = %d", len([]rune(response.Query)))
+	response := svc.GetSearchSuggestions(context.Background(), "  "+strings.Repeat("兽", 140)+"  ")
+	if len([]rune(response.Query)) != 128 || provider.lastQuery != response.Query {
+		t.Fatal("query must be normalized before fetching")
 	}
-	if provider.lastQuery != response.Query {
-		t.Fatalf("provider query = %q, response query = %q", provider.lastQuery, response.Query)
+	key := searchSuggestionCacheKey(response.Query)
+	if !strings.HasPrefix(key, "nav:v2:search:suggestions:v2:") || strings.Contains(key, "兽") {
+		t.Fatal("wrong versioned query hash")
+	}
+	empty := svc.GetSearchSuggestions(context.Background(), "  ")
+	if empty.State != "empty" || empty.Suggestions == nil || provider.calls.Load() != 1 {
+		t.Fatal("blank query called provider")
 	}
 }
 
-func fixedSearchNow() time.Time {
-	return time.Date(2026, 6, 4, 12, 0, 0, 0, time.UTC)
+func TestSearchSuggestionsSingleflightAndCanceledWaiter(t *testing.T) {
+	started, release := make(chan struct{}), make(chan struct{})
+	provider := &fakeSuggestionProvider{items: []string{"furry"}, started: started, release: release}
+	svc := newSearchService(provider, newMemorySuggestionCache(), fixedSearchNow)
+	ctx, cancel := context.WithCancel(context.Background())
+	first := make(chan string, 1)
+	go func() { first <- svc.GetSearchSuggestions(ctx, "furry").State }()
+	<-started
+	cancel()
+	if <-first != "unavailable" {
+		t.Fatal("canceled waiter did not return")
+	}
+	const count = 12
+	var ready, done sync.WaitGroup
+	ready.Add(count)
+	done.Add(count)
+	for i := 0; i < count; i++ {
+		go func() {
+			defer done.Done()
+			ready.Done()
+			response := svc.GetSearchSuggestions(context.Background(), "furry")
+			if response.State != "ready" {
+				t.Errorf("waiter state: %s", response.State)
+			}
+		}()
+	}
+	ready.Wait()
+	close(release)
+	done.Wait()
+	if provider.calls.Load() != 1 {
+		t.Fatalf("upstream requests: %d", provider.calls.Load())
+	}
 }
+
+func TestInvalidProxyIsUnavailableAndNotCached(t *testing.T) {
+	cache := newMemorySuggestionCache()
+	svc := newSearchService(newDuckDuckGoProvider("://invalid"), cache, fixedSearchNow)
+	if svc.GetSearchSuggestions(context.Background(), "furry").State != "unavailable" || cache.sets != 0 {
+		t.Fatal("invalid proxy must fail closed")
+	}
+}
+
+func fixedSearchNow() time.Time { return time.Date(2026, 10, 6, 0, 0, 0, 0, time.UTC) }
 
 type memorySuggestionCache struct {
+	mu    sync.Mutex
 	items map[string][]string
+	ttl   time.Duration
+	sets  int
 }
 
 func newMemorySuggestionCache() *memorySuggestionCache {
 	return &memorySuggestionCache{items: map[string][]string{}}
 }
-
-func (cache *memorySuggestionCache) Get(key string) ([]string, bool) {
-	items, ok := cache.items[key]
+func (c *memorySuggestionCache) Get(key string) ([]string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	items, ok := c.items[key]
 	return copySuggestions(items), ok
 }
-
-func (cache *memorySuggestionCache) Set(key string, suggestions []string) {
-	cache.items[key] = copySuggestions(suggestions)
+func (c *memorySuggestionCache) Set(key string, items []string, ttl time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items[key] = copySuggestions(items)
+	c.ttl = ttl
+	c.sets++
 }
 
 type fakeSuggestionProvider struct {
-	items      []string
-	err        common.GFError
-	calls      int
-	lastEngine string
-	lastQuery  string
+	items     []string
+	err       error
+	calls     atomic.Int64
+	lastQuery string
+	started   chan struct{}
+	release   chan struct{}
 }
 
-func (provider *fakeSuggestionProvider) GetBaiduSuggestion(q string) ([]string, common.GFError) {
-	return provider.record("baidu", q)
-}
-
-func (provider *fakeSuggestionProvider) GetBingSuggestion(q string) ([]string, common.GFError) {
-	return provider.record("bing", q)
-}
-
-func (provider *fakeSuggestionProvider) GetGoogleSuggestion(q string) ([]string, common.GFError) {
-	return provider.record("google", q)
-}
-
-func (provider *fakeSuggestionProvider) GetBiliBiliSuggestion(q string) ([]string, common.GFError) {
-	return provider.record("bilibili", q)
-}
-
-func (provider *fakeSuggestionProvider) GetDuckDuckGoSuggestion(q string) ([]string, common.GFError) {
-	return provider.record("duckduckgo", q)
-}
-
-func (provider *fakeSuggestionProvider) record(engine string, q string) ([]string, common.GFError) {
-	provider.calls++
-	provider.lastEngine = engine
-	provider.lastQuery = q
-	return provider.items, provider.err
+func (p *fakeSuggestionProvider) Fetch(ctx context.Context, query string) ([]string, error) {
+	p.calls.Add(1)
+	p.lastQuery = query
+	if p.started != nil {
+		close(p.started)
+		select {
+		case <-p.release:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	return p.items, p.err
 }

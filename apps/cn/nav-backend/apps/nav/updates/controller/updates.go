@@ -1,6 +1,9 @@
 package controller
 
 import (
+	"errors"
+	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/gofiber/fiber/v3"
@@ -20,7 +23,8 @@ func init() {
 func New(reader updatesReader) *updatesApi { return &updatesApi{reader: reader} }
 
 type updatesReader interface {
-	GetUpdates(lang string) models.UpdatesResponse
+	GetUpdates(lang string, pages ...models.UpdatePage) models.UpdatesResponse
+	GetUpdateDetail(id int64, lang string) (models.UpdateDetailResponse, error)
 }
 
 var (
@@ -29,11 +33,16 @@ var (
 )
 
 func (api updatesApi) GetUpdates(c fiber.Ctx) error {
+	page, err := strconv.Atoi(c.Query("page", "1"))
+	size, sizeErr := strconv.Atoi(c.Query("page_size", "100"))
+	if err != nil || sizeErr != nil || page <= 0 || size <= 0 || size > 100 || int64(page) > 2147483647/int64(size) {
+		return common.NewResponse(c).ErrorWithCode("invalid release pagination", http.StatusBadRequest)
+	}
 	reader := api.reader
 	if reader == nil {
 		reader = currentUpdatesReader()
 	}
-	data := reader.GetUpdates(c.Query("lang", "zh"))
+	data := reader.GetUpdates(c.Query("lang", "zh"), models.UpdatePage{Page: page, PageSize: size})
 	return common.NewResponse(c).SuccessWithData(data)
 }
 
@@ -57,4 +66,23 @@ func setUpdatesReaderForTest(reader updatesReader) func() {
 		updatesReaderForTest = previous
 		updatesReaderMu.Unlock()
 	}
+}
+
+func (api updatesApi) GetUpdateDetail(c fiber.Ctx) error {
+	id, err := strconv.ParseInt(c.Params("id"), 10, 64)
+	if err != nil || id <= 0 {
+		return common.NewResponse(c).ErrorWithCode(service.ErrNotFound.Error(), http.StatusNotFound)
+	}
+	reader := api.reader
+	if reader == nil {
+		reader = currentUpdatesReader()
+	}
+	data, err := reader.GetUpdateDetail(id, c.Query("lang", "zh"))
+	if errors.Is(err, service.ErrNotFound) {
+		return common.NewResponse(c).ErrorWithCode(service.ErrNotFound.Error(), http.StatusNotFound)
+	}
+	if err != nil {
+		return common.NewResponse(c).ErrorWithCode("release notes unavailable", http.StatusServiceUnavailable)
+	}
+	return common.NewResponse(c).SuccessWithData(data)
 }
