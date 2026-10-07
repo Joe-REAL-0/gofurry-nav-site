@@ -4,7 +4,7 @@
     <div class="games-search-overlay-scope search-toolbar mb-8 flex w-full items-center gap-3">
       <div class="search-shell relative min-w-0 flex-1">
         <img src="~/assets/svgs/search.svg" alt="" class="game-sidebar-search-icon absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-        <input type="search" :value="inputValue" :aria-label="t('game.collections.search')" :placeholder="t('game.collections.search')" :aria-busy="pending" class="game-sidebar-search-input w-full py-2 pl-9 pr-3" @input="onInput" @compositionstart="onCompositionStart" @compositionend="onCompositionEnd" />
+        <input type="text" role="searchbox" :value="inputValue" :aria-label="t('game.collections.search')" :placeholder="t('game.collections.search')" :aria-busy="pending" class="game-sidebar-search-input w-full py-2 pl-9 pr-3" @input="onInput" @compositionstart="onCompositionStart" @compositionend="onCompositionEnd" />
       </div>
       <button type="button" class="search-filter-button shrink-0" @click="filterOpen = true">{{ t('game.collections.advancedFilter') }}</button>
     </div>
