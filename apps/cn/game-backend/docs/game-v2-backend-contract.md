@@ -299,6 +299,8 @@ Draft/Archived/不存在统一 404；成人专属分区在 SFW Index/Detail 仍�
 First Available 优先于 current upcoming；保留精度与 inferred，Collection chronology 的 source
 仅为 first_available/release，不透传详情兼容 DTO 的 maintenance source。
 成人按 Tag code=adult 过滤后派生 count/preview/timeline。Collection 使用专用 bounded batch 轻量投影与共享 canonical header helper，无完整 aggregate、无 N+1。
+Detail 在 mode 过滤后追加一次 `BatchCollectionTimelineDecorations`，仅读取可见成员的主次标签、评论均分/数量、最新成功在线记录与社群入口数；不加载峰值/全标签/社群 URL。核心 7 次加装饰 1 次，共固定 8 次 SQL，Index/Home 不加载装饰。
+schema v1 additive 字段为 `primary_tag/secondary_tag {code,name}|null`、`rating {average,count}|null`、`online {count,collected_at}|null`、`community_count`；无评价/在线记录返回 null。Chronology 与 SFW 规则不变。
 独立 `game:v2:collections:v1:*` cache 按 UTC 日期/lang/mode/端点及分页或 code 分键，TTL 1 小时；
 Redis 错误/损坏回 DB，DB 错误不缓存，同 key singleflight。非默认 q/phase/sort Discovery 不读写结果缓存。
 筛选、数量排序和成员关键词只基于当前 mode 可见成员；非法 phase/sort 返回 400。完整筛选和稳定排序规则见分区合同。与 `/game/home` 长缓存无关。

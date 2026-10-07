@@ -1,10 +1,14 @@
 <template>
   <section class="games-page game-collections-page mx-auto w-full max-w-[1200px] px-6 py-10">
-    <header class="mb-10 max-w-3xl">
-      <NuxtLink :to="localePath('/games/collections')" class="game-collection-back">{{ t('game.collections.back') }}</NuxtLink>
-      <h1 class="game-collections-heading mt-5">{{ snapshot?.collection.name || t('game.collections.heading') }}</h1>
-      <p v-if="snapshot" class="game-collection-copy mt-3">{{ snapshot.collection.info }}</p>
-      <p v-if="snapshot" class="game-collection-note mt-3">{{ t('game.collections.count', { count: snapshot.collection.visible_game_count }) }}</p>
+    <header class="game-collection-detail-header mb-6">
+      <div class="flex flex-wrap items-baseline gap-x-4 gap-y-2">
+        <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h1 class="game-collections-heading break-words">{{ snapshot?.collection.name || t('game.collections.heading') }}</h1>
+          <span v-if="snapshot" class="game-collection-note whitespace-nowrap">{{ t('game.collections.count', { count: snapshot.collection.visible_game_count }) }}</span>
+        </div>
+        <NuxtLink :to="localePath('/games/collections')" class="game-collection-back ml-auto shrink-0">{{ t('game.collections.back') }}</NuxtLink>
+      </div>
+      <p v-if="snapshot" class="game-collection-copy mt-2">{{ snapshot.collection.info }}</p>
     </header>
     <div v-if="error" class="game-collections-error mb-6 flex flex-wrap items-center gap-4" role="alert">
       <p>{{ t(snapshot ? 'game.collections.refreshFailed' : 'game.collections.unavailable') }}</p>

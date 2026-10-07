@@ -708,6 +708,12 @@ export interface GameCollectionChronology {
 export interface GameCollectionTimelineItem {
   game_id: string; name: string; summary: string; header_url: string
   phase: GameCollectionPhase; chronology: GameCollectionChronology | null
+  // Additive schema v1 fields may be absent in pre-upgrade cached responses.
+  primary_tag?: { code: string; name: string } | null
+  secondary_tag?: { code: string; name: string } | null
+  rating?: { average: number; count: number } | null
+  online?: { count: number; collected_at: string } | null
+  community_count?: number
 }
 export interface GameCollectionDetail extends GameCollectionMetadata { collection: GameCollectionInfo; items: GameCollectionTimelineItem[] }
 

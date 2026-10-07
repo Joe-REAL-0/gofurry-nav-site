@@ -293,3 +293,73 @@ test('Index accepts only mode-visible search results and Games card material', a
   expect(runtime.calls.at(-1)!.url.searchParams.get('q')).toBe('隐藏作品')
   runtime.assertQuiet()
 })
+
+for (const locale of ['zh', 'en']) {
+  test(`Detail compact header, localized decorations and Games material (${locale})`, async ({ page }) => {
+    await openRuntime(page, `${locale === 'en' ? '/en' : ''}/games/collections/collection-3`)
+    const header = page.locator('.game-collection-detail-header')
+    const title = await header.locator('h1').boundingBox(), count = await header.locator('.game-collection-note').boundingBox(), back = await header.locator('.game-collection-back').boundingBox()
+    expect(title && count && back).toBeTruthy()
+    expect(count!.x).toBeGreaterThan(title!.x + title!.width)
+    expect(Math.abs(count!.y + count!.height - title!.y - title!.height)).toBeLessThan(12)
+    expect(back!.x).toBeGreaterThan(count!.x + count!.width)
+    await expect(header.locator('.game-collection-copy')).not.toBeEmpty()
+    const card = page.locator('.game-collection-timeline-card').first()
+    await expect(card.locator('.game-collection-timeline-tag--primary')).toHaveText(locale === 'en' ? 'Story' : '剧情')
+    await expect(card.locator('.game-collection-timeline-tag').last()).toHaveText(locale === 'en' ? 'Visual novel' : '视觉小说')
+    const metrics = card.locator('.game-collection-timeline-metrics')
+    await expect(metrics).toContainText('4.6 · 28')
+    await expect(metrics).toContainText('1,234')
+    await expect(metrics.locator('[aria-label]').first()).toHaveAttribute('aria-label', locale === 'en' ? 'Rating 4.6 from 28 reviews' : '评分 4.6，共 28 条评价')
+    await expect(metrics.locator('svg[aria-hidden="true"]')).toHaveCount(3)
+    await expect(metrics.getByRole('img', { name:locale === 'en' ? 'Rating 4.6 from 28 reviews' : '评分 4.6，共 28 条评价', exact:true })).toHaveCount(1)
+    await expect(page.locator('[data-game-id="8"] .game-collection-timeline-metrics')).toBeEmpty()
+    await expect(page.locator('[data-game-id="7"] .game-collection-timeline-metrics')).toContainText('0')
+    const material = await card.evaluate(el => {
+      const s = getComputedStyle(el), probe = document.createElement('span')
+      probe.style.backgroundColor = 'var(--games-home-card-bg)'; probe.style.boxShadow = 'var(--games-home-card-shadow)'; el.append(probe)
+      const expectedBg = getComputedStyle(probe).backgroundColor, expectedShadow = getComputedStyle(probe).boxShadow
+      probe.style.backgroundColor = 'var(--games-home-card-hover-bg)'; const hover = getComputedStyle(probe).backgroundColor; probe.remove()
+      return { border:s.borderColor, bg:s.backgroundColor, radius:s.borderRadius, shadow:s.boxShadow, expectedBg, expectedShadow, hover,
+        title:getComputedStyle(el.querySelector('h3')!).minHeight, summary:getComputedStyle(el.querySelector('.game-collection-copy')!).minHeight }
+    })
+    expect(material.border).toBe('rgba(0, 0, 0, 0)'); expect(material.radius).toBe('12px')
+    expect(material.bg).toBe(material.expectedBg); expect(material.shadow).toBe(material.expectedShadow)
+    expect(parseFloat(material.title)).toBeGreaterThan(40); expect(parseFloat(material.summary)).toBeGreaterThan(40)
+    const now = page.getByTestId('collection-now')
+    await expect(now.locator('time')).toHaveAttribute('datetime','2026-10-06')
+    expect(await now.evaluate(el => ({ tag:el.tagName, border:getComputedStyle(el).borderColor, bg:getComputedStyle(el).backgroundColor }))).toMatchObject({ tag:'P', border:'rgba(0, 0, 0, 0)',bg:material.bg })
+    await expect(now.getByRole('button')).toHaveCount(0)
+    await card.hover(); await expect(card).toHaveCSS('background-color',material.hover); await expect(card).toHaveCSS('border-color','rgba(0, 0, 0, 0)')
+  })
+}
+
+for (const width of [390, 768, 1440]) {
+  test(`Detail flowing connectors, reduced motion and fixed card geometry at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height:900 })
+    await page.emulateMedia({ reducedMotion:'no-preference' })
+    await openRuntime(page, '/games/collections/flow-long')
+    const nodes = page.locator('.game-collection-timeline__item')
+    expect(await nodes.evaluateAll(els => els.map(el => el.getAttribute('data-game-id')))).toEqual(['200','201','202','203','204','205','206'])
+    expect(await nodes.evaluateAll(els => els.map(el => el.getAttribute('data-connector')))).toEqual(['right','right','down','left','left','down','none'])
+    for (const [index, direction] of [[0,'right'],[2,'down'],[3,'left']] as const) {
+      const css = await nodes.nth(index).evaluate(el => { const s=getComputedStyle(el,'::after'); return { width:s.width,height:s.height,image:s.backgroundImage,animation:s.animationName,direction:s.animationDirection,pointer:s.pointerEvents } })
+      const horizontal = width >= 900 && direction !== 'down'
+      expect(css.width).toBe(horizontal ? '40px' : '2px'); expect(css.height).toBe(horizontal ? '2px' : '40px')
+      expect(css.image).toContain('repeating-linear-gradient'); expect(css.animation).toBe(horizontal ? 'collection-flow-right' : 'collection-flow-down')
+      expect(css.direction).toBe(horizontal && direction==='left' ? 'reverse' : 'normal'); expect(css.pointer).toBe('none')
+    }
+    await page.emulateMedia({ reducedMotion:'reduce' })
+    expect(await nodes.first().evaluate(el => getComputedStyle(el,'::after').animationName)).toBe('none')
+    expect(await nodes.first().evaluate(el => getComputedStyle(el,'::after').backgroundImage)).toContain('repeating-linear-gradient')
+    const heights = await page.locator('.game-collection-timeline-card').evaluateAll(els => els.map(el => el.getBoundingClientRect().height))
+    expect(Math.max(...heights)-Math.min(...heights)).toBeLessThanOrEqual(1)
+    for (const part of ['.game-collection-title','.game-collection-copy']) await expect(nodes.nth(1).locator(part)).toHaveCSS('-webkit-line-clamp','2')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await openRuntime(page, '/games/collections/collection-3')
+    for (const phase of ['releasedUnknown','tba','unknown']) {
+      expect(await page.locator(`[data-phase="${phase}"] li`).evaluateAll(els => els.every(el => getComputedStyle(el,'::after').content === 'none'))).toBe(true)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}

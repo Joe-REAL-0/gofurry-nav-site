@@ -2,7 +2,7 @@
 
 Stage A（#140-A）建立人工策展游戏分区及 Game Backend 公开读模型。
 人工只决定成员，公开顺序由 Canonical First Available / Release Facts 派生。
-Collection 不是 Tag、Showcase、Recommendation，也不使用 `gfg_game.groups`。
+Collection 不是 Tag、Showcase、Recommendation；成员关系与 `gfg_game.groups` 社群字段独立，Detail 仅将社群入口数量作为卡片元数据。
 
 ## Stage C：Public Discovery 与 Timeline
 
@@ -19,6 +19,9 @@ Index 视觉以搜索框与高级筛选工具条开场，H1 仅供辅助技术�
 Detail 的单一时间线由后端排序，前端仅稳定分组：已发布、已发布但日期待考、NOW、未来、TBA、未知。
 过去和未来各自复用 `serpentineSequence` 几何，900px 以上三列蛇形，以下单列；DOM 顺序始终不变。
 日期待考、TBA、未知没有 connector，只有未知作品时不显示 NOW。NOW 取后端 `as_of_date`。
+Detail 紧凑 Header 将标题/数量放同组，返回入口靠右，简介下一行。Timeline Card/NOW 使用 Games Home surface 和透明边框。
+卡片固定两行标题/摘要空间；日期与最多两个截断标签同排，底部显示带完整可访问名称的评分/在线/社群数，无数据省略，保留 metadata 最小高度。
+Connector 为 2px、2.5rem 的低强调动态虚线，left/right/down 跟随 chronology；小屏统一向下。Reduced motion 保留静态虚线，pointer-events:none，位于卡片后方。
 显示保留 day/month/quarter/year 与 inferred 精度，不暴露内部 First Available 来源，也不在前端过滤 Adult Tag。
 
 两个分区页面 SSR 一律 SFW。挂载读取本地模式：SFW 零补请求，NSFW 恰好一次刷新。
@@ -29,6 +32,10 @@ adult-only 的 SFW Detail 仍为 200，零作品使用中性空态。所有图�
 
 前一轮 Stage C 首页收口只简化 Home 读取；本轮再将 Index/Detail 改为轻量投影，缓存 TTL 调整为 1 小时，键命名保持不变。数据库结构与 Admin mutation 不变。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
 新增六张分区截图与首页四张变更须人工接受后才构成 Visual PASS，代码完成不代表 #140 已关闭。
+
+2026-10-07 Detail Timeline Closure：新增 Detail-only 单次装饰批量读取，3/30 成员均为固定 8 次 SQL，保留原 chronology、SFW 和 Redis 1h 合同。
+本地 Game Backend 全量测试/构建、隔离 PG18 集成、Nav Web lint/stylelint/style policy/typecheck/build、Unit 366、Nuxt 75、Collection Browser 32 项通过。
+Pinned Linux 的 Detail 材质/几何/方向/reduced-motion 5 项通过；仅四张 Timeline 视觉生成审阅差异，未更新任何 Golden。维护者审计与人工视觉接受仍待完成。
 
 2026-10-07 首页收口：Home 改为单条轻量 SQL；SSR 失败 slice 支持一次 mounted 恢复；快捷入口仅留在 Desktop Sidebar 并继承每日一游材质。
 本地 Unit 366、Nuxt 71、Games Home/Showcase Browser 58 项及隔离 PG18 集成通过。桌面两张 Home 基线按本轮授权更新，移动端与 Index/Timeline 基线保持不变；维护者视觉审计仍待进行。
@@ -87,6 +94,10 @@ HTTP `Cache-Control: no-store` 保持不变。Redis 与 CDN 是不同层；此�
 `info` 投影：`code,name,info,visible_game_count,published_at`。
 `summary` 在 info 上增加 `preview_games: [{game_id,name,header_url}]`。
 `timelineItem`：`game_id,name,summary,header_url,phase,chronology`，game_id 是十进制字符串。
+Detail schema v1 additive 字段：`primary_tag/secondary_tag: {code,name}|null`、`rating: {average,count}|null`、`online: {count,collected_at}|null`、`community_count: number`。
+标签仅来自 game_tag.role=primary/secondary，按 Game Search 同一双语 fallback，不返回内部 Tag ID 或完整标签列表。
+评分复用评论 AVG(score)/COUNT(*)，零评价为 null；在线只取 collected_at DESC,id DESC 的最新成功记录，无成功记录为 null，真实零值保留。
+社群只计算 groups 数组长度，null/非数组为 0，URL 不公开。旧 schema v1 缓存未带新增字段时 UI 安全省略元数据，缓存 namespace/TTL/失效机制均不变。
 不返回 Collection 内部 ID、status、version、archived_at、原始成员数或隐藏成人数。
 分区名称/简介逐字段优先请求语言，空值回退另一语言；游戏文案和图片复用现有 V2 优先级。
 
@@ -127,8 +138,10 @@ First Available 的 inferred 原样保留，内部 legacy_manual/steam_backfill/
 Home 使用单条 sqlc 查询读取 published 槽位、Collection 双语元数据和按 adult code 过滤的可见数量，不加载任何 Game Aggregate 或时间线。
 Home schema v1 保留 CollectionSummary 结构，preview_games 固定为空数组；Index/Detail 仍保留完整 preview/timeline。
 Index/Detail 使用 `LoadCollectionProjectionGames`：一次批量 Membership，去重 game IDs，随后固定批量读取站内双语文案、localized name/summary、detail name/header、仅 header 类型的 media/assets、First Available 和 Release State。
-成员与投影合计 6 次 SQL，与成员数量无关；默认 Index（Count/List + 投影）8 次、Detail（Get + 投影）7 次，Home 1 次。
-不进入完整 Game Aggregate，不读取价格、在线/峰值、评论、配置需求、新闻或完整素材。不内部 HTTP 调用。
+核心成员与投影合计 6 次 SQL，与成员数量无关；默认 Index（Count/List + 投影）8 次，Home 1 次。
+Detail 核心链路审计为 Get + 六次投影，共 7 次；本轮新增过滤后 `LoadCollectionTimelineDecorations` 单次 sqlc batch，总计固定 8 次（零可见成员跳过 decoration）。
+装饰仅查询当前 mode 可见 game IDs。Index 不调用装饰读取，保持原查询和 DTO；Detail 只新增主次标签、评论评分、最新成功在线记录与社群数。
+不进入完整 Game Aggregate，不读取价格、峰值、配置需求、新闻或完整素材，不内部 HTTP 调用。PG integration 的 3/30 成员验收使用真实 SQL tracing；耗时仅诊断，无 CI 毫秒门槛。
 游戏文案继续复用现有 locale fallback；完整 read model 和轻量投影共用 canonical header helper，保持 media/asset 优先级及归档 adult 标签语义。
 
 Redis 是 Origin Read Model acceleration，TTL **1 hour**，不是内容发布时限承诺。

@@ -678,7 +678,15 @@ pagination cannot append, and successful Index mode refresh resets page one.
 No URL mode, frontend adult filtering, or frontend chronology sort is allowed.
 Detail partitions Backend order without changing it; past/future independently
 reuse compactPlacement/connector and retain chronological DOM order at every width.
-Only those two groups have connectors. Date-only facts use UTC/component formatting
+Only those two groups have connectors. Detail's compact Header groups H1/count with
+right-aligned text Back navigation. Timeline cards and NOW share Games Home material,
+transparent borders, and fixed two-line title/summary geometry. Optional schema v1
+metadata shows at most primary/secondary tags and rating/latest observed online/community
+counts with localized accessible labels; missing metadata is omitted, including old cached
+payloads. No client filtering or chronology change follows from decorations.
+Connectors are 2px dashed CSS gradients over 2.5rem gaps; right/left/down motion follows
+chronology, small screens flow down, reduced motion keeps static dashes. Connectors cannot
+capture pointer/focus or join undated phases. Date-only facts use UTC/component formatting
 and retain precision/inferred; NOW uses the response as_of_date. Missing Detail is
 404, initial upstream failure is HTTP 503 with Retry, adult-only SFW is neutral 200.
 Index begins visually with Search + Advanced Filter; its H1 is sr-only and SEO remains.

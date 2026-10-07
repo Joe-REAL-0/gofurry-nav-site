@@ -17,13 +17,26 @@ import (
 )
 
 type collectionReaderFake struct {
-	records []v2models.CollectionRecord
-	batch   v2models.CollectionGames
-	err     error
-	reads   atomic.Int64
-	loads   atomic.Int64
-	entered chan string
-	release chan struct{}
+	records         []v2models.CollectionRecord
+	batch           v2models.CollectionGames
+	err             error
+	reads           atomic.Int64
+	loads           atomic.Int64
+	entered         chan string
+	release         chan struct{}
+	decorations     map[int64]v2models.CollectionTimelineDecoration
+	decorationLoads atomic.Int64
+	decorationIDs   []int64
+	decorationMu    sync.Mutex
+	decorationErr   error
+}
+
+func (r *collectionReaderFake) LoadCollectionTimelineDecorations(_ context.Context, ids []int64, _ string) (map[int64]v2models.CollectionTimelineDecoration, error) {
+	r.decorationLoads.Add(1)
+	r.decorationMu.Lock()
+	r.decorationIDs = append([]int64(nil), ids...)
+	r.decorationMu.Unlock()
+	return r.decorations, r.decorationErr
 }
 
 func (r *collectionReaderFake) CountPublishedCollections(context.Context, v2models.CollectionQuery) (int64, error) {
@@ -534,5 +547,57 @@ func TestCollectionProjectionPreservesGamePresentation(t *testing.T) {
 				t.Fatalf("projection drift: %+v vs %+v", got.Items[0], want)
 			}
 		}
+	}
+}
+
+func TestCollectionDetailDecoratesOnlyVisibleMembersAndCachesResult(t *testing.T) {
+	r, c, s := collectionFixture()
+	r.decorations = map[int64]v2models.CollectionTimelineDecoration{
+		1: {PrimaryTag: &v2models.CollectionTimelineTag{Code: "story", Name: "剧情"}, Rating: &v2models.CollectionTimelineRating{Average: 4.5, Count: 2}, Online: &v2models.CollectionTimelineOnline{Count: 0, CollectedAt: c.now}, CommunityCount: 3},
+		2: {PrimaryTag: &v2models.CollectionTimelineTag{Code: "hidden", Name: "Hidden adult metadata"}},
+	}
+	ctx := context.Background()
+	_, _ = s.List(ctx, v2models.CollectionQuery{})
+	_, _ = s.Home(ctx, v2models.CollectionQuery{})
+	if r.decorationLoads.Load() != 0 {
+		t.Fatal("Index/Home must not decorate")
+	}
+	detail, err := s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if err != nil || r.decorationLoads.Load() != 1 || !reflect.DeepEqual(r.decorationIDs, []int64{1, 3, 4, 5}) {
+		t.Fatal("SFW decoration batch", detail, err, r.decorationIDs)
+	}
+	if detail.Items[0].Rating.Average != 4.5 || detail.Items[0].Online.Count != 0 || detail.Items[0].CommunityCount != 3 {
+		t.Fatal(detail.Items[0])
+	}
+	encoded, _ := json.Marshal(detail)
+	if strings.Contains(string(encoded), "Hidden adult") || !strings.Contains(string(encoded), `"rating":null`) || !strings.Contains(string(encoded), `"schema_version":1`) {
+		t.Fatal("additive DTO/null/privacy", string(encoded))
+	}
+	beforeReads, beforeLoads := r.reads.Load(), r.loads.Load()
+	_, err = s.Detail(ctx, "mixed", v2models.CollectionQuery{})
+	if err != nil || r.reads.Load() != beforeReads || r.loads.Load() != beforeLoads || r.decorationLoads.Load() != 1 {
+		t.Fatal("warm hit rebuilt DB", err)
+	}
+	_, err = s.Detail(ctx, "mixed", v2models.CollectionQuery{Mode: "nsfw"})
+	if err != nil || !reflect.DeepEqual(r.decorationIDs, []int64{1, 2, 3, 4, 5}) {
+		t.Fatal("NSFW batch", err, r.decorationIDs)
+	}
+	before := r.decorationLoads.Load()
+	_, err = s.Detail(ctx, "adult-only", v2models.CollectionQuery{})
+	if err != nil || r.decorationLoads.Load() != before {
+		t.Fatal("empty SFW must not decorate", err)
+	}
+}
+
+func TestCollectionDecorationFailureNotCached(t *testing.T) {
+	r, c, s := collectionFixture()
+	r.decorationErr = errors.New("decoration DB failure")
+	_, err := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{})
+	if err == nil || c.writes != 0 {
+		t.Fatal("partial DTO must not be cached", err, c.writes)
+	}
+	r.decorationErr = nil
+	if _, err = s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); err != nil || r.decorationLoads.Load() != 2 {
+		t.Fatal("must rebuild after failure", err)
 	}
 }

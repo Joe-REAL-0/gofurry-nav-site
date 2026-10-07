@@ -4,6 +4,7 @@ import { defineComponent, h, nextTick } from 'vue'
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { getGameCollectionHome, getGameCollections, getGameCollectionDetail } from '../../app/services/game'
 import { useGameCollectionModeRefresh } from '../../app/composables/useGameCollectionModeRefresh'
+import TimelineItem from '../../app/components/game/collections/GameCollectionTimelineItem.vue'
 import Timeline from '../../app/components/game/collections/GameCollectionTimeline.vue'
 import { collectionDetail } from '../browser/fixtures/game-collections-data'
 import { connector, compactPlacement } from '../../app/utils/serpentineSequence'
@@ -69,5 +70,22 @@ it.each([0, 1, 2, 3, 4, 6, 7])('uses shared geometry with %i ordered nodes, pres
     expect(node.attributes('data-connector')).toBe(connector(i, count))
     expect((node.element as HTMLElement).style.getPropertyValue('--timeline-column')).toBe(String(compactPlacement(i)['--timeline-column']))
   })
+  wrapper.unmount()
+})
+
+it('renders detail metadata accessibly and tolerates pre-upgrade cached items', async () => {
+  const item = collectionDetail('local').items[0]!
+  const wrapper = await mountSuspended(TimelineItem, { props: { item } })
+  expect(wrapper.findAll('.game-collection-timeline-tag').map(tag => tag.text())).toEqual(['剧情', '视觉小说'])
+  expect(wrapper.find('.game-collection-timeline-metrics').text()).toContain('1,234')
+  expect(wrapper.findAll('svg').every(icon => icon.attributes('aria-hidden') === 'true')).toBe(true)
+  expect(wrapper.find('[aria-label="评分 4.6，共 28 条评价"]').exists()).toBe(true)
+  await wrapper.setProps({ item: { ...item, primary_tag:null, secondary_tag:null, rating:null, online:{ count:0,collected_at:'2026-10-06T00:00:00Z' }, community_count:0 } })
+  expect(wrapper.findAll('.game-collection-timeline-tag')).toHaveLength(0)
+  expect(wrapper.find('.game-collection-timeline-metrics').text()).toBe('0')
+  const legacy = { ...item }; delete legacy.primary_tag; delete legacy.secondary_tag; delete legacy.rating; delete legacy.online; delete legacy.community_count
+  await wrapper.setProps({ item:legacy })
+  expect(wrapper.find('.game-collection-timeline-metrics').text()).toBe('')
+  expect(wrapper.find('.game-collection-title').text()).toBe(item.name)
   wrapper.unmount()
 })

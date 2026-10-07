@@ -182,6 +182,86 @@ func (q *Queries) BatchCollectionProjectionGames(ctx context.Context, gameIds []
 	return items, nil
 }
 
+const batchCollectionTimelineDecorations = `-- name: BatchCollectionTimelineDecorations :many
+WITH ratings AS (
+    SELECT game_id, AVG(score)::double precision AS average, COUNT(*)::bigint AS review_count
+    FROM gfg_game_comment WHERE game_id = ANY($2::bigint[])
+    GROUP BY game_id
+)
+SELECT g.id AS game_id, pt.code AS primary_code, st.code AS secondary_code,
+    CASE WHEN $1::text = 'en' THEN COALESCE(NULLIF(pt.name_en, ''), pt.name, '')
+         ELSE COALESCE(NULLIF(pt.name, ''), pt.name_en, '') END::text AS primary_name,
+    CASE WHEN $1::text = 'en' THEN COALESCE(NULLIF(st.name_en, ''), st.name, '')
+         ELSE COALESCE(NULLIF(st.name, ''), st.name_en, '') END::text AS secondary_name,
+    COALESCE(r.average, 0)::double precision AS average,
+    COALESCE(r.review_count, 0)::bigint AS review_count,
+    COALESCE(online.count, 0)::bigint AS online_count, online.collected_at AS online_collected_at,
+    CASE WHEN jsonb_typeof(g.groups::jsonb) = 'array' THEN jsonb_array_length(g.groups::jsonb)
+         ELSE 0 END::integer AS community_count
+FROM gfg_game g
+LEFT JOIN gfg_game_tag pr ON pr.game_id = g.id AND pr.role = 'primary'
+LEFT JOIN gfg_tag pt ON pt.id = pr.tag_id
+LEFT JOIN gfg_game_tag sr ON sr.game_id = g.id AND sr.role = 'secondary'
+LEFT JOIN gfg_tag st ON st.id = sr.tag_id
+LEFT JOIN ratings r ON r.game_id = g.id
+LEFT JOIN LATERAL (
+    SELECT pc.count, pc.collected_at FROM gfg_game_player_counts pc
+    WHERE pc.game_id = g.id AND pc.status = 'success'
+    ORDER BY pc.collected_at DESC, pc.id DESC LIMIT 1
+) online ON true
+WHERE g.id = ANY($2::bigint[])
+ORDER BY g.id
+`
+
+type BatchCollectionTimelineDecorationsParams struct {
+	Lang    string  `json:"lang"`
+	GameIds []int64 `json:"game_ids"`
+}
+
+type BatchCollectionTimelineDecorationsRow struct {
+	GameID            int64              `json:"game_id"`
+	PrimaryCode       *string            `json:"primary_code"`
+	SecondaryCode     *string            `json:"secondary_code"`
+	PrimaryName       string             `json:"primary_name"`
+	SecondaryName     string             `json:"secondary_name"`
+	Average           float64            `json:"average"`
+	ReviewCount       int64              `json:"review_count"`
+	OnlineCount       int64              `json:"online_count"`
+	OnlineCollectedAt pgtype.Timestamptz `json:"online_collected_at"`
+	CommunityCount    int32              `json:"community_count"`
+}
+
+func (q *Queries) BatchCollectionTimelineDecorations(ctx context.Context, arg BatchCollectionTimelineDecorationsParams) ([]BatchCollectionTimelineDecorationsRow, error) {
+	rows, err := q.db.Query(ctx, batchCollectionTimelineDecorations, arg.Lang, arg.GameIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BatchCollectionTimelineDecorationsRow{}
+	for rows.Next() {
+		var i BatchCollectionTimelineDecorationsRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.PrimaryCode,
+			&i.SecondaryCode,
+			&i.PrimaryName,
+			&i.SecondaryName,
+			&i.Average,
+			&i.ReviewCount,
+			&i.OnlineCount,
+			&i.OnlineCollectedAt,
+			&i.CommunityCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countCollectionBrowse = `-- name: CountCollectionBrowse :one
 SELECT count(*) FROM gfg_game_collection WHERE status = 'published'
 `

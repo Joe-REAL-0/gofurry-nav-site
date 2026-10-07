@@ -268,12 +268,16 @@ VALUES(140101,140101,'header','store','store_browse','en','header','https://exam
 			}
 			want := 8
 			if endpoint == "detail" {
-				want = 7
+				want = 8
 			}
 			if e != nil || tracer.count != want {
 				t.Fatalf("%s queries=%d want=%d err=%v", endpoint, tracer.count, want, e)
 			}
-			for _, forbidden := range []string{"gfg_game_prices", "gfg_game_player", "gfg_game_comment", "gfg_game_requirements", "gfg_game_news"} {
+			forbiddenTables := []string{"gfg_game_prices", "gfg_game_requirements", "gfg_game_news", "gfg_game_player_peaks"}
+			if endpoint == "list" {
+				forbiddenTables = append(forbiddenTables, "gfg_game_player", "gfg_game_comment")
+			}
+			for _, forbidden := range forbiddenTables {
 				if strings.Contains(strings.Join(tracer.queries, "\n"), forbidden) {
 					t.Fatal(endpoint, forbidden)
 				}
@@ -284,13 +288,16 @@ VALUES(140101,140101,'header','store','store_browse','en','header','https://exam
 	})
 	assertCollectionDiscovery(t, ctx, pool)
 	assertCollectionConstraints(t, ctx, pool)
+	assertCollectionTimelineDecorations(t, ctx, pool)
 }
 
 type collectionQueryTrace struct {
-	mu      sync.Mutex
-	count   int
-	siteIDs []int64
-	queries []string
+	mu              sync.Mutex
+	count           int
+	siteIDs         []int64
+	decorationIDs   []int64
+	decorationCount int
+	queries         []string
 }
 
 func (q *collectionQueryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -298,6 +305,10 @@ func (q *collectionQueryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn,
 	defer q.mu.Unlock()
 	q.count++
 	q.queries = append(q.queries, data.SQL)
+	if strings.Contains(data.SQL, "-- name: BatchCollectionTimelineDecorations") {
+		q.decorationIDs = append([]int64{}, data.Args[1].([]int64)...)
+		q.decorationCount++
+	}
 	if strings.Contains(data.SQL, "-- name: BatchCollectionProjectionGames") {
 		q.siteIDs = append([]int64{}, data.Args[0].([]int64)...)
 	}

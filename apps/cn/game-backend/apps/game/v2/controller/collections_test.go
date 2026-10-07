@@ -20,6 +20,10 @@ type publicCollectionReader struct {
 	calls         int
 }
 
+func (r *publicCollectionReader) LoadCollectionTimelineDecorations(context.Context, []int64, string) (map[int64]v2models.CollectionTimelineDecoration, error) {
+	return nil, r.err
+}
+
 func (r *publicCollectionReader) CountPublishedCollections(context.Context, v2models.CollectionQuery) (int64, error) {
 	return 1, r.err
 }

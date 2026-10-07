@@ -37,6 +37,17 @@ export function collectionDetail(media: string, lang = 'zh', mode = 'sfw', code 
     item(30, 'released_unknown'), item(40, 'upcoming_overdue', 'month', '2026-08-01'),
     item(41, 'upcoming', 'quarter', '2027-04-01'), item(42, 'upcoming', 'year', '2028-01-01'),
     item(43, 'upcoming', 'day', '2029-05-18'), item(50, 'upcoming_tba'), item(60, 'unknown')]
+  items = items.map((value, index) => ({ ...value,
+    primary_tag: index % 4 < 2 ? { code: 'story', name: lang === 'en' ? 'Story' : '剧情' } : null,
+    secondary_tag: index % 4 === 0 || index % 4 === 2 ? { code: 'visual-novel', name: lang === 'en' ? 'Visual novel' : '视觉小说' } : null,
+    rating: index % 4 === 0 ? { average: 4.64, count: 28 } : null,
+    online: index % 4 === 0 ? { count: 1234, collected_at: '2026-10-06T08:00:00Z' } : index % 4 === 2 ? { count: 0, collected_at: '2026-10-06T08:00:00Z' } : null,
+    community_count: index % 4 === 0 ? 3 : index % 4 === 2 ? 1 : 0,
+  }))
+  if (code === 'flow-long') {
+    items = Array.from({ length: 7 }, (_, i) => ({ ...items[i % 4]!, game_id: String(200 + i), phase: 'released' }))
+    items[1] = { ...items[1]!, name: (lang === 'en' ? 'A very long journey through a changing world ' : '穿越不断变化的世界与伙伴一起踏上漫长旅程').repeat(4), summary: items[1]!.summary.repeat(8) }
+  }
   if (code === 'unknown-only') items = [item(60, 'unknown')]
   if (code === 'adult-only') items = []
   if (mode === 'nsfw') items.push({ ...item(999, 'unknown'), name: 'Adult game', header_url: `${media}/adult-game.svg` })

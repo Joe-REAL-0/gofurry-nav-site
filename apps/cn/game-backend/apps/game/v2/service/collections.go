@@ -32,6 +32,7 @@ type collectionReader interface {
 	GetPublishedCollection(context.Context, string) (*v2models.CollectionRecord, error)
 	ListPublishedCollectionHomeSlots(context.Context, string) ([]v2models.CollectionRecord, error)
 	LoadCollectionProjectionGames(context.Context, []int64, string) (v2models.CollectionGames, error)
+	LoadCollectionTimelineDecorations(context.Context, []int64, string) (map[int64]v2models.CollectionTimelineDecoration, error)
 }
 
 type collectionCache interface {
@@ -207,6 +208,20 @@ func (s *CollectionService) Detail(ctx context.Context, code string, query v2mod
 			return result, err
 		}
 		result.Items = timelines[record.ID]
+		// Only visible members reach the decoration query. Preserve chronology order.
+		if len(result.Items) > 0 {
+			ids := make([]int64, len(result.Items))
+			for i, item := range result.Items {
+				ids[i], _ = strconv.ParseInt(item.GameID, 10, 64)
+			}
+			decorations, err := s.reader.LoadCollectionTimelineDecorations(ctx, ids, query.Lang)
+			if err != nil {
+				return result, err
+			}
+			for i, id := range ids {
+				result.Items[i].CollectionTimelineDecoration = decorations[id]
+			}
+		}
 		result.Collection = collectionInfo(*record, query.Lang, len(result.Items))
 		return result, nil
 	})

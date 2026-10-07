@@ -162,3 +162,36 @@ func (dao *ReadModelDAO) LoadCollectionProjectionGames(ctx context.Context, coll
 	}
 	return result, nil
 }
+
+// One bounded query, invoked only after Detail's mode filtering. Lateral latest
+// observation uses the game's index; no peak/history or full tag set is loaded.
+func (dao *ReadModelDAO) LoadCollectionTimelineDecorations(ctx context.Context, gameIDs []int64, lang string) (map[int64]v2models.CollectionTimelineDecoration, error) {
+	result := make(map[int64]v2models.CollectionTimelineDecoration, len(gameIDs))
+	if err := dao.ready(); err != nil {
+		return nil, err
+	}
+	if len(gameIDs) == 0 {
+		return result, nil
+	}
+	rows, err := dao.q.BatchCollectionTimelineDecorations(ctx, gamesqlc.BatchCollectionTimelineDecorationsParams{GameIds: uniqueInt64s(gameIDs), Lang: lang})
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		decoration := v2models.CollectionTimelineDecoration{CommunityCount: row.CommunityCount}
+		if row.PrimaryCode != nil {
+			decoration.PrimaryTag = &v2models.CollectionTimelineTag{Code: *row.PrimaryCode, Name: row.PrimaryName}
+		}
+		if row.SecondaryCode != nil {
+			decoration.SecondaryTag = &v2models.CollectionTimelineTag{Code: *row.SecondaryCode, Name: row.SecondaryName}
+		}
+		if row.ReviewCount > 0 {
+			decoration.Rating = &v2models.CollectionTimelineRating{Average: row.Average, Count: row.ReviewCount}
+		}
+		if row.OnlineCollectedAt.Valid {
+			decoration.Online = &v2models.CollectionTimelineOnline{Count: row.OnlineCount, CollectedAt: row.OnlineCollectedAt.Time.UTC()}
+		}
+		result[row.GameID] = decoration
+	}
+	return result, nil
+}

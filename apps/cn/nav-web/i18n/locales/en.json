@@ -774,6 +774,11 @@
   },
   "game": {
     "collections": {
+      "metrics": {
+        "rating": "Rating {average} from {count} reviews",
+        "online": "{count} players online at the latest observation",
+        "communities": "{count} community links"
+      },
       "search": "Search collections or games…",
       "advancedFilter": "Advanced filters",
       "apply": "Apply",

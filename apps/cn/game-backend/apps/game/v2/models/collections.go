@@ -93,12 +93,37 @@ type CollectionChronology struct {
 }
 
 type CollectionTimelineItem struct {
+	CollectionTimelineDecoration
 	GameID     string                `json:"game_id"`
 	Name       string                `json:"name"`
 	Summary    string                `json:"summary"`
 	HeaderURL  string                `json:"header_url"`
 	Phase      string                `json:"phase"`
 	Chronology *CollectionChronology `json:"chronology"`
+}
+
+// Detail-only metadata; the core projection and Index previews do not load it.
+type CollectionTimelineDecoration struct {
+	PrimaryTag     *CollectionTimelineTag    `json:"primary_tag"`
+	SecondaryTag   *CollectionTimelineTag    `json:"secondary_tag"`
+	Rating         *CollectionTimelineRating `json:"rating"`
+	Online         *CollectionTimelineOnline `json:"online"`
+	CommunityCount int32                     `json:"community_count"`
+}
+
+type CollectionTimelineTag struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
+}
+
+type CollectionTimelineRating struct {
+	Average float64 `json:"average"`
+	Count   int64   `json:"count"`
+}
+
+type CollectionTimelineOnline struct {
+	Count       int64     `json:"count"`
+	CollectedAt time.Time `json:"collected_at"`
 }
 
 type CollectionDetail struct {
