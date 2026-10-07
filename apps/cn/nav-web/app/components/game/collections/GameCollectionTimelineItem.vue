@@ -40,6 +40,16 @@ const number = (value: number) => numberFormat.value.format(value)
 const timeLabel = computed(() => collectionTime(props.item, locale.value, t))
 const ratingAverage = computed(() => new Intl.NumberFormat(locale.value === 'en' ? 'en-US' : 'zh-CN', { maximumFractionDigits: 1 }).format(props.item.rating?.average ?? 0))
 const ratingLabel = computed(() => t('game.collections.metrics.rating', { average: ratingAverage.value, count: number(props.item.rating?.count ?? 0) }))
-const onlineLabel = computed(() => t('game.collections.metrics.online', { count: number(props.item.online?.count ?? 0) }))
+const onlineLabel = computed(() => {
+  const count = number(props.item.online?.count ?? 0)
+  const observedAt = new Date(props.item.online?.collected_at ?? '')
+  if (!Number.isFinite(observedAt.getTime())) return t('game.collections.metrics.online', { count })
+  // Explicit UTC keeps SSR and hydration labels identical across host time zones.
+  const time = new Intl.DateTimeFormat(locale.value === 'en' ? 'en-US' : 'zh-CN', {
+    timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'short',
+  }).format(observedAt)
+  return t('game.collections.metrics.onlineAt', { count, time })
+})
 const communityLabel = computed(() => t('game.collections.metrics.communities', { count: number(props.item.community_count ?? 0) }))
 </script>

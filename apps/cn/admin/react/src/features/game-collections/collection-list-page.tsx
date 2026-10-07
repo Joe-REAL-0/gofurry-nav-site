@@ -38,8 +38,8 @@ export function CollectionListPage() {
   return <PageLayout>
     <PageHeader title="游戏分区" actions={<><Link to="/game/collections/home-curation"><Button variant="secondary">首页入口编排</Button></Link>{auth.can('content.write') && <Link to="/game/collections/new"><Button>新建游戏分区</Button></Link>}</>} />
     <DataTable data={query.data?.list ?? []} columns={columns} total={query.data?.total ?? 0} page={page} pageSize={50} search={keyword} searchable={false} onSearchChange={value => set('keyword', value)} onPageChange={value => set('page_num', String(value))} loading={query.isLoading} error={query.error ? errorMessage(query.error) : undefined} onRetry={() => void query.refetch()} toolbar={<>
-      <Input aria-label="搜索游戏分区" placeholder="搜索名称或 Code…" className="max-w-sm" {...search.inputProps} />
-      <Select ariaLabel="分区状态" value={status} onValueChange={value => set('status', value)} options={[{ value: '', label: '全部状态' }, ...Object.entries(collectionStatusLabels).map(([value, label]) => ({ value, label }))]} />
+      <Input aria-label="搜索游戏分区" placeholder="搜索名称或 Code…" className="min-w-64 max-w-sm flex-1" {...search.inputProps} />
+      <Select className="w-40 shrink-0" ariaLabel="分区状态" value={status} onValueChange={value => set('status', value)} options={[{ value: '', label: '全部状态' }, ...Object.entries(collectionStatusLabels).map(([value, label]) => ({ value, label }))]} />
     </>} />
   </PageLayout>
 }

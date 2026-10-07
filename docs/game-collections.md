@@ -30,7 +30,7 @@ Detail 保持 `useGameCollectionModeRefresh`。Index 由 `useGameCollectionDisco
 Detail 初始/刷新 404 使用真实 Nuxt 404；初始服务失败返回 HTTP 503 与可重试 surface，不伪装空分区。
 adult-only 的 SFW Detail 仍为 200，零作品使用中性空态。所有图片复用 SteamAssetImage。
 
-前一轮 Stage C 首页收口只简化 Home 读取；本轮再将 Index/Detail 改为轻量投影，缓存 TTL 调整为 1 小时，键命名保持不变。数据库结构与 Admin mutation 不变。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
+前序 Stage C 收口分别简化了 Home 读取与 Index/Detail 轻量投影，并将缓存 TTL 调整为 1 小时。最终数据收口将内部缓存 revision 提升到 v2，Public schema_version 仍为 1。数据库结构与 Admin mutation 不变。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
 新增六张分区截图与首页四张变更须人工接受后才构成 Visual PASS，代码完成不代表 #140 已关闭。
 
 2026-10-07 Detail Timeline Closure：新增 Detail-only 单次装饰批量读取，3/30 成员均为固定 8 次 SQL，保留原 chronology、SFW 和 Redis 1h 合同。
@@ -96,8 +96,8 @@ HTTP `Cache-Control: no-store` 保持不变。Redis 与 CDN 是不同层；此�
 `timelineItem`：`game_id,name,summary,header_url,phase,chronology`，game_id 是十进制字符串。
 Detail schema v1 additive 字段：`primary_tag/secondary_tag: {code,name}|null`、`rating: {average,count}|null`、`online: {count,collected_at}|null`、`community_count: number`。
 标签仅来自 game_tag.role=primary/secondary，按 Game Search 同一双语 fallback，不返回内部 Tag ID 或完整标签列表。
-评分复用评论 AVG(score)/COUNT(*)，零评价为 null；在线只取 collected_at DESC,id DESC 的最新成功记录，无成功记录为 null，真实零值保留。
-社群只计算 groups 数组长度，null/非数组为 0，URL 不公开。旧 schema v1 缓存未带新增字段时 UI 安全省略元数据，缓存 namespace/TTL/失效机制均不变。
+社群 `community_count` 只计算当前游戏 `groups` 中 key/value 经 trim 后均非空的可展示入口；null/非数组/无效元素为 0，不计 resources/links，URL 不公开。Game Detail safeGroups 使用相同 trim 规则。
+评分只使用 GoFurry `gfg_game_comment` 的 AVG(score)/COUNT(*)，无评论为 null。在线人数表示最近一次成功观测（latest successful observed player count），不是严格实时；按 collected_at DESC、id DESC 取值，成功的 0 保留对象，只有失败记录则为 null。Tooltip/aria 按 locale 格式化采集时间并显式标注 UTC，保持 SSR/client 一致。
 不返回 Collection 内部 ID、status、version、archived_at、原始成员数或隐藏成人数。
 分区名称/简介逐字段优先请求语言，空值回退另一语言；游戏文案和图片复用现有 V2 优先级。
 
@@ -148,11 +148,12 @@ Redis 是 Origin Read Model acceleration，TTL **1 hour**，不是内容发布�
 仅默认 Browse（空 q、phase=all、sort=published_desc）、Home、Detail 使用以下命名空间；任何非默认 Discovery query 直接走轻量 DB read，不读写长期结果缓存，避免任意关键词高基数 key。
 
 ```text
-game:v2:collections:v1:home:{asOfDate}:{lang}:{mode}
-game:v2:collections:v1:list:{asOfDate}:{lang}:{mode}:{page}:{pageSize}
-game:v2:collections:v1:detail:{asOfDate}:{lang}:{mode}:{code}
+game:v2:collections:v2:home:{asOfDate}:{lang}:{mode}
+game:v2:collections:v2:list:{asOfDate}:{lang}:{mode}:{page}:{pageSize}
+game:v2:collections:v2:detail:{asOfDate}:{lang}:{mode}:{code}
 ```
 
+内部 revision v2 避免读取旧 community_count 错误 payload；Public schema_version 仍为 1。旧 v1 keys 自然过期，不扫描、不主动删除。
 UTC 日期切换立即换 key。有效缓存命中直接返回；miss/error/malformed 回 DB，成功后 best-effort 写缓存。
 数据库错误和 404 不缓存。每个 Service 实例用 singleflight 合并同 key 的并发 miss；不同 key 独立。
 缓存序列化结果按调用方解码，避免共享可变 slices。单个调用方取消不终止其他等待者，构建有 8 秒总预算。
@@ -220,17 +221,18 @@ Collection Audit resource 为 `gfg_game_collection`，action 为 create/update/m
 ### React Workspace 与刷新
 
 路由：`/game/collections`、`/new`、`/:id`、`/home-curation`（后三者均在相同前缀下）。
-列表搜索使用 IME-safe helper 并将 keyword/status/page_num 保存在 URL。
-单页 Workspace 包含基本内容、收录游戏、公开刷新说明；成员只做添加/移除，不提供顺序编辑或 Timeline Preview。
+列表搜索使用 IME-safe helper 并将 keyword/status/page_num 保存在 URL。Desktop 搜索、固定宽度状态筛选与列菜单处于同一工具行；窄屏可换行。
+单页 Workspace 只保留基本内容与收录游戏；成员只做添加/移除，不提供顺序编辑或 Timeline Preview。
+成员完整加载并保留本地 draft；已收录游戏搜索按 name/name_en/appid 本地 IME-safe 匹配，每页 20 条，搜索回第 1 页，增删夹到合法页。远程“搜索并添加游戏”独立，跨页编辑最终仍 PUT 完整 canonical game_ids。
 Game options 与 Home eligibility 搜索复用 RemoteSelect，不消费 IME 确认键。
 
 内容与成员草稿共享 baseVersion；本页保存成功可推进版本并保留另一份草稿，背景刷新不得覆盖脏草稿或提升其版本。
-409 保留草稿并要求显式重新加载。草稿通过 useUnsavedChanges 保护导航，生命周期操作在 dirty 时禁用且全部要求确认。
+409 保留草稿并要求显式重新加载。Header 的“重新加载”在干净状态直接取最新 workspace；dirty 时显示“放弃修改并重新加载”，确认后同时丢弃内容/成员草稿并采用新 version，取消则原样保留；成功 reload 清除 error/conflict。草稿通过 useUnsavedChanges 保护导航，生命周期操作在 dirty 时禁用且全部要求确认。
 只读用户可查看完整内容；归档后仅 Restore 可写。Audit 入口仅对 audit.read 显示，使用 resource 过滤而不假装支持 target_id。
 Home 草稿同样绑定原 revision，背景刷新不会覆盖它。
 
 Stage B 没有新迁移，也不变更 Stage A cache：不 purge Redis、不新增内部失效接口或 Pub/Sub。
-成功提示为“已保存；公开内容将在缓存刷新后更新。”；自动撤下首页入口时另行说明。
+所有 Collection 成功 Toast 只显示“已保存”。自动撤下首页以返回的 home_slot 状态为准，不重复解释缓存或刷新时限。Workspace 不设公开刷新说明；首页编排只保留选择资格提示。
 
 验证包含 Controller/route 单测、`TestAdminGameCollectionThreeDatabase` 的隔离 PG18 并发/约束/Audit 集成测试，
 以及 React 列表 IME、共享版本、冲突保留、生命周期、只读、五位完整编排和未保存保护测试。

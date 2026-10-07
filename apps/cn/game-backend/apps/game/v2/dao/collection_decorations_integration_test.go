@@ -3,6 +3,7 @@ package dao_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,8 @@ import (
 	v2dao "github.com/gofurry/gofurry-game-backend/apps/game/v2/dao"
 	v2models "github.com/gofurry/gofurry-game-backend/apps/game/v2/models"
 	v2service "github.com/gofurry/gofurry-game-backend/apps/game/v2/service"
+	gamedb "github.com/gofurry/gofurry-game-backend/internal/db/game/sqlc"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -44,12 +47,35 @@ INSERT INTO gfg_game_player_counts(id,run_id,game_id,appid,count,status,collecte
 (145004,'dec-failure',145101,145101,90000,'failed','2026-10-03'),
 (145005,'dec-zero',145102,145102,0,'success','2026-10-02'),
 (145006,'dec-only-failure',145103,145103,90000,'failed','2026-10-03');
-UPDATE gfg_game SET groups='[{"url":"private-community-one"},{"url":"private-community-two"}]' WHERE id=145101;
-UPDATE gfg_game SET groups='[{}]' WHERE id=145102;
+UPDATE gfg_game SET groups='[{"key":"discord","value":"https://private-community-one"},{"key":"telegram","value":"https://private-community-two"}]' WHERE id=145101;
+UPDATE gfg_game SET groups='[{}, {"key":"discord","value":""}, {"key":"","value":"https://x"}]' WHERE id=145102;
 UPDATE gfg_game SET groups='[]' WHERE id=145103;
 UPDATE gfg_game SET groups='{}' WHERE id=145104;
 UPDATE gfg_game SET groups='null' WHERE id=145105;
-UPDATE gfg_game SET groups=NULL WHERE id=145106;`)
+UPDATE gfg_game SET groups=NULL WHERE id=145106;
+UPDATE gfg_game SET groups='[{"key":"   ","value":"https://x"},{"key":"discord","value":"   "}]' WHERE id=145107;
+UPDATE gfg_game SET groups='[{"key":" discord ","value":" https://private-community-single "}]' WHERE id=145108;
+UPDATE gfg_game SET groups='"non-array"', resources='[{"key":"discord","value":"https://resource"}]', links='[{"key":"telegram","value":"https://link"}]' WHERE id=145109;`)
+	t.Run("one decoration row per game enforced by role uniqueness", func(t *testing.T) {
+		for _, role := range []string{"primary", "secondary"} {
+			_, err := pool.Exec(ctx, `INSERT INTO gfg_game_tag(game_id,tag_id,role,create_time,update_time) VALUES (145101,145203,$1,now(),now())`, role)
+			var pgErr *pgconn.PgError
+			if !errors.As(err, &pgErr) || pgErr.Code != "23505" || pgErr.ConstraintName != "idx_gfg_game_tag_"+role {
+				t.Fatalf("expected unique %s role invariant: %v", role, err)
+			}
+		}
+		rows, err := gamedb.New(pool).BatchCollectionTimelineDecorations(ctx, gamedb.BatchCollectionTimelineDecorationsParams{GameIds: []int64{145101, 145102, 145103}, Lang: "zh"})
+		if err != nil || len(rows) != 3 {
+			t.Fatalf("one raw row per game: %v %v", rows, err)
+		}
+		seen := map[int64]bool{}
+		for _, row := range rows {
+			if seen[row.GameID] {
+				t.Fatalf("duplicate game %d", row.GameID)
+			}
+			seen[row.GameID] = true
+		}
+	})
 	t.Run("timeline decoration semantics and bounded reads", func(t *testing.T) {
 		tracer := &collectionQueryTrace{}
 		cfg := pool.Config()
@@ -61,7 +87,7 @@ UPDATE gfg_game SET groups=NULL WHERE id=145106;`)
 		defer traced.Close()
 		dao := v2dao.NewReadModelDAO(traced)
 		for _, lang := range []string{"zh", "en"} {
-			decorations, err := dao.LoadCollectionTimelineDecorations(ctx, []int64{145101, 145102, 145103, 145104, 145105, 145106}, lang)
+			decorations, err := dao.LoadCollectionTimelineDecorations(ctx, []int64{145101, 145102, 145103, 145104, 145105, 145106, 145107, 145108, 145109}, lang)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -79,7 +105,7 @@ UPDATE gfg_game SET groups=NULL WHERE id=145106;`)
 			if both.Online == nil || both.Online.Count != 1234 || both.Online.CollectedAt.Format(time.DateOnly) != "2026-10-02" {
 				t.Fatal("latest success, id tie or peak drift", both)
 			}
-			if both.CommunityCount != 2 || decorations[145102].CommunityCount != 1 {
+			if both.CommunityCount != 2 || decorations[145102].CommunityCount != 0 || decorations[145108].CommunityCount != 1 {
 				t.Fatal("community counts", decorations)
 			}
 			if decorations[145102].SecondaryTag != nil || decorations[145102].PrimaryTag == nil || decorations[145103].PrimaryTag != nil || decorations[145103].SecondaryTag == nil {
@@ -88,10 +114,10 @@ UPDATE gfg_game SET groups=NULL WHERE id=145106;`)
 			if decorations[145102].PrimaryTag.Name != "回退" {
 				t.Fatal("primary locale fallback", decorations[145102])
 			}
-			if decorations[145102].Rating != nil || decorations[145102].Online.Count != 0 || decorations[145103].Online != nil {
+			if decorations[145102].Rating != nil || decorations[145102].Online == nil || decorations[145102].Online.Count != 0 || decorations[145103].Online != nil {
 				t.Fatal("null vs real zero", decorations)
 			}
-			for _, id := range []int64{145104, 145105, 145106} {
+			for _, id := range []int64{145104, 145105, 145106, 145107, 145109} {
 				d := decorations[id]
 				if d.PrimaryTag != nil || d.SecondaryTag != nil || d.Rating != nil || d.Online != nil || d.CommunityCount != 0 {
 					t.Fatal("missing/malformed metadata", id, d)

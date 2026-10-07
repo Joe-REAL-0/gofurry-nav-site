@@ -17,7 +17,7 @@ import { ApiError, errorMessage, sendJSON } from '../../lib/api'
 import { useAuth } from '../auth/auth-context'
 import { collectionContentSchema, collectionEndpoint, contentOf, createCollectionSchema, loadCollectionWorkspace, workspaceKey } from './api'
 import { CollectionMembersEditor } from './collection-members'
-import { collectionStatusLabels, PUBLIC_REFRESH_NOTICE, type CollectionContent, type CollectionWorkspace, type GameCollection } from './types'
+import { collectionStatusLabels, type CollectionContent, type CollectionWorkspace, type GameCollection } from './types'
 
 const fields = [{ key: 'name', label: '中文名称' }, { key: 'name_en', label: '英文名称' }, { key: 'info', label: '中文简介' }, { key: 'info_en', label: '英文简介' }] as const
 const lifecycleLabels = { publish: '发布', unpublish: '取消发布', archive: '归档', restore: '恢复为草稿' }
@@ -36,7 +36,7 @@ export function CreateCollectionPage() {
   const form = useForm<z.infer<typeof createCollectionSchema>>({ resolver: zodResolver(createCollectionSchema), defaultValues: { code: '', name: '', name_en: '', info: '', info_en: '' } })
   const mutation = useMutation({
     mutationFn: (values: z.infer<typeof createCollectionSchema>) => sendJSON<GameCollection>(collectionEndpoint, 'POST', values), retry: false,
-    onSuccess: () => { form.reset(); toast(PUBLIC_REFRESH_NOTICE) },
+    onSuccess: () => { form.reset(); toast('已保存') },
     onError: err => setError(errorMessage(err)),
   })
   useUnsavedChanges(form.formState.isDirty && !mutation.isSuccess)
@@ -95,7 +95,7 @@ export function CollectionWorkspaceEditor({ data, reload }: { data: CollectionWo
       client.setQueryData(workspaceKey(saved.id), base)
       setDraft(dirtyDraft(next) ? next : null)
       setError(''); setConflict(false); setConfirm(null)
-      toast(value.base.collection.home_slot !== null && saved.home_slot === null ? `${PUBLIC_REFRESH_NOTICE} 该分区已同步撤出首页入口。` : PUBLIC_REFRESH_NOTICE)
+      toast('已保存')
       void client.invalidateQueries({ queryKey: ['game-collections'] })
       void client.invalidateQueries({ queryKey: ['game-collection-home'] })
     },
@@ -106,7 +106,7 @@ export function CollectionWorkspaceEditor({ data, reload }: { data: CollectionWo
   const actions: Lifecycle[] = collection.status === 'archived' ? ['restore'] : collection.status === 'published' ? ['unpublish', 'archive'] : ['publish', 'archive']
   const change = (next: Draft) => setDraft(dirtyDraft(next) ? next : null)
   const reloadExplicitly = async () => {
-    if (dirty && !window.confirm('放弃未保存的内容和成员修改并重新加载？')) return
+    if (dirty && !window.confirm('放弃未保存的内容和成员修改，并重新加载服务器上的最新版本？')) return
     setReloading(true)
     try { const fresh = await reload(); client.setQueryData(workspaceKey(collection.id), fresh); setDraft(null); setError(''); setConflict(false) }
     catch (err) { setError(errorMessage(err)) }
@@ -116,18 +116,17 @@ export function CollectionWorkspaceEditor({ data, reload }: { data: CollectionWo
     <PageHeader title={collection.name} actions={<div className="flex flex-wrap gap-2">
       <Link to="/game/collections"><Button variant="secondary">返回</Button></Link>
       {auth.can('audit.read') && <Link to="/system/audit?resource=gfg_game_collection"><Button variant="secondary">操作审计</Button></Link>}
+      <Button variant="secondary" disabled={busy} onClick={() => void reloadExplicitly()}>{dirty ? '放弃修改并重新加载' : '重新加载'}</Button>
       {auth.can('content.write') && actions.map(action => <Button key={action} variant={action === 'archive' ? 'danger' : 'secondary'} disabled={dirty || busy || conflict} onClick={() => setConfirm(action)}>{lifecycleLabels[action]}</Button>)}
     </div>} />
     <div><StatusBadge>{collectionStatusLabels[collection.status]}</StatusBadge></div>
     {dirty && <p className="text-sm text-muted-foreground">请先保存或放弃修改，再执行发布、取消发布、归档或恢复。</p>}
     {error && <Alert tone="danger">{error}{conflict && ' 草稿已保留，请显式重新加载后重试。'}</Alert>}
-    <div><Button variant="secondary" disabled={busy} onClick={() => void reloadExplicitly()}>重新加载 / 放弃修改</Button></div>
     <Section title="基本内容"><ContentForm code={collection.code} value={current.content} disabled={readonly || busy} saveDisabled={!contentDirty(current) || conflict} onChange={content => change({ ...current, content })} onSave={() => mutation.mutate({ kind: 'content', value: current })} readonly={readonly} /></Section>
     <Section title={`收录游戏（${current.members.length}）`}>
       <CollectionMembersEditor members={current.members} disabled={readonly || mutation.isPending || reloading} onLoadingChange={setLoadingMember} onChange={members => change({ ...current, members })} />
       {!readonly && <Button className="mt-3" disabled={!membersDirty(current) || busy || conflict} onClick={() => mutation.mutate({ kind: 'members', value: current })}>保存成员</Button>}
     </Section>
-    <Section title="公开刷新说明"><p className="text-sm text-muted-foreground">保存后，公开内容将在缓存刷新后更新。仅已发布且至少有一个 SFW 可见游戏的分区可配置首页入口；移除最后一个 SFW 游戏时会自动撤下入口。</p></Section>
     <ConfirmAction open={confirm !== null} onOpenChange={open => { if (!open) setConfirm(null) }} title={`${confirm ? lifecycleLabels[confirm] : ''}游戏分区`} description={`确认对“${collection.name}”执行此操作？恢复只会回到草稿，不会恢复首页入口。`} confirmLabel="确认操作" variant={confirm === 'archive' ? 'danger' : 'primary'} busy={busy} onConfirm={() => { if (confirm && !dirty && !busy) mutation.mutate({ kind: confirm, value: current }) }} />
   </PageLayout>
 }

@@ -196,7 +196,11 @@ SELECT g.id AS game_id, pt.code AS primary_code, st.code AS secondary_code,
     COALESCE(r.average, 0)::double precision AS average,
     COALESCE(r.review_count, 0)::bigint AS review_count,
     COALESCE(online.count, 0)::bigint AS online_count, online.collected_at AS online_collected_at,
-    CASE WHEN jsonb_typeof(g.groups::jsonb) = 'array' THEN jsonb_array_length(g.groups::jsonb)
+    CASE WHEN jsonb_typeof(g.groups::jsonb) = 'array' THEN (
+           SELECT COUNT(*) FROM jsonb_array_elements(g.groups::jsonb) AS entry
+           WHERE btrim(COALESCE(entry->>'key', '')) <> ''
+             AND btrim(COALESCE(entry->>'value', '')) <> ''
+         )
          ELSE 0 END::integer AS community_count
 FROM gfg_game g
 LEFT JOIN gfg_game_tag pr ON pr.game_id = g.id AND pr.role = 'primary'

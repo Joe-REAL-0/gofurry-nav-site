@@ -195,8 +195,12 @@ dirty. Archived content remains inspectable and only Restore is writable. Protec
 content, members and Home drafts with useUnsavedChanges. Home sends all five slots
 and its original placement revision; the fixed sixth entry is never in the payload.
 Home pickers request published + home_eligible=true and exclude duplicate selections.
-Keep all search owners IME-safe. Public refresh remains eventual (at most about five
-minutes), with explicit feedback if a save removes a Home entry. Stage C public UI
+Keep all search owners IME-safe. Membership search/pagination are local (20 per page);
+retain the complete draft and always submit the full canonical member ID set.
+Keep reload in header actions; clean reload is immediate, dirty discard requires
+confirmation and reloads both drafts plus the server version. Conflicts never
+auto-reload. Success toasts say only “已保存”; Home removal is reflected by home_slot.
+Do not render persistent cache-refresh explanations or promise publication timing. Stage C public UI
 is outside this contract. See [Game Collections](../docs/game-collections.md).
 
 ## Collaboration Center

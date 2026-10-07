@@ -11,7 +11,7 @@ import { useUnsavedChanges } from '../../hooks/use-unsaved-changes'
 import { ApiError, errorMessage, getJSON, sendJSON } from '../../lib/api'
 import { useAuth } from '../auth/auth-context'
 import { collectionEndpoint, eligibleCollectionEndpoint, homeKey, loadEligibleCollections } from './api'
-import { PUBLIC_REFRESH_NOTICE, type CollectionHome, type GameCollection } from './types'
+import type { CollectionHome, GameCollection } from './types'
 
 export function CollectionHomeCurationPage() {
   const query = useQuery({ queryKey: homeKey, queryFn: () => getJSON<CollectionHome>(`${collectionEndpoint}/home-curation`) })
@@ -33,7 +33,7 @@ export function CollectionHomeEditor({ data, reload }: { data: CollectionHome; r
     retry: false,
     mutationFn: () => sendJSON<CollectionHome>(`${collectionEndpoint}/home-curation`, 'PUT', { revision: current.revision, slots: current.slots.map(s => ({ slot: s.slot, collection_id: s.collection?.id ?? null })) }),
     onMutate: () => client.cancelQueries({ queryKey: homeKey }),
-    onSuccess: saved => { client.setQueryData(homeKey, saved); setDraft(null); setError(''); setConflict(false); toast(PUBLIC_REFRESH_NOTICE); void client.invalidateQueries({ queryKey: ['game-collections'] }) },
+    onSuccess: saved => { client.setQueryData(homeKey, saved); setDraft(null); setError(''); setConflict(false); toast('已保存'); void client.invalidateQueries({ queryKey: ['game-collections'] }) },
     onError: err => { setError(errorMessage(err)); setConflict(err instanceof ApiError && err.status === 409) },
   })
   const busy = loading || mutation.isPending
@@ -50,8 +50,8 @@ export function CollectionHomeEditor({ data, reload }: { data: CollectionHome; r
   }
   return <PageLayout>
     <Link to="/game/collections">返回游戏分区</Link>
-    <PageHeader title="首页入口编排" actions={<><Button variant="secondary" disabled={busy} onClick={() => void reloadExplicitly()}>重新加载 / 放弃修改</Button>{canWrite && <Button disabled={!draft || busy || conflict} onClick={() => mutation.mutate()}>保存编排</Button>}</>} />
-    <p className="text-sm text-muted-foreground">仅可选择已发布且至少有一个 SFW 可见游戏的分区。保存后，公开内容将在缓存刷新后更新。</p>
+    <PageHeader title="首页入口编排" actions={<><Button variant="secondary" disabled={busy} onClick={() => void reloadExplicitly()}>{draft ? '放弃修改并重新加载' : '重新加载'}</Button>{canWrite && <Button disabled={!draft || busy || conflict} onClick={() => mutation.mutate()}>保存编排</Button>}</>} />
+    <p className="text-sm text-muted-foreground">仅可选择已发布且至少有一个 SFW 可见游戏的分区。</p>
     {error && <Alert tone="danger">{error}{conflict && ' 编排草稿已保留，请重新加载。'}</Alert>}
     {current.slots.map(slot => <Section key={slot.slot} title={`#${slot.slot}`} actions={canWrite && <Button variant="ghost" disabled={busy || !slot.collection} onClick={() => select(slot.slot, null)}>清空第 {slot.slot} 位</Button>}>
       {slot.collection ? <Link className="text-primary" to={`/game/collections/${slot.collection.id}`}>{slot.collection.name}</Link> : <p className="text-sm text-muted-foreground">空位</p>}

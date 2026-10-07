@@ -776,7 +776,8 @@
     "collections": {
       "metrics": {
         "rating": "评分 {average}，共 {count} 条评价",
-        "online": "最近采集在线人数 {count}",
+        "online": "最近观测在线人数 {count}",
+        "onlineAt": "最近观测在线人数 {count}，采集于 {time}",
         "communities": "{count} 个社群入口"
       },
       "search": "搜索游戏分区或作品……",

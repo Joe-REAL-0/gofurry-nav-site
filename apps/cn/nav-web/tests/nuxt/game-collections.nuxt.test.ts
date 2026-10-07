@@ -5,6 +5,8 @@ import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { getGameCollectionHome, getGameCollections, getGameCollectionDetail } from '../../app/services/game'
 import { useGameCollectionModeRefresh } from '../../app/composables/useGameCollectionModeRefresh'
 import TimelineItem from '../../app/components/game/collections/GameCollectionTimelineItem.vue'
+import GameSidebarLinks from '../../app/components/game/detail/GameSidebarLinks.vue'
+import type { GameBaseInfoResponse } from '../../app/types/game'
 import Timeline from '../../app/components/game/collections/GameCollectionTimeline.vue'
 import { collectionDetail } from '../browser/fixtures/game-collections-data'
 import { connector, compactPlacement } from '../../app/utils/serpentineSequence'
@@ -80,12 +82,31 @@ it('renders detail metadata accessibly and tolerates pre-upgrade cached items', 
   expect(wrapper.find('.game-collection-timeline-metrics').text()).toContain('1,234')
   expect(wrapper.findAll('svg').every(icon => icon.attributes('aria-hidden') === 'true')).toBe(true)
   expect(wrapper.find('[aria-label="评分 4.6，共 28 条评价"]').exists()).toBe(true)
+  const observed = wrapper.find('[aria-label^="最近观测在线人数"]')
+  expect(observed.attributes('aria-label')).toContain('最近观测在线人数 1,234，采集于')
+  for (const part of ['2026/10/06', '08:00', 'UTC']) expect(observed.attributes('aria-label')).toContain(part)
+  expect(observed.attributes('title')).toBe(observed.attributes('aria-label'))
   await wrapper.setProps({ item: { ...item, primary_tag:null, secondary_tag:null, rating:null, online:{ count:0,collected_at:'2026-10-06T00:00:00Z' }, community_count:0 } })
   expect(wrapper.findAll('.game-collection-timeline-tag')).toHaveLength(0)
   expect(wrapper.find('.game-collection-timeline-metrics').text()).toBe('0')
+  expect(wrapper.find('[aria-label^="最近观测在线人数 0，采集于"]').exists()).toBe(true)
+  await wrapper.setProps({ item: { ...item, online: { count: 1234, collected_at: 'invalid' } } })
+  expect(wrapper.find('[aria-label="最近观测在线人数 1,234"]').exists()).toBe(true)
   const legacy = { ...item }; delete legacy.primary_tag; delete legacy.secondary_tag; delete legacy.rating; delete legacy.online; delete legacy.community_count
   await wrapper.setProps({ item:legacy })
   expect(wrapper.find('.game-collection-timeline-metrics').text()).toBe('')
   expect(wrapper.find('.game-collection-title').text()).toBe(item.name)
+  wrapper.unmount()
+})
+
+it('Game Detail community entries use the same trimmed key/value rule as Timeline counts', async () => {
+  const groups = [{ key: 'discord', value: 'https://valid.example' }, { key: ' telegram ', value: ' https://second.example ' }, {}, { key: 'discord', value: '' }, { key: '', value: 'https://x' }, { key: '   ', value: 'https://x' }, { key: 'discord', value: '   ' }]
+  const wrapper = await mountSuspended(GameSidebarLinks, {
+    props: { game: { groups, links: [], resources: [] } as unknown as GameBaseInfoResponse },
+    global: { stubs: { GameCommentDialog: true } },
+  })
+  expect(wrapper.findAll('.site-icon-link').map(link => link.attributes('href'))).toEqual(['https://valid.example', ' https://second.example '])
+  await wrapper.setProps({ game: { groups: null, links: [], resources: [] } as unknown as GameBaseInfoResponse })
+  expect(wrapper.findAll('.site-icon-link')).toHaveLength(0)
   wrapper.unmount()
 })

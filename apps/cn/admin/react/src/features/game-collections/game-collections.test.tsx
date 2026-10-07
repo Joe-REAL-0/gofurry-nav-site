@@ -70,6 +70,17 @@ const changeName = (name: string) => fireEvent.change(screen.getByRole('textbox'
 it('keeps URL search composition-safe and resets pagination only at final commit', async () => {
   const { router } = setup('/game/collections?page_num=2&keyword=old&status=published')
   const input = await screen.findByRole('textbox', { name: '搜索游戏分区' })
+  const status = screen.getByRole('combobox', { name: '分区状态' })
+  expect(status).toHaveClass('w-40', 'shrink-0')
+  expect(status).not.toHaveClass('w-full')
+  expect(input).toHaveClass('flex-1', 'min-w-64')
+  const toolbar = input.parentElement!.parentElement!
+  expect(toolbar).toHaveClass('flex', 'flex-wrap')
+  expect(toolbar).toContainElement(status)
+  expect(toolbar).toContainElement(screen.getByRole('button', { name: '列' }))
+  const header = screen.getByRole('heading', { name: '游戏分区' }).closest('header')!
+  expect(header).toContainElement(screen.getByRole('link', { name: '首页入口编排' }))
+  expect(header).toContainElement(screen.getByRole('link', { name: '新建游戏分区' }))
   fireEvent.compositionStart(input)
   fireEvent.change(input, { target: { value: 'zhong' } })
   fireEvent.change(input, { target: { value: '中' } })
@@ -92,6 +103,7 @@ it('creates a Draft and navigates to its returned real ID', async () => {
   fireEvent.change(screen.getByRole('textbox', { name: '英文名称' }), { target: { value: 'New Collection' } })
   fireEvent.click(screen.getByRole('button', { name: '创建草稿' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/game/collections/42'))
+  expect(await screen.findByText('已保存', { exact: true })).toBeInTheDocument()
   expect(sendJSON).toHaveBeenCalledWith(collectionEndpoint, 'POST', { code: 'new-collection', name: '新的分区', name_en: 'New Collection', info: '', info_en: '' })
 })
 
@@ -101,6 +113,7 @@ it('keeps Code immutable and saves content with the displayed version', async ()
   expect(screen.getByRole('link', { name: '操作审计' })).toHaveAttribute('href', '/system/audit?resource=gfg_game_collection')
   changeName('新名称'); fireEvent.click(screen.getByRole('button', { name: '保存内容' }))
   await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${collectionEndpoint}/1`, 'PUT', { version: 5, name: '新名称', name_en: 'Collection 1', info: '中文简介', info_en: 'Description' }))
+  expect(await screen.findByText('已保存', { exact: true })).toBeInTheDocument()
   expect((vi.mocked(sendJSON).mock.calls[0][2] as Record<string, unknown>).code).toBeUndefined()
 })
 
@@ -151,8 +164,14 @@ it('background version changes do not overwrite dirty drafts or silently rebase;
   expect(screen.getByRole('button', { name: '保存成员' })).toBeDisabled()
   vi.spyOn(window, 'confirm').mockReturnValue(true)
   current = { ...current, name: '服务器最新', version: 9 }
-  fireEvent.click(screen.getByRole('button', { name: '重新加载 / 放弃修改' }))
+  fireEvent.click(screen.getByRole('button', { name: '放弃修改并重新加载' }))
   await waitFor(() => expect(screen.getByRole('textbox', { name: '中文名称' })).toHaveValue('服务器最新'))
+  expect(screen.getByText('成人游戏')).toBeInTheDocument()
+  expect(screen.queryByText(/草稿已保留/)).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '重新加载' })).toBeEnabled()
+  vi.mocked(sendJSON).mockResolvedValue({ ...current, version: 10 })
+  changeName('重新编辑'); fireEvent.click(screen.getByRole('button', { name: '保存内容' }))
+  await waitFor(() => expect(sendJSON).toHaveBeenLastCalledWith(`${collectionEndpoint}/1`, 'PUT', expect.objectContaining({ version: 9 })))
 })
 
 it('clean background refresh advances data and version normally', async () => {
@@ -202,6 +221,7 @@ it('protects dirty content/member navigation and unload and disables lifecycle',
 it('home has five editable slots, fixed sixth, eligible picker, and full placement payload', async () => {
   setup('/game/collections/home-curation'); await screen.findByRole('heading', { name: '#6 全部分区' })
   expect(screen.getAllByRole('combobox')).toHaveLength(5)
+  expect(screen.queryByText(/缓存刷新|公开页面将在/)).not.toBeInTheDocument()
   expect(screen.getByText('固定入口 · 无需配置')).toBeInTheDocument()
   expect(listJSON).toHaveBeenCalledWith(eligibleCollectionEndpoint, 1, 50, '')
   fireEvent.focus(screen.getAllByRole('combobox')[1])
@@ -237,4 +257,119 @@ it('does not combine mismatched content and membership versions', async () => {
   vi.mocked(getJSON).mockImplementation(async path => path.endsWith('/members') ? { version: 9, members } : current)
   await expect(loadCollectionWorkspace(1)).rejects.toThrow('正在更新')
   expect(getJSON).toHaveBeenCalledTimes(4)
+})
+
+
+it('reloads clean workspace from header without confirmation', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  setup(); await ready()
+  const reload = screen.getByRole('button', { name: '重新加载' })
+  expect(reload.closest('header')).not.toBeNull()
+  expect(screen.queryByText('公开刷新说明')).not.toBeInTheDocument()
+  const calls = vi.mocked(getJSON).mock.calls.length
+  current = { ...current, name: '服务器变更', version: 8 }
+  fireEvent.click(reload)
+  await waitFor(() => expect(screen.getByRole('textbox', { name: '中文名称' })).toHaveValue('服务器变更'))
+  expect(getJSON).toHaveBeenCalledTimes(calls + 2)
+  expect(confirm).not.toHaveBeenCalled()
+  changeName('基线验证'); fireEvent.click(screen.getByRole('button', { name: '保存内容' }))
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${collectionEndpoint}/1`, 'PUT', expect.objectContaining({ version: 8 })))
+})
+
+it('cancel discard retains both drafts; confirmed reload replaces them together', async () => {
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  setup(); await ready(); changeName('内容草稿')
+  fireEvent.click(screen.getByRole('button', { name: '移除 成人游戏' }))
+  const calls = vi.mocked(getJSON).mock.calls.length
+  const reload = screen.getByRole('button', { name: '放弃修改并重新加载' })
+  expect(reload.closest('header')).not.toBeNull()
+  fireEvent.click(reload)
+  expect(confirm).toHaveBeenCalledExactlyOnceWith('放弃未保存的内容和成员修改，并重新加载服务器上的最新版本？')
+  expect(getJSON).toHaveBeenCalledTimes(calls)
+  expect(screen.getByRole('textbox', { name: '中文名称' })).toHaveValue('内容草稿')
+  expect(screen.queryByText('成人游戏')).not.toBeInTheDocument()
+  current = { ...current, name: '最新版本', version: 12 }
+  confirm.mockReturnValue(true); fireEvent.click(reload)
+  await waitFor(() => expect(screen.getByRole('textbox', { name: '中文名称' })).toHaveValue('最新版本'))
+  expect(screen.getByText('成人游戏')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '保存成员' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: '发布' })).toBeEnabled()
+})
+
+function largeMembership() {
+  members = Array.from({ length: 45 }, (_, index) => ({ game_id: index + 100, name: `作品 ${index + 1}`, name_en: `Game ${index + 1}`, appid: 50000 + index, adult: false }))
+  current.member_count = 45
+}
+const memberRows = () => within(screen.getByRole('list', { name: '已收录游戏' })).getAllByRole('listitem')
+const nextMemberPage = () => fireEvent.click(screen.getByRole('button', { name: '成员下一页' }))
+
+it('pages local membership 20/20/5 and searches names/AppID only after composition commits without requests', async () => {
+  largeMembership(); setup(); await ready()
+  expect(memberRows()).toHaveLength(20); nextMemberPage()
+  expect(memberRows()).toHaveLength(20); nextMemberPage()
+  expect(memberRows()).toHaveLength(5)
+  expect(screen.getByText('显示 41–45，共 45 个')).toBeInTheDocument()
+  const reads = vi.mocked(getJSON).mock.calls.length
+  const searches = vi.mocked(listJSON).mock.calls.length
+  const input = screen.getByRole('textbox', { name: '搜索已收录游戏' })
+  fireEvent.compositionStart(input)
+  fireEvent.change(input, { target: { value: 'zuopin' } })
+  fireEvent.change(input, { target: { value: '作品 2' } })
+  expect(memberRows()).toHaveLength(5)
+  fireEvent.compositionEnd(input, { target: { value: '作品 23' } })
+  expect(memberRows()).toHaveLength(1)
+  expect(screen.getByText('1 / 1')).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: '作品 23' })).toBeInTheDocument()
+  fireEvent.change(input, { target: { value: 'gAmE 41' } })
+  expect(screen.getByRole('link', { name: '作品 41' })).toBeInTheDocument()
+  fireEvent.change(input, { target: { value: '50044' } })
+  expect(screen.getByRole('link', { name: '作品 45' })).toBeInTheDocument()
+  fireEvent.change(input, { target: { value: 'no match' } })
+  expect(screen.getByText('未找到匹配的已收录游戏')).toBeInTheDocument()
+  expect(getJSON).toHaveBeenCalledTimes(reads)
+  expect(listJSON).toHaveBeenCalledTimes(searches)
+  expect(sendJSON).not.toHaveBeenCalled()
+})
+
+it('preserves full draft across page removals and add, then saves the canonical complete set', async () => {
+  largeMembership(); const originalIDs = members.map(member => member.game_id)
+  setup(); await ready()
+  fireEvent.click(screen.getByRole('button', { name: '移除 作品 1' }))
+  nextMemberPage(); nextMemberPage()
+  fireEvent.click(screen.getByRole('button', { name: '移除 作品 45' }))
+  fireEvent.focus(screen.getByRole('combobox'))
+  fireEvent.click(await screen.findByRole('option', { name: '新增游戏' }))
+  await screen.findByRole('button', { name: '移除 新增游戏' })
+  expect(screen.getByText('显示 41–44，共 44 个')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '保存成员' }))
+  const expected = [3, ...originalIDs.filter(id => id !== 100 && id !== 144)]
+  await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${collectionEndpoint}/1/members`, 'PUT', { version: 5, game_ids: expected }))
+  expect(await screen.findByText('已保存', { exact: true })).toBeInTheDocument()
+})
+
+it('clamps a removed last page to the last valid page', async () => {
+  largeMembership(); setup(); await ready(); nextMemberPage(); nextMemberPage()
+  for (let index = 41; index <= 45; index++) fireEvent.click(screen.getByRole('button', { name: `移除 作品 ${index}` }))
+  expect(memberRows()).toHaveLength(20)
+  expect(screen.getByText('显示 21–40，共 40 个')).toBeInTheDocument()
+  expect(screen.getByText('2 / 2')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '成员下一页' })).toBeDisabled()
+})
+
+it('uses only a short success toast when a member save clears the Home slot', async () => {
+  current = { ...current, home_slot: 1 }
+  setup(); await ready()
+  vi.mocked(sendJSON).mockResolvedValue({ ...current, version: 6, home_slot: null })
+  fireEvent.click(screen.getByRole('button', { name: '移除 安全游戏' }))
+  fireEvent.click(screen.getByRole('button', { name: '保存成员' }))
+  expect(await screen.findByText('已保存', { exact: true })).toBeInTheDocument()
+  expect(screen.queryByText(/缓存刷新|公开页面将在|分钟|小时|撤出首页/)).not.toBeInTheDocument()
+})
+
+it('Home curation success toast only confirms saving', async () => {
+  setup('/game/collections/home-curation'); await screen.findByText('#6 全部分区')
+  fireEvent.click(screen.getByRole('button', { name: '清空第 1 位' }))
+  fireEvent.click(screen.getByRole('button', { name: '保存编排' }))
+  expect(await screen.findByText('已保存', { exact: true })).toBeInTheDocument()
+  expect(screen.queryByText(/缓存刷新|公开页面将在|分钟|小时/)).not.toBeInTheDocument()
 })
