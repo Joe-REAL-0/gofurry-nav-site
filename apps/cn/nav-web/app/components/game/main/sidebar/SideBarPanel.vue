@@ -6,7 +6,7 @@
 
     <GameSidebarActions>
       <template #collection-shortcuts>
-        <GameCollectionShortcuts v-if="collections" :collections="collections" class="mt-3" />
+        <GameCollectionShortcuts v-if="desktop && collections" :collections="collections" class="mt-3" />
       </template>
       <template #default-sites>
         <GameSiteItem href="https://store.steampowered.com" :icon="icons.steam" title="Steam" subtitle="steam" />
@@ -49,6 +49,17 @@ defineProps<{
   initialReviews?: AnonymousReviewModel[]
   collections?: GameCollectionHome | null
 }>()
+
+// Match the Sidebar's xl visibility; no hidden shortcut DOM after mobile hydration.
+const desktop = ref(true)
+let desktopQuery: MediaQueryList | undefined
+const syncDesktop = () => { desktop.value = desktopQuery?.matches ?? false }
+onMounted(() => {
+  desktopQuery = window.matchMedia('(min-width: 1280px)')
+  syncDesktop()
+  desktopQuery.addEventListener('change', syncDesktop)
+})
+onBeforeUnmount(() => desktopQuery?.removeEventListener('change', syncDesktop))
 
 const LOGO_PREFIX = '/web/platform-icons/'
 const defaultLogo = '/defaultLogo.svg'

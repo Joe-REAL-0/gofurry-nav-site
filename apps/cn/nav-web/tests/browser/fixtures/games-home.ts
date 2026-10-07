@@ -11,7 +11,7 @@ const assetOrigin = 'https://games-home-assets.example'
 const homePath = '/api/v2/game/home'
 const showcasePath = `${homePath}/showcase`
 const collectionsPath = '/api/v2/game/collections/home'
-type CollectionsScenario = 'populated' | 'empty' | 'failure' | 'slow'
+type CollectionsScenario = 'populated' | 'empty' | 'sparse' | 'failure' | 'transient' | 'slow'
 const eventPath = `${showcasePath}/events`
 const collectedAt = '2026-09-18T04:40:00Z'
 export const groupNames = ['最近发售', '最近收录', '免费专区', '热门排行'] as const
@@ -122,7 +122,7 @@ export type GamesHomeScene = {
   news: Locator, reviews: Locator, rendered: string, locale: Language,
   expectNewsPopup(url: string): void,
   showcase: Locator, snapshot: GameShowcaseSnapshot, events: GameShowcaseEvent[], assets: string[],
-  readonly showcasePending: boolean, releaseShowcase(): void,
+  readonly showcasePending: boolean, releaseShowcase(): void, releaseCollections(): void,
   expectShowcasePopup(url: string): void, expectGameDestination(id: string): void,
   holdArtwork(url: string): { requested: Promise<void>; release(): void },
   closureClip(target: Locator): Promise<{ x: number, y: number, width: number, height: number }>,
@@ -156,11 +156,16 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
           await state.showcaseHold
           state.showcasePending = false
         }
-        return state.scenario === 'showcase-failure' ? { status: 503 } : { data: state.showcase }
+        return (state.scenario === 'showcase-failure' || (state.scenario === 'showcase-transient' && state.upstream.filter(v => v.pathname === showcasePath).length === 1)) ? { status: 503 } : { data: state.showcase }
       }
       if (url.pathname === collectionsPath && url.searchParams.size === 2 && url.searchParams.get('lang') === state.lang && url.searchParams.get('mode') === 'sfw') {
         if (state.collections === 'slow') await state.collectionsHold
-        return state.collections === 'failure' ? { status: 503 } : { data: { ...collectionHome(assetOrigin, state.lang), ...(state.collections === 'empty' ? { slots: [] } : {}) } }
+        if (state.collections === 'failure' || (state.collections === 'transient' && state.upstream.filter(v => v.pathname === collectionsPath).length === 1)) return { status: 503 }
+        const home = collectionHome(assetOrigin, state.lang)
+        for (const slot of home.slots) slot.collection.preview_games = []
+        if (state.collections === 'empty') home.slots = []
+        if (state.collections === 'sparse') home.slots = home.slots.filter(s => s.slot === 1 || s.slot === 3)
+        return { data: home }
       }
       if (url.pathname === eventPath && body) {
         state.events.push(body)
@@ -200,7 +205,8 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     gamesHomeApp.current = state
     const upstreamStart = app.requests.length
     const expectedMediaFailures = new Set<string>()
-    const errors = captureBrowserErrors(page, expectedMediaFailures)
+    const expectedNetworkFailures = new Set<string>()
+    const errors = captureBrowserErrors(page, expectedNetworkFailures)
     const diagnostics: { text: string, url: string }[] = []
     page.on('console', message => { if (message.type() === 'error') diagnostics.push({ text: message.text(), url: message.location().url }) })
     const external: string[] = [], failed: string[] = [], assets: string[] = [], browserAPI: string[] = []
@@ -236,14 +242,19 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
     const assertQuiet = () => {
       expect(app.requests.slice(upstreamStart)).toEqual(state.upstream)
       const reads = state.upstream.filter(url => [homePath, showcasePath, collectionsPath].includes(url.pathname))
-      expect(reads.map(url => url.pathname).sort()).toEqual([homePath, showcasePath, collectionsPath].sort())
+      const recoveryPaths = [
+        ...(['slow-showcase', 'showcase-failure', 'showcase-transient'].includes(state.scenario) ? [showcasePath] : []),
+        ...(['slow', 'failure', 'transient'].includes(state.collections) ? [collectionsPath] : []),
+      ]
+      expect(reads.slice(0, 3).map(url => url.pathname).sort()).toEqual([homePath, showcasePath, collectionsPath].sort())
+      expect(reads.slice(3).map(url => url.pathname).sort()).toEqual(recoveryPaths.sort())
       for (const url of reads) expect(Object.fromEntries(url.searchParams)).toEqual(url.pathname === collectionsPath ? { lang: state.lang, mode: 'sfw' } : { lang: state.lang, region: 'CN' })
       const detail = state.upstream.filter(url => ![homePath, showcasePath, collectionsPath, eventPath].includes(url.pathname))
       const detailPaths = state.destination ? ['/api/v2/game/info', '/api/v2/game/reviews', '/api/v2/game/recommend/similar',
         `/api/v2/game/games/${state.destination}/insights`, `/api/v2/game/games/${state.destination}/view`] : []
       expect(detail.map(url => url.pathname).sort()).toEqual([...detailPaths].sort())
       const sideEffects = state.events.map(() => `POST ${eventPath}`)
-      expect(browserAPI.filter(call => !detail.some(url => call.endsWith(url.pathname + url.search))), 'No browser GET for Home/Showcase/Collections, including hydration').toEqual(sideEffects)
+      expect(browserAPI.filter(call => !detail.some(url => call.endsWith(url.pathname + url.search))).sort(), 'Exactly one recovery per unavailable slice; none for SSR success').toEqual([...sideEffects, ...reads.slice(3).map(url => `GET ${url.pathname}${url.search}`)].sort())
       for (const event of state.events) {
         expect(Object.keys(event).sort()).toEqual((event.event === 'click' ? ['tracking_token', 'session_id', 'event', 'source'] : ['tracking_token', 'session_id', 'event']).sort())
         expect(state.showcase.items.map(item => item.tracking_token)).toContain(event.tracking_token)
@@ -258,6 +269,8 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
       expect(eventFailures.length).toBe(state.scenario === 'tracking-failure' ? state.events.length : 0)
       expect(errors.filter(value => value !== `error: ${eventDiagnostic}`)).toEqual([])
       expect(errors.filter(value => value === `error: ${eventDiagnostic}`)).toHaveLength(eventFailures.length)
+      const recoveryFailures = diagnostics.filter(value => value.text === 'Failed to load resource: the server responded with a status of 503 (Service Unavailable)' && value.url.startsWith(`${app.base}/api/`))
+      expect(recoveryFailures).toHaveLength(Number(state.collections === 'failure') + Number(state.scenario === 'showcase-failure'))
       for (const url of expectedMediaFailures) {
         expect(diagnostics.filter(value => value.url === url)).toHaveLength(assets.filter(value => value === url).length)
       }
@@ -286,6 +299,8 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         state.lang = locale
         state.data = makeDataset(dataset, locale)
         state.collections = collections
+        if (collections === 'failure') expectedNetworkFailures.add(`${app.base}${collectionsPath}?lang=${locale}&mode=sfw`)
+        if (showcase === 'showcase-failure') expectedNetworkFailures.add(`${app.base}${showcasePath}?lang=${locale}&region=CN`)
         state.scenario = showcase
         state.showcase = makeShowcase(showcase, locale)
         for (const item of state.showcase.items) {
@@ -297,6 +312,7 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
             if (showcase === 'media-failure' || showcase === 'steam-failure' || (showcase === 'primary-failure' && url.startsWith(showcaseOrigins.primary))) expectedMediaFailures.add(url)
           }
         }
+        for (const url of expectedMediaFailures) expectedNetworkFailures.add(url)
         const { panel } = state.data
         for (const item of [...panel.latest_games, ...panel.updated_games, ...panel.free_games, ...panel.popular_games!,
           ...panel.top_online, ...panel.top_price, ...panel.highest_discount, ...panel.low_price]) covers.set(item.header_url, item.id)
@@ -341,12 +357,15 @@ export const test = base.extend<{ gamesHome: { open(options?: OpenOptions): Prom
         await expect(groups.locator('h3')).toHaveText([...names])
         for (let index = 0; index < 4; index++) await expect(cards(index)).toHaveCount(8)
         await expect(stats.locator('.stats-type-tab--active')).toHaveText(locale === 'en' ? 'Player Count' : '在线人数')
+        const recoveryCount = Number(['slow-showcase', 'showcase-failure', 'showcase-transient'].includes(showcase)) + Number(['slow', 'failure', 'transient'].includes(collections))
+        await expect.poll(() => browserAPI.filter(call => call.startsWith('GET ')).length).toBe(recoveryCount)
+        await expect.poll(() => diagnostics.filter(value => value.text === 'Failed to load resource: the server responded with a status of 503 (Service Unavailable)' && value.url.startsWith(`${app.base}/api/`)).length).toBe(Number(collections === 'failure') + Number(showcase === 'showcase-failure'))
         await settle(root)
         if (showcase === 'empty' || showcase === 'showcase-failure') assertQuiet()
         return { page, root, groups, stats, sidebar, dock, theme, data: state.data, group, cards, settle, assertQuiet,
           rendered, locale, news: root.locator('.game-news-panel'),
           showcase: root.locator('.game-home-showcase'), snapshot: state.showcase, events: state.events, assets,
-          get showcasePending() { return state.showcasePending }, releaseShowcase,
+          get showcasePending() { return state.showcasePending }, releaseShowcase, releaseCollections,
           expectShowcasePopup(url) {
             expect(state.showcase.items.flatMap(item => [item.primary_action.target, item.secondary_action?.target])).toContain(url)
             expectedPopups.push(url)

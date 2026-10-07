@@ -34,7 +34,7 @@ func (r *publicCollectionReader) GetPublishedCollection(_ context.Context, code 
 	}
 	return &v2models.CollectionRecord{ID: 1, Code: code}, r.err
 }
-func (r *publicCollectionReader) ListPublishedCollectionHomeSlots(context.Context) ([]v2models.CollectionRecord, error) {
+func (r *publicCollectionReader) ListPublishedCollectionHomeSlots(context.Context, string) ([]v2models.CollectionRecord, error) {
 	return []v2models.CollectionRecord{}, r.err
 }
 func (r *publicCollectionReader) LoadCollectionGames(_ context.Context, _ []int64, lang string) (v2models.CollectionGames, error) {

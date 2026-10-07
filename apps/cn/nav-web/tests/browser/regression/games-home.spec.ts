@@ -1,31 +1,76 @@
 import { test, expect, groupNames, assertGamesHomeAppearance, assertCardHover, assertStatsAppearance } from '../fixtures/games-home'
 
 for (const width of [390, 1024, 1440]) {
-  test(`Collections 5+1 shortcuts and SFW-only Home at ${width}`, async ({ gamesHome }) => {
+  test(`Collection shortcuts follow Sidebar only at ${width}`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ width, mode: 'nsfw', showcase: 'two-managed' })
-    const shortcuts = scene.page.locator('.game-collection-shortcuts:visible')
-    await expect(shortcuts.getByRole('link')).toHaveText(['森林故事 1', '森林故事 2', '森林故事 3', '森林故事 4', '森林故事 5', '全部分区'])
-    await expect(shortcuts.getByRole('link').last()).toHaveAttribute('href', '/games/collections')
-    expect(await shortcuts.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(width >= 1280 ? 3 : 2)
+    const shortcuts = scene.page.locator('.game-collection-shortcuts')
     if (width < 1280) {
-      const showcase = await scene.showcase.boundingBox(), collection = await shortcuts.boundingBox(), recent = await scene.group(0).boundingBox()
-      expect(collection!.y).toBeGreaterThanOrEqual(showcase!.y + showcase!.height)
-      expect(recent!.y).toBeGreaterThan(collection!.y)
+      await expect(scene.sidebar).toBeHidden()
+      await expect(shortcuts).toHaveCount(0)
+    } else {
+      await expect(scene.sidebar.locator('.game-collection-shortcuts')).toBeVisible()
+      await expect(shortcuts.getByRole('link')).toHaveText(['森林故事 1', '森林故事 2', '森林故事 3', '森林故事 4', '森林故事 5', '全部分区'])
+      expect(await shortcuts.evaluate(el => getComputedStyle(el).gridTemplateColumns.split(' ').length)).toBe(3)
     }
     await scene.page.evaluate(() => window.dispatchEvent(new CustomEvent('mode-change', { detail: { mode: 'sfw' } })))
     await scene.settle(scene.root)
     scene.assertQuiet()
   })
 }
-for (const collections of ['empty', 'failure', 'slow'] as const) {
-  test(`Optional Collections ${collections} preserves Home without hydration retry`, async ({ gamesHome }) => {
+test('Sparse slots are compact, with no placeholder buttons', async ({ gamesHome }) => {
+  const scene = await gamesHome.open({ collections: 'sparse' })
+  await expect(scene.sidebar.locator('.game-collection-shortcut')).toHaveText(['森林故事 1', '森林故事 3', '全部分区'])
+  scene.assertQuiet()
+})
+test('Showcase and Collections recover independently in the same page', async ({ gamesHome }) => {
+  const scene = await gamesHome.open({ collections: 'slow', showcase: 'showcase-transient' })
+  await expect(scene.showcase).toBeVisible()
+  await expect(scene.page.locator('.game-collection-shortcuts')).toHaveCount(0)
+  scene.releaseCollections()
+  await expect(scene.sidebar.locator('.game-collection-shortcut')).toHaveCount(6)
+  scene.assertQuiet()
+})
+for (const collections of ['empty' , 'failure', 'transient', 'slow'] as const) {
+  test(`Optional Collections ${collections} recovers once only when unavailable`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ collections, dataset: 'news-populated' })
     await expect(scene.group(0)).toBeVisible()
     await expect(scene.stats).toBeVisible()
     await expect(scene.sidebar).toBeVisible()
     await expect(scene.news).toBeAttached()
-    await expect(scene.page.locator('.game-collection-shortcuts:visible a')).toHaveCount(collections === 'empty' ? 1 : 0)
+    if (collections === 'slow') {
+      expect(scene.rendered).not.toContain('game-collection-shortcuts')
+      await expect(scene.page.locator('.game-collection-shortcuts')).toHaveCount(0)
+      scene.releaseCollections()
+    }
+    await expect(scene.page.locator('.game-collection-shortcuts a')).toHaveCount(collections === 'empty' ? 1 : collections === 'failure' ? 0 : 6)
     await expect(scene.page.locator('[role="alert"]')).toHaveCount(0)
+    scene.assertQuiet()
+  })
+}
+for (const theme of ['light', 'dark'] as const) {
+  test(`Sidebar shortcuts inherit Daily Game material (${theme})`, async ({ gamesHome }) => {
+    const scene = await gamesHome.open({ theme })
+    const daily = scene.sidebar.getByRole('button', { name: '每日一游', exact: true })
+    const shortcut = scene.sidebar.locator('.game-collection-shortcut').first()
+    for (const property of ['min-height', 'background-color', 'border-color', 'border-radius', 'box-shadow', 'color']) {
+      await expect(shortcut).toHaveCSS(property, await daily.evaluate((el, prop) => getComputedStyle(el).getPropertyValue(prop), property))
+    }
+    await expect(shortcut).toHaveCSS('min-height', '39.2px')
+    await daily.hover(); await scene.settle(daily)
+    const hover = await daily.evaluate(el => getComputedStyle(el).backgroundColor)
+    await shortcut.hover(); await expect(shortcut).toHaveCSS('background-color', hover)
+    await expect(shortcut).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)')
+    await scene.page.keyboard.press('Tab')
+    await daily.focus()
+    const focus = await daily.evaluate(el => {
+      const css = getComputedStyle(el)
+      return { outline: css.outline, offset: css.outlineOffset }
+    })
+    await shortcut.focus()
+    await expect(shortcut).toHaveCSS('outline', focus.outline)
+    await expect(shortcut).toHaveCSS('outline-offset', focus.offset)
+    await scene.page.setViewportSize({ width: 1024, height: 900 })
+    await expect(scene.page.locator('.game-collection-shortcuts')).toHaveCount(0)
     scene.assertQuiet()
   })
 }

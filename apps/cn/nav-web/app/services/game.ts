@@ -68,9 +68,11 @@ export function getGameList() {
   return useApi('gameV2')<GameV2ListItem[]>('/game/list')
 }
 
-export function getGameCollectionHome(lang = 'zh') {
+type HomeOptionalReadOptions = { timeout?: number; signal?: AbortSignal }
+
+export function getGameCollectionHome(lang = 'zh', options: HomeOptionalReadOptions = {}) {
   return useApi('gameV2')<GameCollectionHome>('/game/collections/home', {
-    query: { lang: normalizeGameLang(lang), mode: 'sfw' }, timeout: 1000, retry: 0,
+    query: { lang: normalizeGameLang(lang), mode: 'sfw' }, timeout: 1000, retry: 0, ...options,
   })
 }
 
@@ -100,11 +102,12 @@ export async function getGameHomeData(lang = 'zh'): Promise<GameHomeData> {
   }
 }
 
-export function getGameHomeShowcase(lang = 'zh'): Promise<GameShowcaseSnapshot> {
+export function getGameHomeShowcase(lang = 'zh', options: HomeOptionalReadOptions = {}): Promise<GameShowcaseSnapshot> {
   return useApi('gameV2')('/game/home/showcase', {
     query: { lang: normalizeGameLang(lang), region: 'CN' },
     timeout: 1000,
     retry: 0,
+    ...options,
   })
 }
 

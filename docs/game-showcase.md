@@ -219,8 +219,10 @@ Real cloud publication is separate acceptance; these tests perform no cloud writ
 ## Public Nav Web runtime (#119-C, before Visual acceptance)
 
 Games Home requests Home and Showcase concurrently during SSR, with exactly one
-GET per slice and no hydration GET. A failed Showcase read renders no Hero and
-preserves catalog/News/statistics/sidebar. A valid empty slice also preserves the
+GET per slice (plus Collections Home since #140-C). Successful SSR has no hydration GET.
+A failed/timed-out Showcase read initially renders no Hero, then gets exactly one
+mounted recovery with an 8-second client budget and retry=0; recovery failure stays
+hidden. Both outcomes preserve catalog/News/statistics/sidebar. A valid empty slice also preserves the
 existing Home layout. The public contract, Composer and backend analytics remain
 unchanged; the frontend never reorders, selects or filters returned items.
 

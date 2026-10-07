@@ -7,9 +7,10 @@ Collection 不是 Tag、Showcase、Recommendation，也不使用 `gfg_game.group
 ## Stage C：Public Discovery 与 Timeline
 
 Nav Web 提供 `/games/collections` 和 `/games/collections/:code`（以及 `/en` 对应路由）。
-首页通过一次 `Promise.allSettled` 并行读取 Home、Showcase、Collections Home；两个可选 slice 各有 1 秒预算、无重试。
-Collections Home 永远请求 SFW，失败时整个快捷入口 owner 缺席；合法空 slots 仍显示“全部分区”。
-同一个快捷入口组件在 Desktop Sidebar 使用三列，在小于 xl 的内容区位于 Showcase 与最近发售之间，使用两列。
+首页通过一次 `Promise.allSettled` 并行读取 Home、Showcase、Collections Home；两个可选 slice SSR 各有 1 秒预算、retry=0。
+Collections Home 永远请求 SFW；SSR 不可用的 Showcase/Collections 在 mounted 后各补读一次（8 秒、retry=0），失败静默隐藏。
+SSR 成功（含合法空结果）不补读；合法空 slots 在 Desktop 仍显示“全部分区”。语言变更和卸载取消/丢弃旧恢复，模式变更不请求 Home。
+快捷入口仅在 xl 及以上 Sidebar 使用三列，直接继承每日一游的材质和 2.45rem 最小高度；小屏不保留快捷入口 DOM。
 后端给出的非空 slots 按 slot 升序压缩展示，最后追加固定的全部分区入口。
 
 Index 只提供简介、预览卡片和手动加载更多；0/1/2/3 张 preview 原样消费，不复制图片。
@@ -24,8 +25,11 @@ Index 模式更新成功回到第一页，过期的 Load More 响应不能追加
 Detail 初始/刷新 404 使用真实 Nuxt 404；初始服务失败返回 HTTP 503 与可重试 surface，不伪装空分区。
 adult-only 的 SFW Detail 仍为 200，零作品使用中性空态。所有图片复用 SteamAssetImage。
 
-Stage C 不修改 Stage A 缓存、数据库或 Admin。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
+Stage C 首页收口只简化 Home 读取，不改变缓存键/TTL、数据库结构或 Admin。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
 新增六张分区截图与首页四张变更须人工接受后才构成 Visual PASS，代码完成不代表 #140 已关闭。
+
+2026-10-07 首页收口：Home 改为单条轻量 SQL；SSR 失败 slice 支持一次 mounted 恢复；快捷入口仅留在 Desktop Sidebar 并继承每日一游材质。
+本地 Unit 366、Nuxt 71、Games Home/Showcase Browser 58 项及隔离 PG18 集成通过。桌面两张 Home 基线按本轮授权更新，移动端与 Index/Timeline 基线保持不变；维护者视觉审计仍待进行。
 
 2026-10-06 本地验证：Unit 366、Nuxt 64、focused Browser 76、受影响的既有消费者回归 38 项通过；
 lint/stylelint/style:policy/typecheck/build、SEO/Insights guards 与 repository policy 通过。
@@ -113,6 +117,8 @@ First Available 的 inferred 原样保留，内部 legacy_manual/steam_backfill/
 ## Batch 与 Cache
 
 固定 sqlc 查询负责公开 Collection、count、page、slots 和批量 Membership。
+Home 使用单条 sqlc 查询读取 published 槽位、Collection 双语元数据和按 adult code 过滤的可见数量，不加载任何 Game Aggregate 或时间线。
+Home schema v1 保留 CollectionSummary 结构，preview_games 固定为空数组；Index/Detail 仍保留完整 preview/timeline。旧重型 Home 缓存载荷在原 namespace 内按轻量规则重建，TTL 仍为 5 分钟。
 每个响应收集 unique game IDs 后调用现有 `loadAggregatesByGameIDs` / `loadAggregatesBySites`
 批量加载 canonical release、first available、tags、localized details 和 media。
 newsLimit 固定为 0，不逐游戏加载新闻；不调用内部 `/game/info` HTTP。

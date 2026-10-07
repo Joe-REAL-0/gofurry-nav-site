@@ -84,7 +84,13 @@ func (q *Queries) GetPublishedCollection(ctx context.Context, code string) (GetP
 }
 
 const listPublishedCollectionHomeSlots = `-- name: ListPublishedCollectionHomeSlots :many
-SELECT s.slot, c.id, c.code, c.name, c.name_en, c.info, c.info_en, c.published_at
+SELECT s.slot, c.id, c.code, c.name, c.name_en, c.info, c.info_en, c.published_at,
+    (SELECT count(*) FROM gfg_game_collection_item i
+     WHERE i.collection_id = c.id
+       AND ($1::boolean OR NOT EXISTS (
+           SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id = gt.tag_id
+           WHERE gt.game_id = i.game_id AND t.code = 'adult'
+       ))) AS visible_game_count
 FROM gfg_game_collection_home_slot s
 JOIN gfg_game_collection c ON c.id = s.collection_id
 WHERE c.status = 'published'
@@ -92,18 +98,19 @@ ORDER BY s.slot
 `
 
 type ListPublishedCollectionHomeSlotsRow struct {
-	Slot        int16              `json:"slot"`
-	ID          int64              `json:"id"`
-	Code        string             `json:"code"`
-	Name        string             `json:"name"`
-	NameEn      string             `json:"name_en"`
-	Info        string             `json:"info"`
-	InfoEn      string             `json:"info_en"`
-	PublishedAt pgtype.Timestamptz `json:"published_at"`
+	Slot             int16              `json:"slot"`
+	ID               int64              `json:"id"`
+	Code             string             `json:"code"`
+	Name             string             `json:"name"`
+	NameEn           string             `json:"name_en"`
+	Info             string             `json:"info"`
+	InfoEn           string             `json:"info_en"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	VisibleGameCount int64              `json:"visible_game_count"`
 }
 
-func (q *Queries) ListPublishedCollectionHomeSlots(ctx context.Context) ([]ListPublishedCollectionHomeSlotsRow, error) {
-	rows, err := q.db.Query(ctx, listPublishedCollectionHomeSlots)
+func (q *Queries) ListPublishedCollectionHomeSlots(ctx context.Context, includeAdult bool) ([]ListPublishedCollectionHomeSlotsRow, error) {
+	rows, err := q.db.Query(ctx, listPublishedCollectionHomeSlots, includeAdult)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +127,7 @@ func (q *Queries) ListPublishedCollectionHomeSlots(ctx context.Context) ([]ListP
 			&i.Info,
 			&i.InfoEn,
 			&i.PublishedAt,
+			&i.VisibleGameCount,
 		); err != nil {
 			return nil, err
 		}

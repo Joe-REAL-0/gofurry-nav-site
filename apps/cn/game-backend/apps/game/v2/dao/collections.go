@@ -45,17 +45,17 @@ func (dao *ReadModelDAO) GetPublishedCollection(ctx context.Context, code string
 	return &v2models.CollectionRecord{ID: row.ID, Code: row.Code, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, PublishedAt: row.PublishedAt.Time}, nil
 }
 
-func (dao *ReadModelDAO) ListPublishedCollectionHomeSlots(ctx context.Context) ([]v2models.CollectionRecord, error) {
+func (dao *ReadModelDAO) ListPublishedCollectionHomeSlots(ctx context.Context, mode string) ([]v2models.CollectionRecord, error) {
 	if err := dao.ready(); err != nil {
 		return nil, err
 	}
-	rows, err := dao.q.ListPublishedCollectionHomeSlots(ctx)
+	rows, err := dao.q.ListPublishedCollectionHomeSlots(ctx, mode == "nsfw")
 	if err != nil {
 		return nil, err
 	}
 	result := make([]v2models.CollectionRecord, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, v2models.CollectionRecord{ID: row.ID, Code: row.Code, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, PublishedAt: row.PublishedAt.Time, Slot: row.Slot})
+		result = append(result, v2models.CollectionRecord{ID: row.ID, Code: row.Code, Name: row.Name, NameEn: row.NameEn, Info: row.Info, InfoEn: row.InfoEn, PublishedAt: row.PublishedAt.Time, Slot: row.Slot, VisibleGameCount: row.VisibleGameCount})
 	}
 	return result, nil
 }

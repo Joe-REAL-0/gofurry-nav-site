@@ -12,13 +12,12 @@
             :initial-raw-data="gamesPageData.mainInfo"
             :initial-panel-data="gamesPageData.panelData"
             :initial-news-record="gamesPageData.latestNews"
-            :showcase="data?.showcase"
-            :collections="data?.collections"
+            :showcase="showcase ?? emptyGameShowcase()"
           />
         </section>
 
         <aside class="hidden xl:block xl:w-[25%]">
-          <SideBarPanel :initial-reviews="gamesPageData.latestReviews" :collections="data?.collections" />
+          <SideBarPanel :initial-reviews="gamesPageData.latestReviews" :collections="collections" />
         </aside>
       </div>
     </main>
@@ -52,26 +51,37 @@ const gamesPageSeo = computed(() => locale.value === 'en'
     }
 )
 
-interface GamesPageData { home: GameHomeData | null; showcase: GameShowcaseSnapshot; collections: GameCollectionHome | null }
+interface GamesPageData { lang: string; home: GameHomeData | null; showcase: GameShowcaseSnapshot | null; collections: GameCollectionHome | null }
 
 const { data } = await useAsyncData<GamesPageData>(
   () => `games-page:${lang.value}`,
   async () => {
+    const requestedLang = lang.value
     const [home, showcase, collections] = await Promise.allSettled([
-      getGameHomeData(lang.value),
-      getGameHomeShowcase(lang.value),
-      getGameCollectionHome(lang.value),
+      getGameHomeData(requestedLang),
+      getGameHomeShowcase(requestedLang),
+      getGameCollectionHome(requestedLang),
     ])
     return {
+      lang: requestedLang,
       home: home.status === 'fulfilled' ? home.value : null,
-      showcase: showcase.status === 'fulfilled' ? showcase.value : emptyGameShowcase(),
+      showcase: showcase.status === 'fulfilled' ? showcase.value : null,
       collections: collections.status === 'fulfilled' ? collections.value : null,
     }
   },
   {
     watch: [lang],
-    default: () => ({ home: null, showcase: emptyGameShowcase(), collections: null }),
+    default: () => ({ lang: '', home: null, showcase: null, collections: null }),
   }
+)
+
+const showcase = useGameHomeOptionalRecovery(lang,
+  computed(() => data.value?.lang === lang.value ? data.value.showcase : undefined),
+  (locale, signal) => getGameHomeShowcase(locale, { timeout: 8000, signal }),
+)
+const collections = useGameHomeOptionalRecovery(lang,
+  computed(() => data.value?.lang === lang.value ? data.value.collections : undefined),
+  (locale, signal) => getGameCollectionHome(locale, { timeout: 8000, signal }),
 )
 
 const gamesPageData = computed<GameHomeData>(() => data.value?.home ?? {

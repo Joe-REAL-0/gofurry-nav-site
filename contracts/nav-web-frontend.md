@@ -661,10 +661,14 @@ After approval #109 is closure-ready; subsequent product work uses a new task, n
 ## Game Collection Public ownership (#140-C)
 
 Home has exactly three concurrent SSR GETs: Home, Showcase and Collections Home.
-Collections Home is always SFW, optional, timeout 1000ms and retry 0; failure omits
-its owner, while valid empty slots retain the All Collections link. Hydration and
-mode changes never refetch this Home slice. One shortcuts component owns both
-responsive placements. Existing Showcase runtime/tracking remains independent.
+Collections Home is always SFW. Both optional slices have a 1000ms SSR budget,
+retry 0; unavailable slices get exactly one mounted recovery (8000ms, retry 0,
+including the Nitro proxy). Recovery failure stays absent and silent; successful
+SSR, including valid empty, never refetches. Language identity/unmount invalidate
+late recovery; mode changes never refetch Home. Valid empty slots retain All
+Collections on desktop. Shortcuts exist only in the xl Sidebar, sharing Daily
+Game's sidebar-action-button material and 2.45rem minimum height; below xl their
+DOM is removed. Showcase runtime/tracking remains independent.
 
 Collection Index/Detail SSR must be SFW. The page-lifetime mode refresh owner reads
 local storage only after mount, issues no extra SFW request, and one NSFW request
@@ -1756,11 +1760,11 @@ maintainer Admin/Index/Article review remains explicit, not inferred from pixels
 ## Games Home Showcase runtime (#119-C)
 
 `/games` and `/en/games` load Home and the independent optional Showcase through
-one SSR async-data owner: exactly two parallel GETs, `/game/home` and
-`/game/home/showcase`, each with normalized `lang` and `region=CN`. Hydration
-reuses both payloads without browser GETs; tests assert the exact unordered set,
-not arrival order. Showcase failure/empty hides the entire surface and its margin
-without affecting Home. Neither the Home DTO/cache nor page SEO changes.
+one SSR async-data owner (since #140-C also Collections Home): exactly three
+parallel GETs. Home/Showcase use normalized `lang` and `region=CN`. Tests assert
+exact unordered sets, not arrival order. Successful Showcase SSR, including empty,
+has zero hydration GETs; unavailable SSR gets one mounted recovery as specified
+above. Failure hides the entire surface and its margin without affecting Home. Neither the Home DTO/cache nor page SEO changes.
 
 `GameHomeShowcase` renders before Recently Released inside GameInfoPanel, in
 Composer order. Desktop uses 64/36 at 320px, Tablet stacks 2:1 artwork, Mobile

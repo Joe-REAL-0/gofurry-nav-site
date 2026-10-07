@@ -8,6 +8,7 @@ type CollectionRecord struct {
 	Code, Name, NameEn, Info, InfoEn string
 	PublishedAt                      time.Time
 	Slot                             int16
+	VisibleGameCount                 int64 // Home-only count, without loading game aggregates.
 }
 
 type CollectionMembership struct {

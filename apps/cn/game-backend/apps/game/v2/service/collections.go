@@ -27,7 +27,7 @@ type collectionReader interface {
 	CountPublishedCollections(context.Context) (int64, error)
 	ListPublishedCollections(context.Context, int64, int64) ([]v2models.CollectionRecord, error)
 	GetPublishedCollection(context.Context, string) (*v2models.CollectionRecord, error)
-	ListPublishedCollectionHomeSlots(context.Context) ([]v2models.CollectionRecord, error)
+	ListPublishedCollectionHomeSlots(context.Context, string) ([]v2models.CollectionRecord, error)
 	LoadCollectionGames(context.Context, []int64, string) (v2models.CollectionGames, error)
 }
 
@@ -95,23 +95,30 @@ func (s *CollectionService) Home(ctx context.Context, query v2models.CollectionQ
 	meta := s.metadata()
 	key := collectionCacheKey("home", meta, query)
 	return cachedCollection(ctx, s, key, func(value v2models.CollectionHome) bool {
-		return validCollectionMetadata(value.CollectionMetadata, meta) && value.Slots != nil
+		if !validCollectionMetadata(value.CollectionMetadata, meta) || value.Slots == nil {
+			return false
+		}
+		// Retire heavy Home cache payloads in place; Index/Detail keep previews.
+		for _, slot := range value.Slots {
+			if slot.Collection.PreviewGames == nil || len(slot.Collection.PreviewGames) != 0 {
+				return false
+			}
+		}
+		return true
 	}, func(ctx context.Context) (v2models.CollectionHome, error) {
 		result := v2models.CollectionHome{CollectionMetadata: meta, Slots: []v2models.CollectionHomeSlot{}}
-		records, err := s.reader.ListPublishedCollectionHomeSlots(ctx)
-		if err != nil {
-			return result, err
-		}
-		timelines, err := s.timelines(ctx, records, query, meta.GeneratedAt)
+		records, err := s.reader.ListPublishedCollectionHomeSlots(ctx, query.Mode)
 		if err != nil {
 			return result, err
 		}
 		for _, record := range records {
-			items := timelines[record.ID]
-			if len(items) == 0 {
+			if record.VisibleGameCount == 0 {
 				continue
 			}
-			result.Slots = append(result.Slots, v2models.CollectionHomeSlot{Slot: record.Slot, Collection: collectionSummary(record, query.Lang, items)})
+			result.Slots = append(result.Slots, v2models.CollectionHomeSlot{Slot: record.Slot, Collection: v2models.CollectionSummary{
+				CollectionInfo: collectionInfo(record, query.Lang, int(record.VisibleGameCount)),
+				PreviewGames:   []v2models.CollectionPreviewGame{},
+			}})
 		}
 		return result, nil
 	})

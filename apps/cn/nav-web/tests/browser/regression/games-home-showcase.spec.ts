@@ -53,7 +53,7 @@ test('Showcase 503 is optional and leaves catalog, statistics, News and sidebar 
   scene.assertQuiet()
 })
 
-test('Slow Showcase cannot block Home SSR or retry during hydration or after a late response', async ({ gamesHome, page }) => {
+test('Slow Showcase does not block SSR and recovers once after mount', async ({ gamesHome, page }) => {
   const scene = await gamesHome.open({ showcase: 'slow-showcase', dataset: 'news-populated' })
   expect(scene.snapshot.items).toHaveLength(1)
   expect(scene.showcasePending, 'Home rendered before the gated Showcase response').toBe(true)
@@ -73,10 +73,18 @@ test('Slow Showcase cannot block Home SSR or retry during hydration or after a l
 
   scene.releaseShowcase()
   await expect.poll(() => scene.showcasePending).toBe(false)
+  await expect(scene.showcase).toBeVisible()
   await scene.settle(scene.root)
-  await expect(scene.showcase).toHaveCount(0)
   await expect(page.getByRole('alert')).toHaveCount(0)
   expect(scene.events).toEqual([])
+  scene.assertQuiet()
+})
+
+test('Showcase transient failure recovers once without affecting Home', async ({ gamesHome }) => {
+  const scene = await gamesHome.open({ showcase: 'showcase-transient' })
+  expect(scene.rendered).not.toContain('game-home-showcase')
+  await expect(scene.showcase).toBeVisible()
+  await expect(scene.group(0)).toBeVisible()
   scene.assertQuiet()
 })
 

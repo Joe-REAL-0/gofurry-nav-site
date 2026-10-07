@@ -201,6 +201,32 @@ VALUES(140101,140101,'header','store','store_browse','en','header','https://exam
 			}
 		}
 	})
+	t.Run("Home reads only placement and visible membership", func(t *testing.T) {
+		tracer := &collectionQueryTrace{}
+		cfg := pool.Config()
+		cfg.ConnConfig.Tracer = tracer
+		traced, e := pgxpool.NewWithConfig(ctx, cfg)
+		if e != nil {
+			t.Fatal(e)
+		}
+		defer traced.Close()
+		homeService := v2service.NewCollectionService(v2dao.NewReadModelDAO(traced), nil)
+		home, e := homeService.Home(ctx, v2models.CollectionQuery{Lang: "en"})
+		if e != nil || len(home.Slots) != 1 || home.Slots[0].Collection.VisibleGameCount != 8 || home.Slots[0].Collection.Name != "Chronicle" {
+			t.Fatalf("home=%+v err=%v", home, e)
+		}
+		if home.Slots[0].Collection.PreviewGames == nil || len(home.Slots[0].Collection.PreviewGames) != 0 {
+			t.Fatal("Home preview must stay empty")
+		}
+		if tracer.count != 1 {
+			t.Fatalf("Home must use one SQL read, got %d", tracer.count)
+		}
+		for _, forbidden := range []string{"gfg_game_localized_details", "gfg_game_assets", "gfg_game_media", "gfg_game_release", "gfg_game_first_available", "price", "player", "review"} {
+			if strings.Contains(strings.Join(tracer.queries, "\n"), forbidden) {
+				t.Fatal("heavy Home read:", forbidden)
+			}
+		}
+	})
 	t.Run("bounded batches", func(t *testing.T) {
 		tracer := &collectionQueryTrace{}
 		cfg := pool.Config()
@@ -234,12 +260,14 @@ type collectionQueryTrace struct {
 	mu      sync.Mutex
 	count   int
 	siteIDs []int64
+	queries []string
 }
 
 func (q *collectionQueryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.count++
+	q.queries = append(q.queries, data.SQL)
 	if strings.Contains(data.SQL, "FROM gfg_game WHERE id = ANY") {
 		q.siteIDs = append([]int64{}, data.Args[0].([]int64)...)
 	}

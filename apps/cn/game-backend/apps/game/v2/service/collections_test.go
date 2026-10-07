@@ -53,9 +53,22 @@ func (r *collectionReaderFake) GetPublishedCollection(ctx context.Context, code 
 	}
 	return nil, r.err
 }
-func (r *collectionReaderFake) ListPublishedCollectionHomeSlots(context.Context) ([]v2models.CollectionRecord, error) {
+func (r *collectionReaderFake) ListPublishedCollectionHomeSlots(_ context.Context, mode string) ([]v2models.CollectionRecord, error) {
 	r.reads.Add(1)
-	return r.records, r.err
+	records := append([]v2models.CollectionRecord(nil), r.records...)
+	for i := range records {
+		for _, member := range r.batch.Memberships {
+			if member.CollectionID != records[i].ID {
+				continue
+			}
+			for _, game := range r.batch.Games {
+				if game.Site.ID == member.GameID && (mode == "nsfw" || !collectionAdult(game.Tags)) {
+					records[i].VisibleGameCount++
+				}
+			}
+		}
+	}
+	return records, r.err
 }
 func (r *collectionReaderFake) LoadCollectionGames(_ context.Context, ids []int64, _ string) (v2models.CollectionGames, error) {
 	r.loads.Add(1)
@@ -416,5 +429,59 @@ func TestCollectionCanceledWaiterDoesNotCancelSharedBuild(t *testing.T) {
 	}
 	if _, e := s.Detail(context.Background(), "mixed", v2models.CollectionQuery{}); e != nil || r.reads.Load() != 1 {
 		t.Fatal("completed cache missing", e)
+	}
+}
+
+func TestCollectionHomeNeverLoadsAggregates(t *testing.T) {
+	r, c, s := collectionFixture()
+	for _, mode := range []string{"sfw", "nsfw"} {
+		home, err := s.Home(context.Background(), v2models.CollectionQuery{Mode: mode, Lang: "en"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantSlots, wantCount := 1, 4
+		if mode == "nsfw" {
+			wantSlots, wantCount = 2, 5
+		}
+		if len(home.Slots) != wantSlots || home.Slots[0].Collection.VisibleGameCount != wantCount || home.Slots[0].Collection.Name != "English" {
+			t.Fatalf("home: %+v", home)
+		}
+		for _, slot := range home.Slots {
+			if slot.Collection.PreviewGames == nil || len(slot.Collection.PreviewGames) != 0 {
+				t.Fatal("Home must not project previews")
+			}
+		}
+		_, err = s.Home(context.Background(), v2models.CollectionQuery{Mode: mode, Lang: "en"})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if r.loads.Load() != 0 || r.reads.Load() != 2 || c.writes != 2 {
+		t.Fatalf("aggregate=%d reads=%d writes=%d", r.loads.Load(), r.reads.Load(), c.writes)
+	}
+	for _, ttl := range c.ttls {
+		if ttl != 5*time.Minute {
+			t.Fatal(ttl)
+		}
+	}
+}
+
+func TestCollectionHomeRebuildsLegacyPreviewCacheInSameNamespace(t *testing.T) {
+	r, c, s := collectionFixture()
+	query := v2models.CollectionQuery{Lang: "en", Mode: "sfw"}
+	home, err := s.Home(context.Background(), query)
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := "game:v2:collections:v1:home:2026-10-06:en:sfw"
+	if _, ok := c.entries[key]; !ok {
+		t.Fatal("Home cache namespace changed")
+	}
+	home.Slots[0].Collection.PreviewGames = []v2models.CollectionPreviewGame{{GameID: "1"}}
+	encoded, _ := json.Marshal(home)
+	c.entries[key] = collectionCacheEntry{string(encoded), c.now.Add(CollectionCacheTTL)}
+	rebuilt, err := s.Home(context.Background(), query)
+	if err != nil || len(rebuilt.Slots[0].Collection.PreviewGames) != 0 || r.loads.Load() != 0 || r.reads.Load() != 2 {
+		t.Fatalf("legacy cache did not rebuild through light path: %+v %v reads=%d loads=%d", rebuilt, err, r.reads.Load(), r.loads.Load())
 	}
 }

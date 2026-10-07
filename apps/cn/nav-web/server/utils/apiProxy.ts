@@ -67,9 +67,9 @@ export async function proxyApiNamespace(event: H3Event, service: ApiService, nam
       headers: sanitizeRequestHeaders(getHeaders(event)),
       responseType: 'text',
       redirect: 'manual',
-      // Collection reads own retry=0 end-to-end, including browser requests
+      // Optional Home and Collection reads own retry=0 end-to-end, including browser requests
       // relayed by Nitro. Preserve existing transport behavior for other APIs.
-      ...(service === 'gameV2' && namespace === 'game' && (suffix === 'collections' || suffix.startsWith('collections/')) ? { retry: 0 } : {})
+      ...(service === 'gameV2' && namespace === 'game' && (suffix === 'home/showcase' || suffix === 'collections' || suffix.startsWith('collections/')) ? { retry: 0 } : {})
     })
 
     setResponseStatus(event, response.status)

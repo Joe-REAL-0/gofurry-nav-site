@@ -19,11 +19,23 @@ phase-labelled sections preserve earlier acceptance matrices/counts; use
 actual local/remote/manual status. Earlier baseline-creation instructions are
 not authorization to update an accepted golden.
 
+## Games Home optional recovery (#140-C follow-up)
+
+The shared Games Home fixture gates all three SSR reads. Slow optional slices
+remain held beyond the real 1s server budget while Home renders, then release to
+one mounted recovery. Transient/permanent 503 cases distinguish recovery success
+from silent absence; valid empty and successful SSR never recover. Browser GET
+and upstream ledgers count recoveries separately from analytics POSTs. Nuxt tests
+cover language races, abort/unmount and no retry loop. At 390/1024 shortcut DOM is
+absent; at 1440 the Sidebar owns the compact links and computed Daily Game material.
+Only the two desktop Games Home goldens are updated for this follow-up; mobile
+keeps its existing Home structure. Index/Timeline goldens are unchanged.
+
 ## Game Collections (#140-C)
 
 The Games Home fixture now gates all three SSR reads before releasing any response:
 Home, Showcase, Collections Home. Exact unordered set/query/count assertions cover
-hydration and local NSFW storage. Collection failure/empty and a held upstream
+successful hydration and local NSFW storage. Collection failure/empty and a held upstream
 prove optional isolation with the real 1-second timeout, without fixed sleeps.
 Other fixtures that navigate to Home explicitly include the third read.
 
@@ -43,8 +55,8 @@ pnpm exec playwright test tests/browser/regression/games-home.spec.ts tests/brow
 ```
 
 `visual/game-collections.spec.ts` owns six new Index/Timeline Light/Dark Desktop/
-Mobile captures. The existing four root Home images now include populated 5+1
-shortcuts; existing News/Reviews goldens are outside this update scope. Use the
+Mobile captures. The desktop root Home images include populated 5+1
+shortcuts while mobile keeps its original structure; existing News/Reviews goldens are outside this update scope. Use the
 pinned runner with `--config playwright.visual.config.ts` (the Functional config
 intentionally excludes Visual). Missing/different baselines remain pending human
 acceptance; never use a blanket update. Register the new regression in the existing
@@ -55,8 +67,8 @@ explicit Full Games inventory; no runner or CI job is added.
 `games-home-showcase.spec.ts` extends the existing production Games Home fixture,
 which defaults to an empty Showcase slice. After #140-C its SSR barrier proves all
 three Home/Showcase/Collections reads start concurrently. Every case checks their
-unordered exact GET set and locale/region/mode, zero hydration GET, and separately
-recorded event POSTs.
+unordered exact SSR GET set and locale/region/mode, zero hydration GET for success
+or one recovery for each unavailable optional slice, and separate event POSTs.
 Populated cases exercise cardinality, SSR content, strict locale, navigation,
 media routing/exhaustion, responsive overflow and tracking/error isolation.
 Faults have exact asset/event diagnostics; no general browser-error exemption is

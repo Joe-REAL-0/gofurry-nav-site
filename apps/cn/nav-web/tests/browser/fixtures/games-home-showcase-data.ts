@@ -4,7 +4,7 @@ export const showcaseOrigins = { primary: 'https://showcase-primary.example', mi
 export const showcaseSteam = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/6101/showcase/header.jpg?v=2'
 export type ShowcaseScenario = 'empty' | 'single-editorial' | 'automatic-upcoming' | 'managed-sponsored-tabletop'
   | 'managed-sponsored-merchandise' | 'four-items' | 'long-content' | 'media-failure' | 'steam-failure'
-  | 'primary-failure' | 'showcase-failure' | 'slow-showcase' | 'tracking-failure' | 'mobile-missing' | 'two-managed'
+  | 'primary-failure' | 'showcase-failure' | 'showcase-transient' | 'slow-showcase' | 'tracking-failure' | 'mobile-missing' | 'two-managed'
 
 export function makeShowcase(scenario: ShowcaseScenario, lang: 'zh' | 'en'): GameShowcaseSnapshot {
   const snapshot: GameShowcaseSnapshot = { schema_version: 1, snapshot_id: 'a'.repeat(32), generated_at: '2026-10-04T04:00:00Z', valid_until: '2026-10-04T04:05:00Z', items: [] }
