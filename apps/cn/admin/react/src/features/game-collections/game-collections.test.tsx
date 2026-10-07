@@ -158,7 +158,7 @@ it('background version changes do not overwrite dirty drafts or silently rebase;
 it('clean background refresh advances data and version normally', async () => {
   const { client } = setup(); await ready()
   await act(async () => { client.setQueryData(workspaceKey(1), { collection: { ...current, name: '刷新名称', version: 7 }, members }) })
-  expect(screen.getByRole('textbox', { name: '中文名称' })).toHaveValue('刷新名称')
+  await waitFor(() => expect(screen.getByRole('textbox', { name: '中文名称' })).toHaveValue('刷新名称'))
   changeName('更新'); fireEvent.click(screen.getByRole('button', { name: '保存内容' }))
   await waitFor(() => expect(sendJSON).toHaveBeenCalledWith(`${collectionEndpoint}/1`, 'PUT', expect.objectContaining({ version: 7 })))
 })
