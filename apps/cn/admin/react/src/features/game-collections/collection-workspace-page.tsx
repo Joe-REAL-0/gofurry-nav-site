@@ -127,7 +127,7 @@ export function CollectionWorkspaceEditor({ data, reload }: { data: CollectionWo
       <CollectionMembersEditor members={current.members} disabled={readonly || mutation.isPending || reloading} onLoadingChange={setLoadingMember} onChange={members => change({ ...current, members })} />
       {!readonly && <Button className="mt-3" disabled={!membersDirty(current) || busy || conflict} onClick={() => mutation.mutate({ kind: 'members', value: current })}>保存成员</Button>}
     </Section>
-    <Section title="公开刷新说明"><p className="text-sm text-muted-foreground">保存后，公开页面将在最多约5分钟内刷新。仅已发布且至少有一个 SFW 可见游戏的分区可配置首页入口；移除最后一个 SFW 游戏时会自动撤下入口。</p></Section>
+    <Section title="公开刷新说明"><p className="text-sm text-muted-foreground">保存后，公开内容将在缓存刷新后更新。仅已发布且至少有一个 SFW 可见游戏的分区可配置首页入口；移除最后一个 SFW 游戏时会自动撤下入口。</p></Section>
     <ConfirmAction open={confirm !== null} onOpenChange={open => { if (!open) setConfirm(null) }} title={`${confirm ? lifecycleLabels[confirm] : ''}游戏分区`} description={`确认对“${collection.name}”执行此操作？恢复只会回到草稿，不会恢复首页入口。`} confirmLabel="确认操作" variant={confirm === 'archive' ? 'danger' : 'primary'} busy={busy} onConfirm={() => { if (confirm && !dirty && !busy) mutation.mutate({ kind: confirm, value: current }) }} />
   </PageLayout>
 }

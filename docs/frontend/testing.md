@@ -45,7 +45,14 @@ pagination faults and gates. Its regression owner covers SFW SSR, NSFW hydration
 latest-mode wins, retained ready content, load-more dedupe/reset, initial HTTP
 404/503, neutral zero-visible detail, responsive geometry and western timezone.
 Unit/Nuxt tests cover presentation, shared geometry consumption, endpoint budgets,
-mode lifecycle and cleanup. New Collection endpoints also disable Nitro proxy
+mode lifecycle and cleanup. Index additionally verifies a single request generation
+for IME/debounced keyword, atomic Filter Apply/Cancel, mode and pagination; retained
+ready cards, stale load-more rejection and exact discovery query propagation.
+Showcase sparse/editorial/sponsored fixtures enforce <=1px height delta at
+390/768/1024/1440 plus CTA border, clamp, action/control bounds and artwork geometry.
+Index visual changes require human review before updating its two goldens;
+Detail Timeline goldens remain unchanged.
+New Collection endpoints also disable Nitro proxy
 retries, so an injected 503 is one upstream request until the user retries.
 
 Run the normal frozen install/static/Unit/Nuxt/typecheck/build sequence, then:

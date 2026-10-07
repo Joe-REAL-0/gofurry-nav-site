@@ -1108,9 +1108,6 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		res.Type = details.Type
 		res.IsFree = details.IsFree
 		res.Website = strValue(details.Website)
-		if strValue(details.HeaderURL) != "" {
-			res.HeaderURL = normalizeSteamAssetURL(strValue(details.HeaderURL))
-		}
 		res.Release.ComingSoon = details.ReleaseComingSoon
 		res.Release.Date = strValue(details.ReleaseDateText)
 		res.Developers = decodeJSON[[]string](details.Developers, []string{})
@@ -1129,9 +1126,7 @@ func buildDetailReadModel(aggregate v2models.GameV2Aggregate, requestedLang stri
 		res.AboutTheGame = strValue(aggregate.Localized.AboutTheGame)
 	}
 
-	if res.Media.HeaderURL != "" {
-		res.HeaderURL = res.Media.HeaderURL
-	}
+	res.HeaderURL = canonicalGameHeader(aggregate.Site.Header, aggregate.Details, res.Media.HeaderURL)
 	if res.Name == "" {
 		res.Name = siteName
 	}
@@ -1372,6 +1367,31 @@ func isUnavailableRegionalPrice(price v2models.GfgGameV2Price) bool {
 		strings.TrimSpace(strValue(price.FinalFormatted)) == ""
 }
 
+// Shared by full game read models and the bounded collection projection.
+func canonicalGameHeader(site string, details *v2models.GfgGameV2Details, media string) string {
+	header := normalizeSteamAssetURL(site)
+	if details != nil && strValue(details.HeaderURL) != "" {
+		header = normalizeSteamAssetURL(strValue(details.HeaderURL))
+	}
+	if media != "" {
+		header = media
+	}
+	return header
+}
+
+func canonicalMediaHeader(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asset, lang string) string {
+	header := ""
+	for _, item := range items {
+		if item.MediaType == "header" {
+			header = normalizeSteamAssetURL(strValue(item.URL))
+		}
+	}
+	if url := firstAssetURL(assets, lang, "header", "header_2x"); url != "" {
+		header = url
+	}
+	return header
+}
+
 func buildMedia(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asset, lang string) v2models.GameV2MediaView {
 	res := v2models.GameV2MediaView{
 		Screenshots: []v2models.GameV2Screenshot{},
@@ -1380,8 +1400,6 @@ func buildMedia(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asse
 	}
 	for _, item := range items {
 		switch item.MediaType {
-		case "header":
-			res.HeaderURL = normalizeSteamAssetURL(strValue(item.URL))
 		case "capsule":
 			res.CapsuleURL = normalizeSteamAssetURL(strValue(item.URL))
 		case "capsule_v5":
@@ -1407,9 +1425,7 @@ func buildMedia(items []v2models.GfgGameV2Media, assets []v2models.GfgGameV2Asse
 		}
 	}
 
-	if url := firstAssetURL(assets, lang, "header", "header_2x"); url != "" {
-		res.HeaderURL = url
-	}
+	res.HeaderURL = canonicalMediaHeader(items, assets, lang)
 	if url := firstAssetURL(assets, lang, "capsule_main", "hero_capsule", "capsule_main_2x", "hero_capsule_2x"); url != "" {
 		res.CapsuleURL = url
 	}

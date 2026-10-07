@@ -18,11 +18,25 @@ type CollectionMembership struct {
 
 type CollectionGames struct {
 	Memberships []CollectionMembership
-	Games       []GameV2Aggregate
+	Games       []CollectionProjectionGame
+}
+
+// CollectionProjectionGame contains only the fields needed by collection cards
+// and chronology. It intentionally cannot carry prices, metrics or detail panels.
+type CollectionProjectionGame struct {
+	Site           GameV2SiteRecord
+	Details        *GfgGameV2Details
+	Localized      *GfgGameV2LocalizedDetails
+	Media          []GfgGameV2Media
+	Assets         []GfgGameV2Asset
+	Adult          bool
+	FirstAvailable *GameV2FirstAvailable
+	ReleaseState   *GameV2ReleaseState
 }
 
 type CollectionQuery struct {
 	Lang, Mode     string
+	Q, Phase, Sort string
 	Page, PageSize int64
 }
 
@@ -91,4 +105,8 @@ type CollectionDetail struct {
 	CollectionMetadata
 	Collection CollectionInfo           `json:"collection"`
 	Items      []CollectionTimelineItem `json:"items"`
+}
+
+func (q CollectionQuery) IsDefaultBrowse() bool {
+	return q.Q == "" && q.Phase == "all" && q.Sort == "published_desc"
 }

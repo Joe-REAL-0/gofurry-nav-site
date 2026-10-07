@@ -710,3 +710,11 @@ export interface GameCollectionTimelineItem {
   phase: GameCollectionPhase; chronology: GameCollectionChronology | null
 }
 export interface GameCollectionDetail extends GameCollectionMetadata { collection: GameCollectionInfo; items: GameCollectionTimelineItem[] }
+
+export type GameCollectionPhaseFilter = 'all' | 'released' | 'upcoming' | 'mixed'
+export type GameCollectionSort = 'published_desc' | 'count_desc' | 'count_asc' | 'name_asc' | 'name_desc'
+export interface GameCollectionCriteria {
+  q: string
+  phase: GameCollectionPhaseFilter
+  sort: GameCollectionSort
+}

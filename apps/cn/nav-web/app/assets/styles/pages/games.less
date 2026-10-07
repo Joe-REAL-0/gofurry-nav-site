@@ -196,6 +196,27 @@ html.dark .games-page {
   .game-home-showcase__controls button { width: 2rem; height: 2.35rem; }
 }
 
+// Reserve content slots only in the stacked layout. Desktop keeps its 20rem
+// root and existing artwork geometry; empty wrappers never invent content.
+.game-home-showcase__primary,
+.game-home-showcase__primary:hover { border-color: transparent; }
+.game-home-showcase__note:empty { border-color: transparent; }
+
+@media (max-width: 1023px) {
+  .game-home-showcase__context,
+  .game-home-showcase__meta { height: 1.4em; }
+  .game-home-showcase__title { height: 2.4em; }
+  .game-home-showcase__summary { height: 2.8em; }
+  .game-home-showcase__tags { height: calc(1.5 * 0.6875rem + 0.2rem); }
+  .game-home-showcase__note { height: 2.8em; }
+  .game-home-showcase__actions { min-height: 2.75rem; }
+  .game-home-showcase__footer { min-height: 2.75rem; }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .game-home-showcase__summary { height: 4.2em; }
+}
+
 // Existing Home/Search/Detail compatibility palette; new surfaces own their domain tokens.
 .games-page {
   --games-item-hover-bg: rgba(255, 235, 205, 0.82);

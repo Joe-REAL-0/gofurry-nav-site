@@ -774,6 +774,24 @@
   },
   "game": {
     "collections": {
+      "search": "搜索游戏分区或作品……",
+      "advancedFilter": "高级筛选",
+      "apply": "应用",
+      "phaseLabel": "内容阶段",
+      "sortLabel": "排序",
+      "phases": {
+        "all": "全部",
+        "released": "包含已发行作品",
+        "upcoming": "包含待发行作品",
+        "mixed": "已发行与待发行"
+      },
+      "sorts": {
+        "published_desc": "最新发布",
+        "count_desc": "作品数量从多到少",
+        "count_asc": "作品数量从少到多",
+        "name_asc": "名称升序",
+        "name_desc": "名称降序"
+      },
       "heading": "游戏分区",
       "all": "全部分区",
       "intro": "沿着作品的发行脉络，发现人工整理的游戏主题与系列。",

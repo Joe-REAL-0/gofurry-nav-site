@@ -16,7 +16,7 @@ it('owns independent timeouts, strict locale and SFW Home query', async () => {
   await useNuxtApp().runWithContext(() => getGameCollectionHome('bad'))
   expect(fetcher).toHaveBeenLastCalledWith('/game/collections/home', expect.objectContaining({ query: { lang: 'zh', mode: 'sfw' }, retry: 0, timeout: 1000 }))
   await useNuxtApp().runWithContext(() => getGameCollections('en', 'nsfw', 2))
-  expect(fetcher).toHaveBeenLastCalledWith('/game/collections', expect.objectContaining({ query: { lang: 'en', mode: 'nsfw', page: 2, page_size: 24 }, retry: 0, timeout: 8000 }))
+  expect(fetcher).toHaveBeenLastCalledWith('/game/collections', expect.objectContaining({ query: { lang: 'en', mode: 'nsfw', page: 2, page_size: 24, q: '', phase: 'all', sort: 'published_desc' }, retry: 0, timeout: 8000 }))
   await useNuxtApp().runWithContext(() => getGameCollectionDetail('a/b', 'zh', 'sfw'))
   expect(fetcher).toHaveBeenLastCalledWith('/game/collections/a%2Fb', expect.objectContaining({ query: { lang: 'zh', mode: 'sfw' }, retry: 0, timeout: 8000 }))
 })

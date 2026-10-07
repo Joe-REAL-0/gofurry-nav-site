@@ -237,22 +237,52 @@ VALUES(140101,140101,'header','store','store_browse','en','header','https://exam
 		}
 		defer traced.Close()
 		dao := v2dao.NewReadModelDAO(traced)
-		small, e := dao.LoadCollectionGames(ctx, []int64{140002}, "en")
+		small, e := dao.LoadCollectionProjectionGames(ctx, []int64{140002}, "en")
 		if e != nil || len(small.Games) != 1 {
 			t.Fatal(small, e)
 		}
 		firstCount := tracer.count
 		tracer.count = 0
 		tracer.siteIDs = nil
-		large, e := dao.LoadCollectionGames(ctx, []int64{140001, 140002}, "en")
+		large, e := dao.LoadCollectionProjectionGames(ctx, []int64{140001, 140002}, "en")
 		if e != nil || len(large.Games) != 9 || len(large.Memberships) != 10 {
 			t.Fatal("batch dedupe", large, e)
 		}
-		if tracer.count != firstCount || firstCount > 20 || len(tracer.siteIDs) != 9 {
+		if tracer.count != firstCount || firstCount != 6 || len(tracer.siteIDs) != 9 {
 			t.Fatalf("N+1 or duplicate IDs: small=%d large=%d ids=%v", firstCount, tracer.count, tracer.siteIDs)
+		}
+		for _, forbidden := range []string{"gfg_game_prices", "gfg_game_player", "gfg_game_comment", "gfg_game_requirements", "gfg_game_news", "gfg_game_recommendations"} {
+			if strings.Contains(strings.Join(tracer.queries, "\n"), forbidden) {
+				t.Fatal("unexpected projection read", forbidden)
+			}
+		}
+		service := v2service.NewCollectionService(dao, nil)
+		for _, endpoint := range []string{"list", "detail"} {
+			tracer.count = 0
+			tracer.queries = nil
+			start := time.Now()
+			if endpoint == "list" {
+				_, e = service.List(ctx, v2models.CollectionQuery{})
+			} else {
+				_, e = service.Detail(ctx, "chronicle", v2models.CollectionQuery{})
+			}
+			want := 8
+			if endpoint == "detail" {
+				want = 7
+			}
+			if e != nil || tracer.count != want {
+				t.Fatalf("%s queries=%d want=%d err=%v", endpoint, tracer.count, want, e)
+			}
+			for _, forbidden := range []string{"gfg_game_prices", "gfg_game_player", "gfg_game_comment", "gfg_game_requirements", "gfg_game_news"} {
+				if strings.Contains(strings.Join(tracer.queries, "\n"), forbidden) {
+					t.Fatal(endpoint, forbidden)
+				}
+			}
+			t.Logf("cold %s: %d bounded queries, %s", endpoint, tracer.count, time.Since(start))
 		}
 		t.Logf("one member and ten memberships both use %d SQL queries; nine unique games loaded once", firstCount)
 	})
+	assertCollectionDiscovery(t, ctx, pool)
 	assertCollectionConstraints(t, ctx, pool)
 }
 
@@ -268,7 +298,7 @@ func (q *collectionQueryTrace) TraceQueryStart(ctx context.Context, _ *pgx.Conn,
 	defer q.mu.Unlock()
 	q.count++
 	q.queries = append(q.queries, data.SQL)
-	if strings.Contains(data.SQL, "FROM gfg_game WHERE id = ANY") {
+	if strings.Contains(data.SQL, "-- name: BatchCollectionProjectionGames") {
 		q.siteIDs = append([]int64{}, data.Args[0].([]int64)...)
 	}
 	return ctx
@@ -340,4 +370,94 @@ func assertCollectionConstraints(t *testing.T, ctx context.Context, pool *pgxpoo
 			t.Fatal("collection deletion removed game", count, e)
 		}
 	})
+}
+
+func assertCollectionDiscovery(t *testing.T, ctx context.Context, pool *pgxpool.Pool) {
+	t.Helper()
+	// Changes are confined to this disposable fixture and restored afterwards.
+	exec := func(sql string) {
+		t.Helper()
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			t.Fatal(err)
+		}
+	}
+	exec(`UPDATE gfg_game SET name='独特可见作品',name_en='VisibleUnique' WHERE id=140109`)
+	exec(`UPDATE gfg_game SET name='隐藏秘密作品',name_en='HiddenUnique' WHERE id=140108`)
+	exec(`INSERT INTO gfg_game_release_state(game_id,availability,precision,raw_text,source,source_region,source_locale,normalizer_version,observed_at) VALUES(140108,'upcoming','tba','TBA','steam','US','en','test',now())`)
+	defer exec(`DELETE FROM gfg_game_release_state WHERE game_id=140108`)
+	exec(`INSERT INTO gfg_game_collection(id,code,name,name_en,info,info_en,status,published_at) VALUES
+        (140007,'unknown-only','未知','Unknown','','English description','published','2026-08-01'),
+        (140008,'visible-with-adult','可见与隐藏','Visible hidden','','','published','2026-08-01')`)
+	defer exec(`DELETE FROM gfg_game_collection WHERE id IN(140007,140008)`)
+	exec(`INSERT INTO gfg_game_collection_item(collection_id,game_id) VALUES(140007,140107),(140008,140101),(140008,140108)`)
+	svc := v2service.NewCollectionService(v2dao.NewReadModelDAO(pool), nil)
+	codes := func(q v2models.CollectionQuery) ([]string, v2models.CollectionIndex) {
+		t.Helper()
+		result, err := svc.List(ctx, q)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := []string{}
+		for _, item := range result.Items {
+			out = append(out, item.Code)
+		}
+		return out, result
+	}
+	for _, tc := range []struct {
+		q    v2models.CollectionQuery
+		want []string
+	}{
+		{v2models.CollectionQuery{Q: "中文谱系"}, []string{"chronicle"}},
+		{v2models.CollectionQuery{Q: "CHRONICLE"}, []string{"later-chronicle", "chronicle", "adult-chronicle", "empty-chronicle"}},
+		{v2models.CollectionQuery{Q: "Visible hidden"}, []string{"visible-with-adult"}},
+		{v2models.CollectionQuery{Q: "later-chronicle"}, []string{"later-chronicle"}},
+		{v2models.CollectionQuery{Q: "中文简介"}, []string{"chronicle"}},
+		{v2models.CollectionQuery{Q: "English description"}, []string{"unknown-only"}},
+		{v2models.CollectionQuery{Q: "独特可见作品"}, []string{"chronicle"}},
+		{v2models.CollectionQuery{Q: "VisibleUnique"}, []string{"chronicle"}},
+		{v2models.CollectionQuery{Q: "HiddenUnique"}, []string{}},
+		{v2models.CollectionQuery{Q: "HiddenUnique", Mode: "nsfw"}, []string{"chronicle", "adult-chronicle", "visible-with-adult"}},
+		{v2models.CollectionQuery{Q: "no match"}, []string{}},
+		{v2models.CollectionQuery{Q: "%' OR 1=1 --"}, []string{}},
+		{v2models.CollectionQuery{Phase: "released"}, []string{"later-chronicle", "chronicle", "visible-with-adult"}},
+		{v2models.CollectionQuery{Phase: "upcoming"}, []string{"chronicle"}},
+		{v2models.CollectionQuery{Phase: "mixed"}, []string{"chronicle"}},
+		{v2models.CollectionQuery{Phase: "upcoming", Mode: "nsfw"}, []string{"chronicle", "adult-chronicle", "visible-with-adult"}},
+		{v2models.CollectionQuery{Phase: "mixed", Mode: "nsfw"}, []string{"chronicle", "visible-with-adult"}},
+		{v2models.CollectionQuery{Sort: "count_desc"}, []string{"chronicle", "later-chronicle", "visible-with-adult", "unknown-only", "adult-chronicle", "empty-chronicle"}},
+		{v2models.CollectionQuery{Sort: "count_asc"}, []string{"adult-chronicle", "empty-chronicle", "later-chronicle", "visible-with-adult", "unknown-only", "chronicle"}},
+		{v2models.CollectionQuery{Sort: "count_desc", Mode: "nsfw"}, []string{"chronicle", "visible-with-adult", "later-chronicle", "adult-chronicle", "unknown-only", "empty-chronicle"}},
+		{v2models.CollectionQuery{Lang: "en", Sort: "name_asc"}, []string{"adult-chronicle", "chronicle", "empty-chronicle", "later-chronicle", "unknown-only", "visible-with-adult"}},
+		{v2models.CollectionQuery{Lang: "en", Sort: "name_desc"}, []string{"visible-with-adult", "unknown-only", "later-chronicle", "empty-chronicle", "chronicle", "adult-chronicle"}},
+	} {
+		got, result := codes(tc.q)
+		if !reflect.DeepEqual(got, tc.want) || result.Total != int64(len(tc.want)) {
+			t.Fatalf("criteria %+v: %v total=%d want=%v", tc.q, got, result.Total, tc.want)
+		}
+	}
+	for page := int64(1); page <= 3; page++ {
+		got, result := codes(v2models.CollectionQuery{Phase: "released", Page: page, PageSize: 2})
+		if result.Total != 3 || result.HasMore != (page == 1) || (page == 2 && !reflect.DeepEqual(got, []string{"visible-with-adult"})) || (page == 3 && len(got) != 0) {
+			t.Fatal("filtered pagination", result)
+		}
+	}
+	// Tie-breaking for localized names is numeric ID ascending, independent of publication.
+	exec(`UPDATE gfg_game_collection SET name_en='Same' WHERE id IN(140007,140008)`)
+	got, _ := codes(v2models.CollectionQuery{Q: "Same", Lang: "en", Sort: "name_desc"})
+	if !reflect.DeepEqual(got, []string{"unknown-only", "visible-with-adult"}) {
+		t.Fatal("name ties", got)
+	}
+	exec(`UPDATE gfg_game_collection SET name=CASE WHEN id=140007 THEN 'A' ELSE 'Z' END WHERE id IN(140007,140008)`)
+	got, _ = codes(v2models.CollectionQuery{Q: "Same", Lang: "zh", Sort: "name_desc"})
+	if !reflect.DeepEqual(got, []string{"visible-with-adult", "unknown-only"}) {
+		t.Fatal("sort must use projected locale name", got)
+	}
+	exec(`UPDATE gfg_game SET name='',name_en='',info='',info_en='' WHERE id=140101`)
+	for _, lang := range []string{"zh", "en"} {
+		detail, err := svc.Detail(ctx, "later-chronicle", v2models.CollectionQuery{Lang: lang})
+		if err != nil || detail.Items[0].Name != "Localized Game" || detail.Items[0].Summary != "Localized summary" || detail.Items[0].HeaderURL != "https://example.test/asset-header.jpg" {
+			t.Fatalf("localized projection fallback: %+v %v", detail, err)
+		}
+	}
+
 }

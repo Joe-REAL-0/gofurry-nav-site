@@ -26,10 +26,11 @@ type collectionReaderFake struct {
 	release chan struct{}
 }
 
-func (r *collectionReaderFake) CountPublishedCollections(context.Context) (int64, error) {
+func (r *collectionReaderFake) CountPublishedCollections(context.Context, v2models.CollectionQuery) (int64, error) {
 	return int64(len(r.records)), r.err
 }
-func (r *collectionReaderFake) ListPublishedCollections(_ context.Context, limit, offset int64) ([]v2models.CollectionRecord, error) {
+func (r *collectionReaderFake) ListPublishedCollections(_ context.Context, query v2models.CollectionQuery) ([]v2models.CollectionRecord, error) {
+	limit, offset := query.PageSize, (query.Page-1)*query.PageSize
 	r.reads.Add(1)
 	if offset >= int64(len(r.records)) {
 		return nil, r.err
@@ -62,7 +63,7 @@ func (r *collectionReaderFake) ListPublishedCollectionHomeSlots(_ context.Contex
 				continue
 			}
 			for _, game := range r.batch.Games {
-				if game.Site.ID == member.GameID && (mode == "nsfw" || !collectionAdult(game.Tags)) {
+				if game.Site.ID == member.GameID && (mode == "nsfw" || !game.Adult) {
 					records[i].VisibleGameCount++
 				}
 			}
@@ -70,7 +71,7 @@ func (r *collectionReaderFake) ListPublishedCollectionHomeSlots(_ context.Contex
 	}
 	return records, r.err
 }
-func (r *collectionReaderFake) LoadCollectionGames(_ context.Context, ids []int64, _ string) (v2models.CollectionGames, error) {
+func (r *collectionReaderFake) LoadCollectionProjectionGames(_ context.Context, ids []int64, _ string) (v2models.CollectionGames, error) {
 	r.loads.Add(1)
 	result := v2models.CollectionGames{Games: r.batch.Games}
 	for _, m := range r.batch.Memberships {
@@ -92,6 +93,7 @@ type collectionCacheFake struct {
 	entries map[string]collectionCacheEntry
 	now     time.Time
 	err     error
+	reads   int
 	writes  int
 	ttls    []time.Duration
 }
@@ -99,6 +101,7 @@ type collectionCacheFake struct {
 func (c *collectionCacheFake) Get(_ context.Context, key string) *redis.StringCmd {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	c.reads++
 	if c.err != nil {
 		return redis.NewStringResult("", c.err)
 	}
@@ -127,12 +130,9 @@ func collectionFixture() (*collectionReaderFake, *collectionCacheFake, *Collecti
 		{ID: 3, Code: "empty", Name: "空", NameEn: "Empty", PublishedAt: now, Slot: 3},
 	}}
 	for id := int64(1); id <= 5; id++ {
-		g := v2models.GameV2Aggregate{Site: v2models.GameV2SiteRecord{ID: id, Name: "游戏", NameEn: "Game", Info: "简介", InfoEn: "Summary", Header: "https://example.test/header.jpg"}}
+		g := v2models.CollectionProjectionGame{Site: v2models.GameV2SiteRecord{ID: id, Name: "游戏", NameEn: "Game", Info: "简介", InfoEn: "Summary", Header: "https://example.test/header.jpg"}}
 		if id == 2 {
-			g.Tags = []v2models.GameV2Tag{{ID: "7", Code: "adult"}}
-		}
-		if id == 1 {
-			g.Tags = []v2models.GameV2Tag{{ID: "1014", Code: "adventure", Name: "adult"}}
+			g.Adult = true
 		}
 		r.batch.Games = append(r.batch.Games, g)
 		r.batch.Memberships = append(r.batch.Memberships, v2models.CollectionMembership{CollectionID: 1, GameID: id})
@@ -260,12 +260,12 @@ func TestCollectionCacheKeysAndTTL(t *testing.T) {
 		}
 	}
 	for _, ttl := range c.ttls {
-		if ttl != 5*time.Minute {
+		if ttl != time.Hour {
 			t.Fatal("TTL", ttl)
 		}
 	}
 	before := r.reads.Load()
-	c.now = c.now.Add(5*time.Minute - time.Nanosecond)
+	c.now = c.now.Add(time.Hour - time.Nanosecond)
 	_, _ = s.Detail(ctx, "mixed", v2models.CollectionQuery{})
 	if r.reads.Load() != before {
 		t.Fatal("expired too early")
@@ -460,7 +460,7 @@ func TestCollectionHomeNeverLoadsAggregates(t *testing.T) {
 		t.Fatalf("aggregate=%d reads=%d writes=%d", r.loads.Load(), r.reads.Load(), c.writes)
 	}
 	for _, ttl := range c.ttls {
-		if ttl != 5*time.Minute {
+		if ttl != time.Hour {
 			t.Fatal(ttl)
 		}
 	}
@@ -483,5 +483,56 @@ func TestCollectionHomeRebuildsLegacyPreviewCacheInSameNamespace(t *testing.T) {
 	rebuilt, err := s.Home(context.Background(), query)
 	if err != nil || len(rebuilt.Slots[0].Collection.PreviewGames) != 0 || r.loads.Load() != 0 || r.reads.Load() != 2 {
 		t.Fatalf("legacy cache did not rebuild through light path: %+v %v reads=%d loads=%d", rebuilt, err, r.reads.Load(), r.loads.Load())
+	}
+}
+
+func TestCollectionDiscoveryBypassesResultCache(t *testing.T) {
+	for _, q := range []v2models.CollectionQuery{{Q: "游戏"}, {Phase: "released"}, {Phase: "upcoming"}, {Phase: "mixed"}, {Sort: "count_desc"}, {Sort: "count_asc"}, {Sort: "name_asc"}, {Sort: "name_desc"}} {
+		r, cache, service := collectionFixture()
+		for range 2 {
+			if _, err := service.List(context.Background(), q); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if cache.reads != 0 || cache.writes != 0 || len(cache.entries) != 0 || r.reads.Load() != 2 {
+			t.Fatalf("discovery must bypass cache: %+v", q)
+		}
+	}
+	r, cache, service := collectionFixture()
+	for range 2 {
+		if _, err := service.List(context.Background(), v2models.CollectionQuery{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if cache.writes != 1 || r.reads.Load() != 1 || cache.ttls[0] != time.Hour {
+		t.Fatal("browse cache contract")
+	}
+	for _, q := range []v2models.CollectionQuery{{Phase: "bad"}, {Sort: "bad"}} {
+		if _, err := service.List(context.Background(), q); !errors.Is(err, ErrCollectionQuery) {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestCollectionProjectionPreservesGamePresentation(t *testing.T) {
+	pointer := func(s string) *string { return &s }
+	exists := false
+	for _, lang := range []string{"zh", "en"} {
+		for _, game := range []v2models.CollectionProjectionGame{
+			{Site: v2models.GameV2SiteRecord{ID: 1, NameEn: "Fallback", InfoEn: "Summary", Header: "https://example.test/site"}},
+			{Site: v2models.GameV2SiteRecord{ID: 1}, Details: &v2models.GfgGameV2Details{Name: "Detail", HeaderURL: pointer("https://example.test/detail")}, Localized: &v2models.GfgGameV2LocalizedDetails{Lang: "en", Name: "Localized", ShortDescription: pointer("Localized summary")}},
+			{Site: v2models.GameV2SiteRecord{ID: 1}, Media: []v2models.GfgGameV2Media{{MediaType: "header", URL: pointer("https://example.test/first")}, {MediaType: "header", URL: pointer("https://example.test/last")}}, Assets: []v2models.GfgGameV2Asset{{AssetType: "header", Lang: "zh", URL: "https://example.test/missing", Exists: &exists}, {AssetType: "header", Lang: "en", URL: "https://example.test/en"}, {AssetType: "header_2x", Lang: "zh", URL: "https://example.test/2x"}}},
+		} {
+			r, _, service := collectionFixture()
+			r.batch = v2models.CollectionGames{Games: []v2models.CollectionProjectionGame{game}, Memberships: []v2models.CollectionMembership{{CollectionID: 1, GameID: 1}}}
+			got, err := service.Detail(context.Background(), "mixed", v2models.CollectionQuery{Lang: lang})
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := buildListItem(v2models.GameV2Aggregate{Site: game.Site, Details: game.Details, Localized: game.Localized, Media: game.Media, Assets: game.Assets}, lang, defaultRegion)
+			if got.Items[0].Name != want.Name || got.Items[0].Summary != want.Summary || got.Items[0].HeaderURL != want.HeaderURL {
+				t.Fatalf("projection drift: %+v vs %+v", got.Items[0], want)
+			}
+		}
 	}
 }

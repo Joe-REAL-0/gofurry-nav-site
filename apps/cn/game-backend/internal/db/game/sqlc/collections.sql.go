@@ -11,6 +11,77 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const batchCollectionHeaderAssets = `-- name: BatchCollectionHeaderAssets :many
+SELECT game_id, asset_type, lang, url, exists FROM gfg_game_assets
+WHERE game_id = ANY($1::bigint[]) AND asset_type IN ('header', 'header_2x')
+ORDER BY game_id, asset_family, sort_order, id
+`
+
+type BatchCollectionHeaderAssetsRow struct {
+	GameID    int64  `json:"game_id"`
+	AssetType string `json:"asset_type"`
+	Lang      string `json:"lang"`
+	Url       string `json:"url"`
+	Exists    *bool  `json:"exists"`
+}
+
+func (q *Queries) BatchCollectionHeaderAssets(ctx context.Context, gameIds []int64) ([]BatchCollectionHeaderAssetsRow, error) {
+	rows, err := q.db.Query(ctx, batchCollectionHeaderAssets, gameIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BatchCollectionHeaderAssetsRow{}
+	for rows.Next() {
+		var i BatchCollectionHeaderAssetsRow
+		if err := rows.Scan(
+			&i.GameID,
+			&i.AssetType,
+			&i.Lang,
+			&i.Url,
+			&i.Exists,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const batchCollectionHeaderMedia = `-- name: BatchCollectionHeaderMedia :many
+SELECT game_id, url FROM gfg_game_media
+WHERE game_id = ANY($1::bigint[]) AND media_type = 'header'
+ORDER BY game_id, media_type, sort_order, id
+`
+
+type BatchCollectionHeaderMediaRow struct {
+	GameID int64  `json:"game_id"`
+	Url    string `json:"url"`
+}
+
+func (q *Queries) BatchCollectionHeaderMedia(ctx context.Context, gameIds []int64) ([]BatchCollectionHeaderMediaRow, error) {
+	rows, err := q.db.Query(ctx, batchCollectionHeaderMedia, gameIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BatchCollectionHeaderMediaRow{}
+	for rows.Next() {
+		var i BatchCollectionHeaderMediaRow
+		if err := rows.Scan(&i.GameID, &i.Url); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const batchCollectionMemberships = `-- name: BatchCollectionMemberships :many
 SELECT collection_id, game_id FROM gfg_game_collection_item
 WHERE collection_id = ANY($1::bigint[])
@@ -42,12 +113,131 @@ func (q *Queries) BatchCollectionMemberships(ctx context.Context, collectionIds 
 	return items, nil
 }
 
-const countPublishedCollections = `-- name: CountPublishedCollections :one
+const batchCollectionProjectionGames = `-- name: BatchCollectionProjectionGames :many
+SELECT g.id, g.name, g.name_en, g.info, g.info_en, g.header,
+    COALESCE(d.name, '')::text AS detail_name, d.header_url AS detail_header,
+    zh.game_id AS zh_id, zh.name AS zh_name, zh.short_description AS zh_summary,
+    en.game_id AS en_id, en.name AS en_name, en.short_description AS en_summary,
+    EXISTS (SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id = gt.tag_id
+        WHERE gt.game_id = g.id AND t.code = 'adult') AS adult
+FROM gfg_game g
+LEFT JOIN gfg_game_details d ON d.game_id = g.id
+LEFT JOIN gfg_game_localized_details zh ON zh.game_id = g.id AND zh.lang = 'zh'
+LEFT JOIN gfg_game_localized_details en ON en.game_id = g.id AND en.lang = 'en'
+WHERE g.id = ANY($1::bigint[])
+ORDER BY g.id
+`
+
+type BatchCollectionProjectionGamesRow struct {
+	ID           int64   `json:"id"`
+	Name         string  `json:"name"`
+	NameEn       string  `json:"name_en"`
+	Info         string  `json:"info"`
+	InfoEn       string  `json:"info_en"`
+	Header       string  `json:"header"`
+	DetailName   string  `json:"detail_name"`
+	DetailHeader *string `json:"detail_header"`
+	ZhID         *int64  `json:"zh_id"`
+	ZhName       *string `json:"zh_name"`
+	ZhSummary    *string `json:"zh_summary"`
+	EnID         *int64  `json:"en_id"`
+	EnName       *string `json:"en_name"`
+	EnSummary    *string `json:"en_summary"`
+	Adult        bool    `json:"adult"`
+}
+
+func (q *Queries) BatchCollectionProjectionGames(ctx context.Context, gameIds []int64) ([]BatchCollectionProjectionGamesRow, error) {
+	rows, err := q.db.Query(ctx, batchCollectionProjectionGames, gameIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []BatchCollectionProjectionGamesRow{}
+	for rows.Next() {
+		var i BatchCollectionProjectionGamesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.NameEn,
+			&i.Info,
+			&i.InfoEn,
+			&i.Header,
+			&i.DetailName,
+			&i.DetailHeader,
+			&i.ZhID,
+			&i.ZhName,
+			&i.ZhSummary,
+			&i.EnID,
+			&i.EnName,
+			&i.EnSummary,
+			&i.Adult,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countCollectionBrowse = `-- name: CountCollectionBrowse :one
 SELECT count(*) FROM gfg_game_collection WHERE status = 'published'
 `
 
-func (q *Queries) CountPublishedCollections(ctx context.Context) (int64, error) {
-	row := q.db.QueryRow(ctx, countPublishedCollections)
+func (q *Queries) CountCollectionBrowse(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countCollectionBrowse)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countPublishedCollections = `-- name: CountPublishedCollections :one
+WITH visible_members AS (
+    SELECT i.collection_id, g.name, g.name_en,
+        (fa.game_id IS NOT NULL OR r.availability = 'available') AS released,
+        (fa.game_id IS NULL AND r.availability = 'upcoming') AS upcoming
+    FROM gfg_game_collection_item i
+    JOIN gfg_game g ON g.id = i.game_id
+    LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
+    LEFT JOIN gfg_game_release_state r ON r.game_id = g.id
+    WHERE $1::boolean OR NOT EXISTS (
+        SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id = gt.tag_id
+        WHERE gt.game_id = g.id AND t.code = 'adult'
+    )
+), membership AS (
+    SELECT collection_id, count(*) AS visible_count,
+        bool_or(released) AS has_released, bool_or(upcoming) AS has_upcoming,
+        bool_or(strpos(lower(name), lower($2::text)) > 0
+            OR strpos(lower(name_en), lower($2::text)) > 0) AS member_match
+    FROM visible_members GROUP BY collection_id
+), filtered AS (
+    SELECT c.id, c.code, c.name, c.name_en, c.info, c.info_en, c.status, c.version, c.published_at, c.archived_at, c.created_at, c.updated_at, COALESCE(m.visible_count, 0)::bigint AS visible_count
+    FROM gfg_game_collection c LEFT JOIN membership m ON m.collection_id = c.id
+    WHERE c.status = 'published'
+      AND ($2::text = '' OR m.member_match
+        OR strpos(lower(c.code), lower($2::text)) > 0
+        OR strpos(lower(c.name), lower($2::text)) > 0
+        OR strpos(lower(c.name_en), lower($2::text)) > 0
+        OR strpos(lower(c.info), lower($2::text)) > 0
+        OR strpos(lower(c.info_en), lower($2::text)) > 0)
+      AND ($3::text = 'all'
+        OR ($3::text = 'released' AND m.has_released)
+        OR ($3::text = 'upcoming' AND m.has_upcoming)
+        OR ($3::text = 'mixed' AND m.has_released AND m.has_upcoming))
+)
+SELECT count(*) FROM filtered
+`
+
+type CountPublishedCollectionsParams struct {
+	IncludeAdult bool   `json:"include_adult"`
+	Keyword      string `json:"keyword"`
+	Phase        string `json:"phase"`
+}
+
+func (q *Queries) CountPublishedCollections(ctx context.Context, arg CountPublishedCollectionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPublishedCollections, arg.IncludeAdult, arg.Keyword, arg.Phase)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -81,6 +271,56 @@ func (q *Queries) GetPublishedCollection(ctx context.Context, code string) (GetP
 		&i.PublishedAt,
 	)
 	return i, err
+}
+
+const listCollectionBrowse = `-- name: ListCollectionBrowse :many
+SELECT id, code, name, name_en, info, info_en, published_at
+FROM gfg_game_collection WHERE status = 'published'
+ORDER BY published_at DESC, id DESC
+LIMIT $2::bigint OFFSET $1::bigint
+`
+
+type ListCollectionBrowseParams struct {
+	PageOffset int64 `json:"page_offset"`
+	PageSize   int64 `json:"page_size"`
+}
+
+type ListCollectionBrowseRow struct {
+	ID          int64              `json:"id"`
+	Code        string             `json:"code"`
+	Name        string             `json:"name"`
+	NameEn      string             `json:"name_en"`
+	Info        string             `json:"info"`
+	InfoEn      string             `json:"info_en"`
+	PublishedAt pgtype.Timestamptz `json:"published_at"`
+}
+
+func (q *Queries) ListCollectionBrowse(ctx context.Context, arg ListCollectionBrowseParams) ([]ListCollectionBrowseRow, error) {
+	rows, err := q.db.Query(ctx, listCollectionBrowse, arg.PageOffset, arg.PageSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCollectionBrowseRow{}
+	for rows.Next() {
+		var i ListCollectionBrowseRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Code,
+			&i.Name,
+			&i.NameEn,
+			&i.Info,
+			&i.InfoEn,
+			&i.PublishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPublishedCollectionHomeSlots = `-- name: ListPublishedCollectionHomeSlots :many
@@ -140,15 +380,63 @@ func (q *Queries) ListPublishedCollectionHomeSlots(ctx context.Context, includeA
 }
 
 const listPublishedCollections = `-- name: ListPublishedCollections :many
+WITH visible_members AS (
+    SELECT i.collection_id, g.name, g.name_en,
+        (fa.game_id IS NOT NULL OR r.availability = 'available') AS released,
+        (fa.game_id IS NULL AND r.availability = 'upcoming') AS upcoming
+    FROM gfg_game_collection_item i
+    JOIN gfg_game g ON g.id = i.game_id
+    LEFT JOIN gfg_game_first_available fa ON fa.game_id = g.id
+    LEFT JOIN gfg_game_release_state r ON r.game_id = g.id
+    WHERE $5::boolean OR NOT EXISTS (
+        SELECT 1 FROM gfg_game_tag gt JOIN gfg_tag t ON t.id = gt.tag_id
+        WHERE gt.game_id = g.id AND t.code = 'adult'
+    )
+), membership AS (
+    SELECT collection_id, count(*) AS visible_count,
+        bool_or(released) AS has_released, bool_or(upcoming) AS has_upcoming,
+        bool_or(strpos(lower(name), lower($6::text)) > 0
+            OR strpos(lower(name_en), lower($6::text)) > 0) AS member_match
+    FROM visible_members GROUP BY collection_id
+), filtered AS (
+    SELECT c.id, c.code, c.name, c.name_en, c.info, c.info_en, c.status, c.version, c.published_at, c.archived_at, c.created_at, c.updated_at, COALESCE(m.visible_count, 0)::bigint AS visible_count
+    FROM gfg_game_collection c LEFT JOIN membership m ON m.collection_id = c.id
+    WHERE c.status = 'published'
+      AND ($6::text = '' OR m.member_match
+        OR strpos(lower(c.code), lower($6::text)) > 0
+        OR strpos(lower(c.name), lower($6::text)) > 0
+        OR strpos(lower(c.name_en), lower($6::text)) > 0
+        OR strpos(lower(c.info), lower($6::text)) > 0
+        OR strpos(lower(c.info_en), lower($6::text)) > 0)
+      AND ($7::text = 'all'
+        OR ($7::text = 'released' AND m.has_released)
+        OR ($7::text = 'upcoming' AND m.has_upcoming)
+        OR ($7::text = 'mixed' AND m.has_released AND m.has_upcoming))
+)
 SELECT id, code, name, name_en, info, info_en, published_at
-FROM gfg_game_collection WHERE status = 'published'
-ORDER BY published_at DESC, id DESC
-LIMIT $2::bigint OFFSET $1::bigint
+FROM filtered
+ORDER BY
+    CASE WHEN $1::text = 'count_desc' THEN visible_count END DESC,
+    CASE WHEN $1::text = 'count_asc' THEN visible_count END ASC,
+    CASE WHEN $1::text = 'name_asc' THEN
+        CASE WHEN $2::text = 'en' THEN CASE WHEN btrim(name_en) = '' THEN name ELSE name_en END
+        ELSE CASE WHEN btrim(name) = '' THEN name_en ELSE name END END END ASC,
+    CASE WHEN $1::text = 'name_desc' THEN
+        CASE WHEN $2::text = 'en' THEN CASE WHEN btrim(name_en) = '' THEN name ELSE name_en END
+        ELSE CASE WHEN btrim(name) = '' THEN name_en ELSE name END END END DESC,
+    CASE WHEN $1::text IN ('name_asc', 'name_desc') THEN id END ASC,
+    published_at DESC, id DESC
+LIMIT $4::bigint OFFSET $3::bigint
 `
 
 type ListPublishedCollectionsParams struct {
-	PageOffset int64 `json:"page_offset"`
-	PageSize   int64 `json:"page_size"`
+	Sort         string `json:"sort"`
+	Lang         string `json:"lang"`
+	PageOffset   int64  `json:"page_offset"`
+	PageSize     int64  `json:"page_size"`
+	IncludeAdult bool   `json:"include_adult"`
+	Keyword      string `json:"keyword"`
+	Phase        string `json:"phase"`
 }
 
 type ListPublishedCollectionsRow struct {
@@ -162,7 +450,15 @@ type ListPublishedCollectionsRow struct {
 }
 
 func (q *Queries) ListPublishedCollections(ctx context.Context, arg ListPublishedCollectionsParams) ([]ListPublishedCollectionsRow, error) {
-	rows, err := q.db.Query(ctx, listPublishedCollections, arg.PageOffset, arg.PageSize)
+	rows, err := q.db.Query(ctx, listPublishedCollections,
+		arg.Sort,
+		arg.Lang,
+		arg.PageOffset,
+		arg.PageSize,
+		arg.IncludeAdult,
+		arg.Keyword,
+		arg.Phase,
+	)
 	if err != nil {
 		return nil, err
 	}

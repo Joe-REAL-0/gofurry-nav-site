@@ -774,6 +774,24 @@
   },
   "game": {
     "collections": {
+      "search": "Search collections or games…",
+      "advancedFilter": "Advanced filters",
+      "apply": "Apply",
+      "phaseLabel": "Content phase",
+      "sortLabel": "Sort by",
+      "phases": {
+        "all": "All",
+        "released": "Includes released games",
+        "upcoming": "Includes upcoming games",
+        "mixed": "Released and upcoming"
+      },
+      "sorts": {
+        "published_desc": "Recently published",
+        "count_desc": "Most games",
+        "count_asc": "Fewest games",
+        "name_asc": "Name ascending",
+        "name_desc": "Name descending"
+      },
       "heading": "Game Collections",
       "all": "All collections",
       "intro": "Explore curated themes and series through the release history of their games.",

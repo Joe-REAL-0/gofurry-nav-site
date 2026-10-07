@@ -3,6 +3,7 @@ import type {
   GameCollectionIndex,
   GameCollectionDetail,
   GameCollectionMode,
+  GameCollectionCriteria,
   AnonymousReviewModel,
   CommentReq,
   GameBaseInfoResponse,
@@ -76,9 +77,9 @@ export function getGameCollectionHome(lang = 'zh', options: HomeOptionalReadOpti
   })
 }
 
-export function getGameCollections(lang: string, mode: GameCollectionMode, page = 1, pageSize = 24) {
+export function getGameCollections(lang: string, mode: GameCollectionMode, page = 1, pageSize = 24, criteria: GameCollectionCriteria = { q: '', phase: 'all', sort: 'published_desc' }) {
   return useApi('gameV2')<GameCollectionIndex>('/game/collections', {
-    query: { lang: normalizeGameLang(lang), mode, page, page_size: pageSize }, timeout: 8000, retry: 0,
+    query: { lang: normalizeGameLang(lang), mode, page, page_size: pageSize, ...criteria }, timeout: 8000, retry: 0,
   })
 }
 

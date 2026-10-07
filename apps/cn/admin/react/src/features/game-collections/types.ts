@@ -10,4 +10,4 @@ export type CollectionMembers = { collection_id: number; version: number; member
 export type CollectionWorkspace = { collection: GameCollection; members: CollectionMember[] }
 export type CollectionHome = { revision: string; slots: { slot: number; collection: GameCollection | null }[] }
 export const collectionStatusLabels: Record<CollectionStatus, string> = { draft: '草稿', published: '已发布', archived: '已归档' }
-export const PUBLIC_REFRESH_NOTICE = '已保存；公开页面将在最多约5分钟内刷新。'
+export const PUBLIC_REFRESH_NOTICE = '已保存；公开内容将在缓存刷新后更新。'

@@ -13,19 +13,21 @@ SSR 成功（含合法空结果）不补读；合法空 slots 在 Desktop 仍显
 快捷入口仅在 xl 及以上 Sidebar 使用三列，直接继承每日一游的材质和 2.45rem 最小高度；小屏不保留快捷入口 DOM。
 后端给出的非空 slots 按 slot 升序压缩展示，最后追加固定的全部分区入口。
 
-Index 只提供简介、预览卡片和手动加载更多；0/1/2/3 张 preview 原样消费，不复制图片。
+Index 视觉以搜索框与高级筛选工具条开场，H1 仅供辅助技术读取，SEO title/description 保留。
+卡片复用 Games Home 的透明边框、背景、阴影、hover 和圆角；0/1/2/3 张 preview 原样消费，不复制图片。
+输入使用 IME-safe 的 350ms debounce；筛选弹窗仅编辑本地 Draft，Cancel 不提交，Apply 原子提交阶段与排序。
 Detail 的单一时间线由后端排序，前端仅稳定分组：已发布、已发布但日期待考、NOW、未来、TBA、未知。
 过去和未来各自复用 `serpentineSequence` 几何，900px 以上三列蛇形，以下单列；DOM 顺序始终不变。
 日期待考、TBA、未知没有 connector，只有未知作品时不显示 NOW。NOW 取后端 `as_of_date`。
 显示保留 day/month/quarter/year 与 inferred 精度，不暴露内部 First Available 来源，也不在前端过滤 Adult Tag。
 
 两个分区页面 SSR 一律 SFW。挂载读取本地模式：SFW 零补请求，NSFW 恰好一次刷新。
-页面实例独占 `useGameCollectionModeRefresh`，响应按 generation 接受，模式更新成功才整体替换内容；失败保留上次内容和局部重试。
-Index 模式更新成功回到第一页，过期的 Load More 响应不能追加进新模式。模式不写 URL。
+Detail 保持 `useGameCollectionModeRefresh`。Index 由 `useGameCollectionDiscovery` 单独拥有 committed q/phase/sort、mode、分页和 snapshot；所有搜索/筛选/模式变更共用 generation。
+新请求期间保留 ready 卡片，成功后从 page 1 原子替换，失败保留旧内容并局部重试。Load More 携带相同 criteria，按 code 去重，过期响应不追加。模式不写 URL。
 Detail 初始/刷新 404 使用真实 Nuxt 404；初始服务失败返回 HTTP 503 与可重试 surface，不伪装空分区。
 adult-only 的 SFW Detail 仍为 200，零作品使用中性空态。所有图片复用 SteamAssetImage。
 
-Stage C 首页收口只简化 Home 读取，不改变缓存键/TTL、数据库结构或 Admin。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
+前一轮 Stage C 首页收口只简化 Home 读取；本轮再将 Index/Detail 改为轻量投影，缓存 TTL 调整为 1 小时，键命名保持不变。数据库结构与 Admin mutation 不变。Functional、固定环境 Visual 比对和维护者人工验收分别记录；
 新增六张分区截图与首页四张变更须人工接受后才构成 Visual PASS，代码完成不代表 #140 已关闭。
 
 2026-10-07 首页收口：Home 改为单条轻量 SQL；SSR 失败 slice 支持一次 mounted 恢复；快捷入口仅留在 Desktop Sidebar 并继承每日一游材质。
@@ -70,12 +72,17 @@ Stage A 没有 Admin mutation、Membership editor、Home curation 或 Audit 功�
 `lang=zh|en`，缺失或非法默认 zh；`mode=sfw|nsfw`，缺失或非法默认 sfw。
 List 默认 `page=1,page_size=24`，page_size 上限 60；非整数、非正数回安全默认值。
 无法安全计算 bigint offset 的 page 回到 1。越界页为 `items=[]` 并保留 total。
-List 按 `published_at DESC,id DESC` 排序，total 是已发布分区数量。
+List 额外支持 `q`（默认空）、`phase=all|released|upcoming|mixed`、`sort=published_desc|count_desc|count_asc|name_asc|name_desc`。
+非法 phase/sort 返回 400。q 不区分大小写、按字面子串匹配 Collection code/双语名称/双语简介，或当前 mode 可见成员的站内双语名称。
+SFW 下 adult 成员不参与 keyword、phase 和数量排序，避免通过结果侧信道泄露隐藏成员。
+released 指存在 First Available 或 release=available；upcoming 指无 First Available 且 release=upcoming（含 overdue/TBA）；mixed 两者都有，unknown 不计入任一侧。
+默认 `published_desc` 按 published_at DESC,id DESC；count 排序按可见数量，再按 published_at DESC,id DESC；name 按当前 lang 实际投影名称，再按 id ASC。
+Count/List 使用相同参数化筛选，total/has_more 是筛选后的分页事实。
 
 仅 published 公开。非法 code、draft、archived 和不存在的 Detail 均为 HTTP 404，
 同一 `Collection not found` 错误；SQL/连接故障为 503 `Collections unavailable`，不透传内部错误。
 空 Index、空 Home 和零可见成员 Detail 都是 200；数组使用 `[]`。
-HTTP `Cache-Control: no-store`，避免在服务端五分钟缓存之外叠加浏览器缓存。
+HTTP `Cache-Control: no-store` 保持不变。Redis 与 CDN 是不同层；此合同不推断或修改 CDN/Nginx 策略。
 
 `info` 投影：`code,name,info,visible_game_count,published_at`。
 `summary` 在 info 上增加 `preview_games: [{game_id,name,header_url}]`。
@@ -118,13 +125,14 @@ First Available 的 inferred 原样保留，内部 legacy_manual/steam_backfill/
 
 固定 sqlc 查询负责公开 Collection、count、page、slots 和批量 Membership。
 Home 使用单条 sqlc 查询读取 published 槽位、Collection 双语元数据和按 adult code 过滤的可见数量，不加载任何 Game Aggregate 或时间线。
-Home schema v1 保留 CollectionSummary 结构，preview_games 固定为空数组；Index/Detail 仍保留完整 preview/timeline。旧重型 Home 缓存载荷在原 namespace 内按轻量规则重建，TTL 仍为 5 分钟。
-每个响应收集 unique game IDs 后调用现有 `loadAggregatesByGameIDs` / `loadAggregatesBySites`
-批量加载 canonical release、first available、tags、localized details 和 media。
-newsLimit 固定为 0，不逐游戏加载新闻；不调用内部 `/game/info` HTTP。
-游戏显示投影复用 `buildListItem`，不复制 header resolver。
+Home schema v1 保留 CollectionSummary 结构，preview_games 固定为空数组；Index/Detail 仍保留完整 preview/timeline。
+Index/Detail 使用 `LoadCollectionProjectionGames`：一次批量 Membership，去重 game IDs，随后固定批量读取站内双语文案、localized name/summary、detail name/header、仅 header 类型的 media/assets、First Available 和 Release State。
+成员与投影合计 6 次 SQL，与成员数量无关；默认 Index（Count/List + 投影）8 次、Detail（Get + 投影）7 次，Home 1 次。
+不进入完整 Game Aggregate，不读取价格、在线/峰值、评论、配置需求、新闻或完整素材。不内部 HTTP 调用。
+游戏文案继续复用现有 locale fallback；完整 read model 和轻量投影共用 canonical header helper，保持 media/asset 优先级及归档 adult 标签语义。
 
-独立 Redis namespace，TTL **5 minutes**：
+Redis 是 Origin Read Model acceleration，TTL **1 hour**，不是内容发布时限承诺。
+仅默认 Browse（空 q、phase=all、sort=published_desc）、Home、Detail 使用以下命名空间；任何非默认 Discovery query 直接走轻量 DB read，不读写长期结果缓存，避免任意关键词高基数 key。
 
 ```text
 game:v2:collections:v1:home:{asOfDate}:{lang}:{mode}
@@ -136,7 +144,7 @@ UTC 日期切换立即换 key。有效缓存命中直接返回；miss/error/malf
 数据库错误和 404 不缓存。每个 Service 实例用 singleflight 合并同 key 的并发 miss；不同 key 独立。
 缓存序列化结果按调用方解码，避免共享可变 slices。单个调用方取消不终止其他等待者，构建有 8 秒总预算。
 Redis 读写使用 200ms context 和共享连接池的 read/write timeout clone，不改全局 Redis 配置。
-Stage A 不做跨服务精确失效或 stale fallback；后续运营修改最多约五分钟最终一致。
+Stage A 不做跨服务精确失效或 stale fallback；公开内容在缓存刷新后更新，不承诺固定的最终可见时限。
 
 ## 验证与交付边界
 
@@ -209,7 +217,7 @@ Game options 与 Home eligibility 搜索复用 RemoteSelect，不消费 IME 确�
 Home 草稿同样绑定原 revision，背景刷新不会覆盖它。
 
 Stage B 没有新迁移，也不变更 Stage A cache：不 purge Redis、不新增内部失效接口或 Pub/Sub。
-成功提示为“已保存；公开页面将在最多约5分钟内刷新。”；自动撤下首页入口时另行说明。
+成功提示为“已保存；公开内容将在缓存刷新后更新。”；自动撤下首页入口时另行说明。
 
 验证包含 Controller/route 单测、`TestAdminGameCollectionThreeDatabase` 的隔离 PG18 并发/约束/Audit 集成测试，
 以及 React 列表 IME、共享版本、冲突保留、生命周期、只读、五位完整编排和未保存保护测试。

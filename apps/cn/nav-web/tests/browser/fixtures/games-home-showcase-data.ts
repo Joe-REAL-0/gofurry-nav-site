@@ -4,7 +4,7 @@ export const showcaseOrigins = { primary: 'https://showcase-primary.example', mi
 export const showcaseSteam = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/6101/showcase/header.jpg?v=2'
 export type ShowcaseScenario = 'empty' | 'single-editorial' | 'automatic-upcoming' | 'managed-sponsored-tabletop'
   | 'managed-sponsored-merchandise' | 'four-items' | 'long-content' | 'media-failure' | 'steam-failure'
-  | 'primary-failure' | 'showcase-failure' | 'showcase-transient' | 'slow-showcase' | 'tracking-failure' | 'mobile-missing' | 'two-managed'
+  | 'varied-content' | 'primary-failure' | 'showcase-failure' | 'showcase-transient' | 'slow-showcase' | 'tracking-failure' | 'mobile-missing' | 'two-managed'
 
 export function makeShowcase(scenario: ShowcaseScenario, lang: 'zh' | 'en'): GameShowcaseSnapshot {
   const snapshot: GameShowcaseSnapshot = { schema_version: 1, snapshot_id: 'a'.repeat(32), generated_at: '2026-10-04T04:00:00Z', valid_until: '2026-10-04T04:05:00Z', items: [] }
@@ -33,6 +33,13 @@ export function makeShowcase(scenario: ShowcaseScenario, lang: 'zh' | 'en'): Gam
   else if (scenario === 'two-managed') snapshot.items = [editorial, sponsored]
   else if (scenario === 'four-items' || scenario === 'media-failure' || scenario === 'tracking-failure') snapshot.items = [editorial, upcoming, sponsored, trending]
   else snapshot.items = [editorial]
+  if (scenario === 'varied-content') {
+    snapshot.items = [
+      { ...trending, title: en ? 'Quiet' : '静谧', summary: en ? 'A journey.' : '一段旅程。', tags: [], secondary_action: undefined },
+      { ...editorial, title: (en ? 'Across the forest and beyond the stars ' : '穿越森林与星海的漫长冒险').repeat(4), summary: editorial.summary.repeat(12), release: upcoming.release, editorial_note: editorial.editorial_note!.repeat(6) },
+      sponsored,
+    ]
+  }
   if (scenario === 'long-content') {
     editorial.title = (en ? 'Across the forest and beyond the stars ' : '穿越森林与星海的漫长冒险').repeat(8)
     editorial.summary = (en ? 'There are many more stories to discover. ' : '在无数个温柔的日夜里寻找彼此与更多值得珍藏的回忆。').repeat(12)

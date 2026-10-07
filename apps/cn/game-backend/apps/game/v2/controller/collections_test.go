@@ -20,11 +20,11 @@ type publicCollectionReader struct {
 	calls         int
 }
 
-func (r *publicCollectionReader) CountPublishedCollections(context.Context) (int64, error) {
+func (r *publicCollectionReader) CountPublishedCollections(context.Context, v2models.CollectionQuery) (int64, error) {
 	return 1, r.err
 }
-func (r *publicCollectionReader) ListPublishedCollections(_ context.Context, limit, offset int64) ([]v2models.CollectionRecord, error) {
-	r.limit, r.offset = limit, offset
+func (r *publicCollectionReader) ListPublishedCollections(_ context.Context, query v2models.CollectionQuery) ([]v2models.CollectionRecord, error) {
+	r.limit, r.offset = query.PageSize, (query.Page-1)*query.PageSize
 	return []v2models.CollectionRecord{{ID: 1, Code: "public"}}, r.err
 }
 func (r *publicCollectionReader) GetPublishedCollection(_ context.Context, code string) (*v2models.CollectionRecord, error) {
@@ -37,9 +37,9 @@ func (r *publicCollectionReader) GetPublishedCollection(_ context.Context, code 
 func (r *publicCollectionReader) ListPublishedCollectionHomeSlots(context.Context, string) ([]v2models.CollectionRecord, error) {
 	return []v2models.CollectionRecord{}, r.err
 }
-func (r *publicCollectionReader) LoadCollectionGames(_ context.Context, _ []int64, lang string) (v2models.CollectionGames, error) {
+func (r *publicCollectionReader) LoadCollectionProjectionGames(_ context.Context, _ []int64, lang string) (v2models.CollectionGames, error) {
 	r.lang = lang
-	return v2models.CollectionGames{Memberships: []v2models.CollectionMembership{{CollectionID: 1, GameID: 1}}, Games: []v2models.GameV2Aggregate{{Site: v2models.GameV2SiteRecord{ID: 1}, Tags: []v2models.GameV2Tag{{Code: "adult"}}}}}, r.err
+	return v2models.CollectionGames{Memberships: []v2models.CollectionMembership{{CollectionID: 1, GameID: 1}}, Games: []v2models.CollectionProjectionGame{{Site: v2models.GameV2SiteRecord{ID: 1}, Adult: true}}}, r.err
 }
 
 func TestCollectionHTTPContract(t *testing.T) {
@@ -115,5 +115,21 @@ func TestCollectionHTTPContract(t *testing.T) {
 	_ = json.NewDecoder(res.Body).Decode(&body)
 	if res.StatusCode != 503 || body.Data != "Collections unavailable" {
 		t.Fatal("DB error disclosure", res.StatusCode, body)
+	}
+}
+
+func TestCollectionInvalidDiscoveryCriteria(t *testing.T) {
+	api := New(nil, nil, nil, nil).WithCollections(v2service.NewCollectionService(&publicCollectionReader{}, nil))
+	app := fiber.New()
+	app.Get("/collections", api.GetCollections)
+	for _, query := range []string{"?phase=bad", "?sort=bad", "?phase=all&sort=bad"} {
+		res, err := app.Test(httptest.NewRequest("GET", "/collections"+query, nil))
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != 400 || res.Header.Get("Cache-Control") != "no-store" {
+			t.Fatal(query, res.StatusCode)
+		}
 	}
 }

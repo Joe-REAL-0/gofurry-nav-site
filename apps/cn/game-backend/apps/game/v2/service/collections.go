@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,19 +17,21 @@ import (
 )
 
 const (
-	CollectionCacheTTL     = 5 * time.Minute
+	CollectionCacheTTL     = time.Hour
 	collectionRedisTimeout = 200 * time.Millisecond
 )
+
+var ErrCollectionQuery = errors.New("invalid collection discovery criteria")
 
 var ErrCollectionNotFound = errors.New("collection not found")
 var collectionCodePattern = regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
 
 type collectionReader interface {
-	CountPublishedCollections(context.Context) (int64, error)
-	ListPublishedCollections(context.Context, int64, int64) ([]v2models.CollectionRecord, error)
+	CountPublishedCollections(context.Context, v2models.CollectionQuery) (int64, error)
+	ListPublishedCollections(context.Context, v2models.CollectionQuery) ([]v2models.CollectionRecord, error)
 	GetPublishedCollection(context.Context, string) (*v2models.CollectionRecord, error)
 	ListPublishedCollectionHomeSlots(context.Context, string) ([]v2models.CollectionRecord, error)
-	LoadCollectionGames(context.Context, []int64, string) (v2models.CollectionGames, error)
+	LoadCollectionProjectionGames(context.Context, []int64, string) (v2models.CollectionGames, error)
 }
 
 type collectionCache interface {
@@ -78,6 +81,15 @@ func NormalizeCollectionQuery(query v2models.CollectionQuery) v2models.Collectio
 	if query.Page <= 0 || query.Page > math.MaxInt64/query.PageSize {
 		query.Page = 1
 	}
+	query.Q = strings.Clone(strings.TrimSpace(query.Q))
+	if query.Phase == "" {
+		query.Phase = "all"
+	}
+	if query.Sort == "" {
+		query.Sort = "published_desc"
+	}
+	query.Phase = strings.Clone(query.Phase)
+	query.Sort = strings.Clone(query.Sort)
 	return query
 }
 
@@ -126,20 +138,27 @@ func (s *CollectionService) Home(ctx context.Context, query v2models.CollectionQ
 
 func (s *CollectionService) List(ctx context.Context, query v2models.CollectionQuery) (v2models.CollectionIndex, error) {
 	query = NormalizeCollectionQuery(query)
+	switch query.Phase {
+	case "all", "released", "upcoming", "mixed":
+	default:
+		return v2models.CollectionIndex{}, ErrCollectionQuery
+	}
+	switch query.Sort {
+	case "published_desc", "count_desc", "count_asc", "name_asc", "name_desc":
+	default:
+		return v2models.CollectionIndex{}, ErrCollectionQuery
+	}
 	meta := s.metadata()
 	key := fmt.Sprintf("%s:%d:%d", collectionCacheKey("list", meta, query), query.Page, query.PageSize)
-	return cachedCollection(ctx, s, key, func(value v2models.CollectionIndex) bool {
-		return validCollectionMetadata(value.CollectionMetadata, meta) && value.Items != nil && value.Page == query.Page && value.PageSize == query.PageSize
-	}, func(ctx context.Context) (v2models.CollectionIndex, error) {
+	build := func(ctx context.Context) (v2models.CollectionIndex, error) {
 		result := v2models.CollectionIndex{CollectionMetadata: meta, Page: query.Page, PageSize: query.PageSize, Items: []v2models.CollectionSummary{}}
-		total, err := s.reader.CountPublishedCollections(ctx)
+		total, err := s.reader.CountPublishedCollections(ctx, query)
 		if err != nil {
 			return result, err
 		}
 		result.Total = total
-		offset := (query.Page - 1) * query.PageSize
 		result.HasMore = total > query.Page*query.PageSize
-		records, err := s.reader.ListPublishedCollections(ctx, query.PageSize, offset)
+		records, err := s.reader.ListPublishedCollections(ctx, query)
 		if err != nil {
 			return result, err
 		}
@@ -151,7 +170,16 @@ func (s *CollectionService) List(ctx context.Context, query v2models.CollectionQ
 			result.Items = append(result.Items, collectionSummary(record, query.Lang, timelines[record.ID]))
 		}
 		return result, nil
-	})
+	}
+	if !query.IsDefaultBrowse() {
+		// Arbitrary discovery criteria never enter the long-lived result cache.
+		work, cancel := context.WithTimeout(ctx, 8*time.Second)
+		defer cancel()
+		return build(work)
+	}
+	return cachedCollection(ctx, s, key, func(value v2models.CollectionIndex) bool {
+		return validCollectionMetadata(value.CollectionMetadata, meta) && value.Items != nil && value.Page == query.Page && value.PageSize == query.PageSize
+	}, build)
 }
 
 func (s *CollectionService) Detail(ctx context.Context, code string, query v2models.CollectionQuery) (v2models.CollectionDetail, error) {
@@ -194,20 +222,26 @@ func (s *CollectionService) timelines(ctx context.Context, records []v2models.Co
 	if len(ids) == 0 {
 		return result, nil
 	}
-	batch, err := s.reader.LoadCollectionGames(ctx, ids, query.Lang)
+	batch, err := s.reader.LoadCollectionProjectionGames(ctx, ids, query.Lang)
 	if err != nil {
 		return nil, err
 	}
 	games := make(map[int64]v2models.CollectionTimelineItem, len(batch.Games))
 	for _, aggregate := range batch.Games {
-		if query.Mode == "sfw" && collectionAdult(aggregate.Tags) {
+		if query.Mode == "sfw" && aggregate.Adult {
 			continue
 		}
 		// Share all existing V2 locale and media priorities, then expose only the
 		// collection projection. No legacy maintenance source escapes this DTO.
-		game := buildListItem(aggregate, query.Lang, defaultRegion)
+		// The adapter reuses pure text fallback helpers, never the detail builder.
+		text := v2models.GameV2Aggregate{Site: aggregate.Site, Details: aggregate.Details, Localized: aggregate.Localized}
+		mediaLang := query.Lang
+		if aggregate.Localized != nil && aggregate.Localized.Lang != "" {
+			mediaLang = aggregate.Localized.Lang
+		}
+		header := canonicalGameHeader(aggregate.Site.Header, aggregate.Details, canonicalMediaHeader(aggregate.Media, aggregate.Assets, mediaLang))
 		phase, chronology := resolveCollectionChronology(aggregate.FirstAvailable, aggregate.ReleaseState, asOfDate)
-		games[aggregate.Site.ID] = v2models.CollectionTimelineItem{GameID: game.ID, Name: game.Name, Summary: game.Summary, HeaderURL: game.HeaderURL, Phase: phase, Chronology: chronology}
+		games[aggregate.Site.ID] = v2models.CollectionTimelineItem{GameID: strconv.FormatInt(aggregate.Site.ID, 10), Name: localizedName(text, query.Lang), Summary: localizedSummary(text, query.Lang), HeaderURL: header, Phase: phase, Chronology: chronology}
 	}
 	for _, member := range batch.Memberships {
 		if game, ok := games[member.GameID]; ok {
@@ -218,15 +252,6 @@ func (s *CollectionService) timelines(ctx context.Context, records []v2models.Co
 		sortCollectionTimeline(items)
 	}
 	return result, nil
-}
-
-func collectionAdult(tags []v2models.GameV2Tag) bool {
-	for _, tag := range tags {
-		if tag.Code == "adult" {
-			return true
-		}
-	}
-	return false
 }
 
 func collectionInfo(record v2models.CollectionRecord, lang string, count int) v2models.CollectionInfo {

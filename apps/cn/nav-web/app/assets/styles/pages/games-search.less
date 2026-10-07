@@ -87,7 +87,7 @@ html.dark .games-search-overlay-scope {
   color: var(--games-search-text-body);
 }
 
-.games-search-page .search-filter-button {
+:is(.games-search-page, .games-search-overlay-scope) .search-filter-button {
   display: inline-flex;
   min-height: 2.5rem;
   align-items: center;
@@ -103,24 +103,24 @@ html.dark .games-search-overlay-scope {
   transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
 }
 
-.games-search-page .search-filter-button:hover {
+:is(.games-search-page, .games-search-overlay-scope) .search-filter-button:hover {
   border-color: transparent;
   background: var(--games-search-surface-hover);
   color: var(--games-search-accent-strong);
 }
 
-.games-search-page .search-shell .game-sidebar-search-input {
+:is(.games-search-page, .games-search-overlay-scope) .search-shell .game-sidebar-search-input {
   border: 1px solid var(--games-search-border);
   background: var(--games-search-surface);
   color: var(--games-search-text-main);
   box-shadow: var(--games-search-shadow-soft);
 }
 
-.games-search-page .search-shell .game-sidebar-search-input::placeholder {
+:is(.games-search-page, .games-search-overlay-scope) .search-shell .game-sidebar-search-input::placeholder {
   color: var(--games-search-text-soft);
 }
 
-.games-search-page .search-shell .game-sidebar-search-input:focus {
+:is(.games-search-page, .games-search-overlay-scope) .search-shell .game-sidebar-search-input:focus {
   border-color: var(--games-search-border-hover);
   background: color-mix(in srgb, var(--games-search-surface-strong) 62%, transparent);
   outline: none;

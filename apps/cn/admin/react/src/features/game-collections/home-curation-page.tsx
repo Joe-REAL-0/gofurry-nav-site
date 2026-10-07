@@ -51,7 +51,7 @@ export function CollectionHomeEditor({ data, reload }: { data: CollectionHome; r
   return <PageLayout>
     <Link to="/game/collections">返回游戏分区</Link>
     <PageHeader title="首页入口编排" actions={<><Button variant="secondary" disabled={busy} onClick={() => void reloadExplicitly()}>重新加载 / 放弃修改</Button>{canWrite && <Button disabled={!draft || busy || conflict} onClick={() => mutation.mutate()}>保存编排</Button>}</>} />
-    <p className="text-sm text-muted-foreground">仅可选择已发布且至少有一个 SFW 可见游戏的分区。保存后，公开页面将在最多约5分钟内刷新。</p>
+    <p className="text-sm text-muted-foreground">仅可选择已发布且至少有一个 SFW 可见游戏的分区。保存后，公开内容将在缓存刷新后更新。</p>
     {error && <Alert tone="danger">{error}{conflict && ' 编排草稿已保留，请重新加载。'}</Alert>}
     {current.slots.map(slot => <Section key={slot.slot} title={`#${slot.slot}`} actions={canWrite && <Button variant="ghost" disabled={busy || !slot.collection} onClick={() => select(slot.slot, null)}>清空第 {slot.slot} 位</Button>}>
       {slot.collection ? <Link className="text-primary" to={`/game/collections/${slot.collection.id}`}>{slot.collection.name}</Link> : <p className="text-sm text-muted-foreground">空位</p>}

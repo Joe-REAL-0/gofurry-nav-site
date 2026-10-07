@@ -25,13 +25,16 @@ func collectionQuery(c fiber.Ctx) v2models.CollectionQuery {
 	}
 	page := parse(c.Query("page"))
 	size := parse(c.Query("page_size"))
-	return v2models.CollectionQuery{Lang: c.Query("lang"), Mode: c.Query("mode"), Page: page, PageSize: size}
+	return v2models.CollectionQuery{Lang: c.Query("lang"), Mode: c.Query("mode"), Page: page, PageSize: size, Q: c.Query("q"), Phase: c.Query("phase"), Sort: c.Query("sort")}
 }
 
 func collectionResponse(c fiber.Ctx, value any, err error) error {
 	c.Set("Cache-Control", "no-store")
 	if errors.Is(err, v2service.ErrCollectionNotFound) {
 		return common.NewResponse(c).ErrorWithCode("Collection not found", fiber.StatusNotFound)
+	}
+	if errors.Is(err, v2service.ErrCollectionQuery) {
+		return common.NewResponse(c).ErrorWithCode("Invalid collection criteria", fiber.StatusBadRequest)
 	}
 	if err != nil {
 		return common.NewResponse(c).ErrorWithCode("Collections unavailable", fiber.StatusServiceUnavailable)

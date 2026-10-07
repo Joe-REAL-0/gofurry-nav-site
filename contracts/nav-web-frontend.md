@@ -670,7 +670,8 @@ Collections on desktop. Shortcuts exist only in the xl Sidebar, sharing Daily
 Game's sidebar-action-button material and 2.45rem minimum height; below xl their
 DOM is removed. Showcase runtime/tracking remains independent.
 
-Collection Index/Detail SSR must be SFW. The page-lifetime mode refresh owner reads
+Collection Index/Detail SSR must be SFW. Detail retains its mode refresh owner;
+Index uses one discovery owner for committed q/phase/sort, mode, snapshot and pagination. It reads
 local storage only after mount, issues no extra SFW request, and one NSFW request
 when needed. Latest response wins; ready content survives pending/error, old-mode
 pagination cannot append, and successful Index mode refresh resets page one.
@@ -680,6 +681,16 @@ reuse compactPlacement/connector and retain chronological DOM order at every wid
 Only those two groups have connectors. Date-only facts use UTC/component formatting
 and retain precision/inferred; NOW uses the response as_of_date. Missing Detail is
 404, initial upstream failure is HTTP 503 with Retry, adult-only SFW is neutral 200.
+Index begins visually with Search + Advanced Filter; its H1 is sr-only and SEO remains.
+Search is IME-safe with a 350ms debounce. The modal owns a local draft: Cancel has
+no side effects, Apply commits both criteria atomically. All criteria/mode requests
+share one generation, retain ready cards, reset page on success, and reject stale
+load-more responses. Server q/phase/sort results are authoritative; the frontend
+never filters adult members or infers phases. Cards use Games Home material and
+transparent borders with an inset rounded preview.
+Showcase primary CTA alone has a transparent border. Stacked content reserves
+context/release/title/summary/tags/note/footer geometry so slide height is stable;
+desktop retains lg:h-80 and 64/36. Autoplay/tracking/artwork ownership is unchanged.
 Collections use existing Games/global tokens and SteamAssetImage. New copy belongs
 to game.collections. Visual acceptance is separate from Functional completion.
 

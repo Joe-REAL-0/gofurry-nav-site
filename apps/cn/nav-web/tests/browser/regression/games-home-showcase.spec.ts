@@ -180,7 +180,7 @@ test('Upcoming uses Steam routing and canonical calendar release metadata', asyn
   await expect(scene.showcase.locator('.game-home-showcase__context')).toHaveText('Upcoming')
   await expect(scene.showcase.locator('.game-home-showcase__meta')).toHaveText('Expected Q2 2027')
   await expect(scene.showcase.locator('img')).toHaveAttribute('src', /shared\.akamai\.steamstatic\.com\/store_item_assets\/steam\/apps\/6101\/showcase\/header\.jpg\?v=2/)
-  await expect(scene.showcase.locator('.game-home-showcase__note')).toHaveCount(0)
+  await expect(scene.showcase.locator('.game-home-showcase__note')).toHaveText('')
   scene.assertQuiet()
 })
 
@@ -188,7 +188,7 @@ for (const scenario of ['managed-sponsored-tabletop', 'managed-sponsored-merchan
   test(`Sponsored context and fixed external CTA (${scenario})`, async ({ gamesHome }) => {
     const scene = await gamesHome.open({ showcase: scenario, theme: 'dark', width: scenario.endsWith('merchandise') ? 390 : 1440, locale: 'en' })
     await expect(scene.showcase.locator('.game-home-showcase__context')).toHaveText(scenario.endsWith('merchandise') ? 'Merchandise · Sponsored' : 'Tabletop · Sponsored')
-    await expect(scene.showcase.locator('.game-home-showcase__note')).toHaveCount(0)
+    await expect(scene.showcase.locator('.game-home-showcase__note')).toHaveText('')
     await expect(scene.showcase.locator('.gf-button')).toHaveText(scenario.endsWith('merchandise') ? 'View Product' : 'View Project')
     for (const link of await scene.showcase.getByRole('link').all()) {
       await expect(link).toHaveAttribute('target', '_blank')
@@ -626,6 +626,40 @@ for (const width of [1440, 1024, 768, 375]) {
     expect(controls!.x + controls!.width).toBeLessThanOrEqual(root!.x + root!.width)
     if (width >= 1024) expect(root!.height).toBeLessThan(350)
     await reviewScreenshot(scene, `autoplay-control-${width}`)
+    scene.assertQuiet()
+  })
+}
+
+
+for (const width of [390, 768, 1024, 1440]) {
+  test(`Showcase reserves geometry across sparse/editorial/sponsored slides at ${width}`, async ({ gamesHome, page }) => {
+    const scene = await gamesHome.open({ showcase: 'varied-content', width })
+    const hero = scene.showcase
+    const heights: number[] = [], artworkHeights: number[] = []
+    for (let index = 0; index < 3; index++) {
+      await expect(hero.locator('h2')).toHaveText(scene.snapshot.items[index]!.title)
+      heights.push((await hero.boundingBox())!.height)
+      artworkHeights.push((await hero.locator('.game-home-showcase__artwork-frame').boundingBox())!.height)
+      const primary = hero.locator('.game-home-showcase__primary')
+      await expect(primary).toBeVisible()
+      await expect(primary).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)')
+      await primary.hover(); await expect(primary).toHaveCSS('border-color', 'rgba(0, 0, 0, 0)')
+      await expect(hero.locator('h2')).toHaveCSS('-webkit-line-clamp', '2')
+      await expect(hero.locator('.game-home-showcase__summary')).toHaveCSS('-webkit-line-clamp', width < 640 ? '2' : '3')
+      const rootBox = (await hero.boundingBox())!
+      for (const selector of ['.game-home-showcase__actions', '.game-home-showcase__controls']) {
+        const box = (await hero.locator(selector).boundingBox())!
+        expect(box.y + box.height).toBeLessThanOrEqual(rootBox.y + rootBox.height + 1)
+        expect(box.x + box.width).toBeLessThanOrEqual(rootBox.x + rootBox.width + 1)
+      }
+      expect(await hero.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await reviewScreenshot(scene, `varied-${width}-${index}`)
+      await hero.getByRole('button', {name:'下一项精选'}).click()
+    }
+    expect(Math.max(...heights) - Math.min(...heights)).toBeLessThanOrEqual(1)
+    expect(Math.max(...artworkHeights) - Math.min(...artworkHeights)).toBeLessThanOrEqual(1)
+    if (width >= 1024) await expect(hero.locator(':scope > div').first()).toHaveCSS('height', '320px')
     scene.assertQuiet()
   })
 }

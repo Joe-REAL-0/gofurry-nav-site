@@ -12,22 +12,22 @@
       <div class="game-home-showcase__content flex min-h-0 min-w-0 flex-1 flex-col lg:w-[36%]">
         <div :key="item.key" class="game-home-showcase__copy min-h-0 min-w-0 flex-1 overflow-hidden" :class="{ 'game-home-showcase__copy--switch': interacted }">
           <p class="game-home-showcase__context">{{ t(showcaseContextKey(item)) }}</p>
-          <p v-if="releaseDate" class="game-home-showcase__meta truncate">
-            {{ t(item.release?.availability === 'upcoming' ? 'gameShowcase.release.expected' : 'gameShowcase.release.released', { date: releaseDate }) }}
+          <p class="game-home-showcase__meta truncate">
+            {{ releaseDate ? t(item.release?.availability === 'upcoming' ? 'gameShowcase.release.expected' : 'gameShowcase.release.released', { date: releaseDate }) : '' }}
           </p>
           <h2 class="game-home-showcase__title mt-2 line-clamp-2">
             <component :is="primary ? NuxtLink : 'span'" v-bind="primary" @click="primary && click('title', item)">{{ item.title }}</component>
           </h2>
           <p class="game-home-showcase__summary mt-2 line-clamp-2 sm:line-clamp-3">{{ item.summary }}</p>
-          <ul v-if="item.tags.length" class="game-home-showcase__tags mt-2 flex min-w-0 gap-1.5">
+          <ul class="game-home-showcase__tags mt-2 flex min-w-0 gap-1.5">
             <li v-for="(tag, tagIndex) in item.tags.slice(0, 3)" :key="tagIndex" class="truncate" :class="tagIndex === 2 ? 'hidden sm:block' : ''">{{ tag }}</li>
           </ul>
-          <p v-if="item.reason === 'editorial' && !item.sponsored && item.editorial_note" class="game-home-showcase__note mt-2 hidden sm:line-clamp-2">{{ item.editorial_note }}</p>
+          <p class="game-home-showcase__note mt-2 hidden sm:line-clamp-2">{{ item.reason === 'editorial' && !item.sponsored ? item.editorial_note : '' }}</p>
         </div>
 
-        <div class="mt-3 flex shrink-0 flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-end" :class="{ 'sm:flex-wrap': showAutoplayControl }">
-          <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-            <NuxtLink v-if="primary" v-bind="primary" class="gf-button gf-button--primary gf-button--stationary" @click="click('primary', item)">{{ t(`gameShowcase.action.${item.primary_action.type}`) }}</NuxtLink>
+        <div class="game-home-showcase__footer mt-3 flex shrink-0 flex-col items-stretch justify-between gap-2 sm:flex-row sm:items-end" :class="{ 'sm:flex-wrap': showAutoplayControl }">
+          <div class="game-home-showcase__actions flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <NuxtLink v-if="primary" v-bind="primary" class="gf-button gf-button--primary gf-button--stationary game-home-showcase__primary" @click="click('primary', item)">{{ t(`gameShowcase.action.${item.primary_action.type}`) }}</NuxtLink>
             <NuxtLink v-if="secondary" v-bind="secondary" class="game-home-showcase__secondary" @click="click('secondary', item)">
               {{ t(`gameShowcase.secondary.${item.secondary_action!.type}`) }} <span aria-hidden="true">↗</span>
             </NuxtLink>

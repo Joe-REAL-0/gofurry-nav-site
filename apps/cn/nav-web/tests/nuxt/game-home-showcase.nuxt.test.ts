@@ -30,7 +30,7 @@ it('hides an editorial note on Sponsored and emits plain text even for markup-li
   snapshot.items[0]!.title = '<script>not HTML</script>'
   const wrapper = await mountSuspended(GameHomeShowcase, { props: { snapshot } })
   try {
-    expect(wrapper.find('.game-home-showcase__note').exists()).toBe(false)
+    expect(wrapper.get('.game-home-showcase__note').text()).toBe('')
     expect(wrapper.get('h2').text()).toBe('<script>not HTML</script>')
     expect(wrapper.find('script').exists()).toBe(false)
     expect(wrapper.get('.gf-button').attributes('rel')).toBe('noopener noreferrer')
